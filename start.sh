@@ -17,4 +17,4 @@ if [ "$NEEDS_SEED" = "yes" ]; then
 fi
 
 # Start the app
-node server.js
+HOSTNAME=0.0.0.0 PORT=3000 node server.js
