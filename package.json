@@ -6,9 +6,9 @@
     "node": "20"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --hostname 0.0.0.0 --port 3000",
     "build": "next build",
-    "start": "next start",
+    "start": "next start --hostname 0.0.0.0 --port 3000",
     "lint": "eslint",
     "seed": "npx tsx --tsconfig tsconfig.json prisma/seed.ts"
   },
