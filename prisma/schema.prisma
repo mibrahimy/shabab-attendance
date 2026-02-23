@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  name          String
+  phone         String?
+  roles         String   @default("teacher")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  sessions      Session[]
+  memberships   Member[]
+  markedAttendances Attendance[] @relation("markedBy")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+model City {
+  id       String  @id @default(cuid())
+  name     String
+  isActive Boolean @default(true)
+  parks    Park[]
+}
+
+model Park {
+  id       String   @id @default(cuid())
+  name     String
+  cityId   String
+  capacity Int      @default(100)
+  city     City     @relation(fields: [cityId], references: [id])
+  events   Event[]
+  members  Member[]
+}
+
+model Member {
+  id              String    @id @default(cuid())
+  userId          String?
+  parentId        String?
+  parkId          String?
+  name            String
+  phone           String?
+  positionLabel   String    @default("Member")
+  isTeaching      Boolean   @default(false)
+  classAssignment String?
+  canManageTeam   Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  user            User?     @relation(fields: [userId], references: [id])
+  parent          Member?   @relation("MemberTree", fields: [parentId], references: [id])
+  children        Member[]  @relation("MemberTree")
+  park            Park?     @relation(fields: [parkId], references: [id])
+  attendances     Attendance[]
+
+  @@index([parentId])
+  @@index([parkId])
+}
+
+model Event {
+  id          String    @id @default(cuid())
+  name        String
+  type        String
+  date        DateTime
+  endDate     DateTime?
+  startTime   String?
+  endTime     String?
+  parkId      String
+  isRecurring Boolean   @default(false)
+  status      String    @default("scheduled")
+  createdAt   DateTime  @default(now())
+  park        Park      @relation(fields: [parkId], references: [id])
+  attendances Attendance[]
+
+  @@index([parkId])
+  @@index([date])
+}
+
+model Attendance {
+  id             String   @id @default(cuid())
+  eventId        String
+  memberId       String
+  status         String
+  markedById     String?
+  overrideReason String?
+  createdAt      DateTime @default(now())
+  event          Event    @relation(fields: [eventId], references: [id])
+  member         Member   @relation(fields: [memberId], references: [id])
+  markedBy       User?    @relation("markedBy", fields: [markedById], references: [id])
+
+  @@unique([eventId, memberId])
+  @@index([memberId])
+}
