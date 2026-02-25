@@ -1,19 +1,16 @@
 #!/bin/sh
 set -e
 
-# Apply schema to the SQLite DB on the persistent volume
-npx prisma db push --skip-generate
+DB_FILE="/data/app.db"
 
-# Seed if the database has no users (first deploy)
-NEEDS_SEED=$(node -e "
-  const { PrismaClient } = require('@prisma/client');
-  const p = new PrismaClient();
-  p.user.count().then(c => { console.log(c === 0 ? 'yes' : 'no'); p.\$disconnect(); });
-")
-
-if [ "$NEEDS_SEED" = "yes" ]; then
+if [ ! -f "$DB_FILE" ]; then
+  echo "First run: creating database and applying schema..."
+  npx prisma db push --skip-generate
   echo "Seeding database..."
   npx tsx --tsconfig tsconfig.json prisma/seed.ts
+else
+  # Apply any pending schema changes (runs fast if already in sync)
+  npx prisma db push --skip-generate &
 fi
 
 # Start the app
