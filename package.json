@@ -16,6 +16,7 @@
     "seed": "npx tsx --tsconfig tsconfig.json prisma/seed.ts"
   },
   "dependencies": {
+    "@flydotio/litestream": "^1.0.1",
     "@prisma/client": "^6.19.2",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
@@ -37,5 +38,8 @@
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"
+  },
+  "dockerfile": {
+    "litestream": true
   }
 }

@@ -1,31 +1,23 @@
-app = "shababxit-attendance"
-primary_region = "ams"
+# fly.toml app configuration file generated for shabab-attendance-cwuokw on 2026-02-25T10:53:35Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'shabab-attendance-cwuokw'
+primary_region = 'ams'
 
 [build]
-
-[env]
-  NODE_ENV = "production"
-  DATABASE_URL = "file:/data/app.db"
 
 [http_service]
   internal_port = 3000
   force_https = true
-  auto_stop_machines = "stop"
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
-
-  [http_service.checks]
-    [http_service.checks.health]
-      interval = "10s"
-      timeout = "5s"
-      grace_period = "30s"
-      method = "GET"
-      path = "/"
-
-[mounts]
-  source = "data"
-  destination = "/data"
+  processes = ['app']
 
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "256mb"
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 4096
