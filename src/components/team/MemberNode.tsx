@@ -29,7 +29,7 @@ export default function MemberNode({ member, depth = 0, onSelect }: MemberNodePr
   return (
     <div>
       <div
-        className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors group"
+        className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-all duration-150 active:scale-[0.99] group"
         style={{ paddingLeft: `${depth * 20 + 12}px` }}
         onClick={() => onSelect(member)}
       >
@@ -42,7 +42,7 @@ export default function MemberNode({ member, depth = 0, onSelect }: MemberNodePr
             className="min-w-[28px] min-h-[28px] flex items-center justify-center text-gray-400 hover:text-gray-600"
           >
             <svg
-              className={`w-4 h-4 transition-transform ${expanded ? "rotate-90" : ""}`}
+              className={`w-4 h-4 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

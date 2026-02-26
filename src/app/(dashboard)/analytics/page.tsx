@@ -33,7 +33,7 @@ function getOrInit<K, V>(map: Map<K, V>, key: K, init: () => V): V {
 export default async function AnalyticsPage() {
   const session = await getSession();
   if (!session || !isSuperAdmin(session.roles)) {
-    redirect("/dashboard");
+    redirect("/dashboard?denied=1");
   }
 
   const [parks, attendanceRecords] = await Promise.all([

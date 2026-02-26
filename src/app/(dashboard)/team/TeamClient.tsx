@@ -110,6 +110,8 @@ export default function TeamClient({ members, parks, allMembers }: TeamClientPro
         <MemberDetail
           member={selected}
           onClose={() => setSelected(null)}
+          parks={parks}
+          allMembers={allMembers}
         />
       )}
     </div>

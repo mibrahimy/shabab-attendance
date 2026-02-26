@@ -67,6 +67,56 @@ export async function createEvent(data: EventInput): Promise<ActionResult> {
   }
 }
 
+export async function updateEvent(id: string, data: EventInput): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { error: "Unauthorized" };
+
+  if (!id) return { error: "Event ID is required" };
+
+  const validationError = validateEventInput(data);
+  if (validationError) return { error: validationError };
+
+  try {
+    await prisma.event.update({
+      where: { id },
+      data: {
+        name: data.name.trim(),
+        type: data.type,
+        date: new Date(data.date),
+        endDate: data.endDate ? new Date(data.endDate) : null,
+        startTime: data.startTime || null,
+        endTime: data.endTime || null,
+        parkId: data.parkId,
+        isRecurring: data.isRecurring,
+      },
+    });
+    revalidatePath("/events");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch {
+    return { error: "Failed to update event" };
+  }
+}
+
+export async function deleteEvent(id: string): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { error: "Unauthorized" };
+
+  if (!id) return { error: "Event ID is required" };
+
+  try {
+    // Delete associated attendance records first
+    await prisma.attendance.deleteMany({ where: { eventId: id } });
+    await prisma.event.delete({ where: { id } });
+    revalidatePath("/events");
+    revalidatePath("/dashboard");
+    revalidatePath("/attendance");
+    return { success: true };
+  } catch {
+    return { error: "Failed to delete event" };
+  }
+}
+
 export async function updateEventStatus(id: string, status: string): Promise<ActionResult> {
   const session = await getSession();
   if (!session) return { error: "Unauthorized" };

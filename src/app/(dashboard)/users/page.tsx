@@ -7,7 +7,7 @@ import UsersClient from "./UsersClient";
 export default async function UsersPage() {
   const session = await getSession();
   if (!session || !isAdmin(session.roles)) {
-    redirect("/dashboard");
+    redirect("/dashboard?denied=1");
   }
 
   const [users, unlinkedMembers] = await Promise.all([

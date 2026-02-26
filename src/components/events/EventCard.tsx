@@ -16,13 +16,18 @@ interface EventCardProps {
     park: { name: string };
     _count?: { attendances: number };
   };
+  onClick?: () => void;
 }
 
-export default function EventCard({ event }: EventCardProps) {
+export default function EventCard({ event, onClick }: EventCardProps) {
   const typeInfo = EVENT_TYPES[event.type as EventType] || EVENT_TYPES.custom;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 transition-colors">
+    <button
+      type="button"
+      onClick={onClick}
+      className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 text-left w-full cursor-pointer active:scale-[0.98]"
+    >
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1">
           <h3 className="text-sm font-medium text-gray-900">{event.name}</h3>
@@ -49,14 +54,6 @@ export default function EventCard({ event }: EventCardProps) {
             {event.endTime && ` - ${formatTime(event.endTime)}`}
           </span>
         )}
-        {event.isRecurring && (
-          <span className="flex items-center gap-1">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Recurring
-          </span>
-        )}
       </div>
 
       <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
@@ -69,6 +66,6 @@ export default function EventCard({ event }: EventCardProps) {
           </span>
         )}
       </div>
-    </div>
+    </button>
   );
 }

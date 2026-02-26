@@ -5,6 +5,7 @@ import Button from "@/components/ui/Button";
 import EmptyState from "@/components/ui/EmptyState";
 import EventCard from "@/components/events/EventCard";
 import CreateEventModal from "@/components/events/CreateEventModal";
+import EventDetailModal from "@/components/events/EventDetailModal";
 import { EVENT_TYPES, type EventType } from "@/lib/utils";
 import type { ParkOption } from "@/types";
 
@@ -13,6 +14,7 @@ interface EventData {
   name: string;
   type: string;
   date: Date;
+  endDate?: Date | null;
   startTime: string | null;
   endTime: string | null;
   status: string;
@@ -28,6 +30,7 @@ interface EventsClientProps {
 
 export default function EventsClient({ events, parks }: EventsClientProps) {
   const [showCreate, setShowCreate] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<EventData | null>(null);
   const [filter, setFilter] = useState<"all" | "scheduled" | "completed">("all");
   const [parkFilter, setParkFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
@@ -112,7 +115,11 @@ export default function EventsClient({ events, parks }: EventsClientProps) {
       ) : (
         <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-4">
           {filteredEvents.map((event) => (
-            <EventCard key={event.id} event={event} />
+            <EventCard
+              key={event.id}
+              event={event}
+              onClick={() => setSelectedEvent(event)}
+            />
           ))}
         </div>
       )}
@@ -122,6 +129,15 @@ export default function EventsClient({ events, parks }: EventsClientProps) {
         onClose={() => setShowCreate(false)}
         parks={parks}
       />
+
+      {selectedEvent && (
+        <EventDetailModal
+          event={selectedEvent}
+          open={true}
+          onClose={() => setSelectedEvent(null)}
+          parks={parks}
+        />
+      )}
     </div>
   );
 }

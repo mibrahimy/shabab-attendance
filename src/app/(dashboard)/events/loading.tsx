@@ -4,13 +4,13 @@ export default function EventsLoading() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <div className="h-7 bg-gray-200 rounded animate-pulse w-24" />
-        <div className="h-10 bg-gray-200 rounded-lg animate-pulse w-32" />
+        <div className="h-7 skeleton-shimmer rounded w-24" />
+        <div className="h-10 skeleton-shimmer rounded-lg w-32" />
       </div>
 
       <div className="flex gap-2 mb-4">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-8 bg-gray-200 rounded-lg animate-pulse w-20" />
+          <div key={i} className="h-8 skeleton-shimmer rounded-lg w-20" />
         ))}
       </div>
 

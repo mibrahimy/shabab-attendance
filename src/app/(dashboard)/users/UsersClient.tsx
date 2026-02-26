@@ -178,6 +178,10 @@ export default function UsersClient({ users, unlinkedMembers, currentUserId, isS
                         <div>
                           <p className="font-medium text-gray-900">{user.name}</p>
                           <p className="text-xs text-gray-500 sm:hidden">{user.email}</p>
+                          {/* Show linked member on mobile */}
+                          {linkedMember && (
+                            <p className="text-xs text-blue-600 md:hidden">{linkedMember.name}</p>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -219,15 +223,44 @@ export default function UsersClient({ users, unlinkedMembers, currentUserId, isS
                       </Badge>
                     </td>
                     <td className="py-3 px-2 text-right">
-                      {user.id !== currentUserId && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => user.isActive ? setConfirmDeactivate(user) : handleToggleActive(user.id)}
-                        >
-                          {user.isActive ? "Deactivate" : "Activate"}
-                        </Button>
-                      )}
+                      <div className="flex items-center justify-end gap-1">
+                        {/* Link/unlink on mobile (hidden on md+) */}
+                        <div className="md:hidden">
+                          {linkedMember ? (
+                            <button
+                              onClick={() => setConfirmUnlink({ memberId: linkedMember.id, memberName: linkedMember.name, userName: user.name })}
+                              className="p-2 text-red-500 hover:text-red-700 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                              title="Unlink member"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                              </svg>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setLinkingUserId(user.id);
+                                setSelectedMemberId("");
+                              }}
+                              className="p-2 text-blue-600 hover:text-blue-800 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                              title="Link to member"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                        {user.id !== currentUserId && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => user.isActive ? setConfirmDeactivate(user) : handleToggleActive(user.id)}
+                          >
+                            {user.isActive ? "Deactivate" : "Activate"}
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

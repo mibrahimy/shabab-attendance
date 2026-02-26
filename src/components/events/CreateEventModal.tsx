@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createEvent } from "@/actions/events";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
@@ -18,6 +19,7 @@ export default function CreateEventModal({ open, onClose, parks }: CreateEventMo
   const [type, setType] = useState("weekly_session");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -33,7 +35,7 @@ export default function CreateEventModal({ open, onClose, parks }: CreateEventMo
         startTime: form.get("startTime") as string || undefined,
         endTime: form.get("endTime") as string || undefined,
         parkId: form.get("parkId") as string,
-        isRecurring: form.get("isRecurring") === "on",
+        isRecurring: false,
       });
 
       if (result?.error) {
@@ -44,6 +46,7 @@ export default function CreateEventModal({ open, onClose, parks }: CreateEventMo
 
       toast("Event created successfully");
       onClose();
+      router.refresh();
     } catch {
       toast("Something went wrong", "error");
     } finally {
@@ -149,15 +152,6 @@ export default function CreateEventModal({ open, onClose, parks }: CreateEventMo
             />
           </div>
         </div>
-
-        <label className="flex items-center gap-2 min-h-[44px] cursor-pointer">
-          <input
-            type="checkbox"
-            name="isRecurring"
-            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-          />
-          <span className="text-sm text-gray-700">Recurring event</span>
-        </label>
 
         <div className="flex gap-3 pt-2">
           <Button type="submit" disabled={loading} className="flex-1">

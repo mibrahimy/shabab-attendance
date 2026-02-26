@@ -37,15 +37,17 @@ interface ReportData {
 
 interface AttendanceClientProps {
   events: EventData[];
+  initialEventId?: string;
 }
 
-export default function AttendanceClient({ events }: AttendanceClientProps) {
-  const [selectedEventId, setSelectedEventId] = useState("");
+export default function AttendanceClient({ events, initialEventId }: AttendanceClientProps) {
+  const [selectedEventId, setSelectedEventId] = useState(initialEventId || "");
   const [tab, setTab] = useState<"mark" | "report">("mark");
   const [members, setMembers] = useState<MemberData[]>([]);
   const [existing, setExisting] = useState<{ memberId: string; status: string }[]>([]);
   const [report, setReport] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
 
   const selectedEvent = events.find((e) => e.id === selectedEventId);
@@ -53,14 +55,21 @@ export default function AttendanceClient({ events }: AttendanceClientProps) {
   const loadData = useCallback(async () => {
     if (!selectedEventId || !selectedEvent) return;
     setLoading(true);
+    setError(null);
 
-    const res = await fetch(`/api/attendance?eventId=${selectedEventId}`);
-    const data = await res.json();
-    setMembers(data.members);
-    setExisting(data.existing);
-    setReport(data.report);
-    setWarning(data.warning || null);
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/attendance?eventId=${selectedEventId}`);
+      if (!res.ok) throw new Error(`Failed to load attendance data`);
+      const data = await res.json();
+      setMembers(data.members);
+      setExisting(data.existing);
+      setReport(data.report);
+      setWarning(data.warning || null);
+    } catch {
+      setError("Failed to load attendance data. Please check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
   }, [selectedEventId, selectedEvent]);
 
   useEffect(() => {
@@ -114,7 +123,21 @@ export default function AttendanceClient({ events }: AttendanceClientProps) {
         </Card>
       )}
 
-      {selectedEventId && !loading && (
+      {error && (
+        <Card className="mb-4 border-red-200 bg-red-50">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-red-800">{error}</p>
+            <button
+              onClick={loadData}
+              className="ml-4 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-100 rounded-lg hover:bg-red-200 transition-colors shrink-0"
+            >
+              Retry
+            </button>
+          </div>
+        </Card>
+      )}
+
+      {selectedEventId && !loading && !error && (
         <>
           <div className="flex gap-2 mb-4">
             <button
