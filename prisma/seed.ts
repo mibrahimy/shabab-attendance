@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  // Clean existing data
+  // Clean everything — full reset
   await prisma.attendance.deleteMany();
   await prisma.event.deleteMany();
   await prisma.member.deleteMany();
@@ -15,7 +15,7 @@ async function main() {
 
   // Create admin user
   const adminHash = await bcrypt.hash("admin123", 10);
-  const admin = await prisma.user.create({
+  await prisma.user.create({
     data: {
       email: "admin@shababxit.com",
       passwordHash: adminHash,
@@ -27,7 +27,7 @@ async function main() {
 
   // Create an admin user
   const adminUserHash = await bcrypt.hash("admin123", 10);
-  const adminUser = await prisma.user.create({
+  await prisma.user.create({
     data: {
       email: "hassain@shababxit.com",
       passwordHash: adminUserHash,
@@ -39,7 +39,7 @@ async function main() {
 
   // Create a teacher user
   const teacherHash = await bcrypt.hash("teacher123", 10);
-  const teacher = await prisma.user.create({
+  await prisma.user.create({
     data: {
       email: "ali@shababxit.com",
       passwordHash: teacherHash,
@@ -49,217 +49,43 @@ async function main() {
     },
   });
 
-  // Create city
-  const islamabad = await prisma.city.create({
-    data: { name: "Islamabad" },
-  });
+  // Create zone lead accounts
+  const zoneLeads = [
+    { email: "zone1@shababxit.com", password: "zone1", name: "Ahtisham" },
+    { email: "zone2@shababxit.com", password: "zone2", name: "Sarmad Bilal" },
+    { email: "zone3@shababxit.com", password: "zone3", name: "Saeed" },
+    { email: "zone4@shababxit.com", password: "zone4", name: "Noman Ghafoor" },
+    { email: "zone5@shababxit.com", password: "zone5", name: "Ansar Iqbal" },
+    { email: "zone6@shababxit.com", password: "zone6", name: "Adeel Haider" },
+    { email: "zone7@shababxit.com", password: "zone7", name: "Sardar Faisal" },
+  ];
 
-  // Create parks
-  const parkG11 = await prisma.park.create({
-    data: { name: "G-11 Park", cityId: islamabad.id, capacity: 80 },
-  });
-
-  const parkF9 = await prisma.park.create({
-    data: { name: "F-9 Park", cityId: islamabad.id, capacity: 120 },
-  });
-
-  // Create team hierarchy
-  const cityHead = await prisma.member.create({
-    data: {
-      name: "Islamabad Shabab Masool",
-      phone: "+923001111111",
-      positionLabel: "City Head",
-      canManageTeam: true,
-      parkId: parkG11.id,
-      userId: admin.id,
-    },
-  });
-
-  const zonalLead = await prisma.member.create({
-    data: {
-      name: "Hassain Sahib",
-      phone: "+923002222222",
-      positionLabel: "Zonal Lead",
-      canManageTeam: true,
-      parentId: cityHead.id,
-      parkId: parkG11.id,
-      userId: adminUser.id,
-    },
-  });
-
-  const aliMember = await prisma.member.create({
-    data: {
-      name: "Ali Khan",
-      phone: "+923009876543",
-      positionLabel: "Teacher",
-      isTeaching: true,
-      classAssignment: "Grade 5A",
-      parentId: zonalLead.id,
-      parkId: parkG11.id,
-      userId: teacher.id,
-    },
-  });
-
-  const sara = await prisma.member.create({
-    data: {
-      name: "Sara Malik",
-      phone: "+923003333333",
-      positionLabel: "Teacher",
-      isTeaching: true,
-      classAssignment: "Grade 5B",
-      canManageTeam: true,
-      parentId: zonalLead.id,
-      parkId: parkG11.id,
-    },
-  });
-
-  await prisma.member.create({
-    data: {
-      name: "Usman Ahmed",
-      phone: "+923004444444",
-      positionLabel: "Member",
-      parentId: sara.id,
-      parkId: parkG11.id,
-    },
-  });
-
-  const zonalLead2 = await prisma.member.create({
-    data: {
-      name: "Zeama Jaikson",
-      phone: "+923005555555",
-      positionLabel: "Zonal Lead",
-      canManageTeam: true,
-      parentId: cityHead.id,
-      parkId: parkF9.id,
-    },
-  });
-
-  const fahad = await prisma.member.create({
-    data: {
-      name: "Fahad Ahmed",
-      phone: "+923006666666",
-      positionLabel: "Teacher",
-      isTeaching: true,
-      classAssignment: "Grade 4A",
-      parentId: zonalLead2.id,
-      parkId: parkF9.id,
-    },
-  });
-
-  await prisma.member.create({
-    data: {
-      name: "Bilal Hassan",
-      phone: "+923007777777",
-      positionLabel: "Member",
-      parentId: zonalLead2.id,
-      parkId: parkF9.id,
-    },
-  });
-
-  await prisma.member.create({
-    data: {
-      name: "Hamza Iqbal",
-      phone: "+923008888888",
-      positionLabel: "Teacher",
-      isTeaching: true,
-      classAssignment: "Grade 3A",
-      parentId: zonalLead2.id,
-      parkId: parkF9.id,
-    },
-  });
-
-  // Create events
-  const today = new Date();
-  const nextSunday = new Date(today);
-  nextSunday.setDate(today.getDate() + (7 - today.getDay()));
-
-  const events = await Promise.all([
-    prisma.event.create({
+  for (const zl of zoneLeads) {
+    const hash = await bcrypt.hash(zl.password, 10);
+    await prisma.user.create({
       data: {
-        name: "Grade 5A Weekly Class",
-        type: "weekly_session",
-        date: nextSunday,
-        startTime: "09:00",
-        endTime: "11:00",
-        parkId: parkG11.id,
-        isRecurring: true,
-      },
-    }),
-    prisma.event.create({
-      data: {
-        name: "Grade 5B Weekly Class",
-        type: "weekly_session",
-        date: nextSunday,
-        startTime: "09:00",
-        endTime: "11:00",
-        parkId: parkG11.id,
-        isRecurring: true,
-      },
-    }),
-    prisma.event.create({
-      data: {
-        name: "New Student Orientation",
-        type: "orientation",
-        date: new Date(nextSunday.getTime() + 7 * 24 * 60 * 60 * 1000),
-        startTime: "10:00",
-        endTime: "12:00",
-        parkId: parkG11.id,
-      },
-    }),
-    prisma.event.create({
-      data: {
-        name: "Team Mashwara",
-        type: "mashwara",
-        date: new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000),
-        startTime: "14:00",
-        endTime: "15:30",
-        parkId: parkG11.id,
-        status: "completed",
-      },
-    }),
-    prisma.event.create({
-      data: {
-        name: "Grade 4A Weekly Class",
-        type: "weekly_session",
-        date: nextSunday,
-        startTime: "09:00",
-        endTime: "11:00",
-        parkId: parkF9.id,
-        isRecurring: true,
-      },
-    }),
-  ]);
-
-  // Create some attendance records for the completed mashwara
-  const mashwara = events[3];
-  const membersForAttendance = [aliMember, sara, zonalLead];
-
-  for (const member of membersForAttendance) {
-    await prisma.attendance.create({
-      data: {
-        eventId: mashwara.id,
-        memberId: member.id,
-        status: "present",
-        markedById: admin.id,
+        email: zl.email,
+        passwordHash: hash,
+        name: zl.name,
+        roles: "zone_lead",
       },
     });
   }
 
-  // Add some absent records too
-  await prisma.attendance.create({
-    data: {
-      eventId: mashwara.id,
-      memberId: fahad.id,
-      status: "absent",
-      markedById: admin.id,
-    },
+  // Create city (Excel import depends on this)
+  await prisma.city.create({
+    data: { name: "Islamabad" },
   });
 
-  console.log("Seed data created successfully!");
+  console.log("Seed complete — users + city created.");
   console.log("Login credentials:");
   console.log("  Super Admin: admin@shababxit.com / admin123");
-  console.log("  Admin: hassain@shababxit.com / admin123");
-  console.log("  Teacher: ali@shababxit.com / teacher123");
+  console.log("  Admin:       hassain@shababxit.com / admin123");
+  console.log("  Teacher:     ali@shababxit.com / teacher123");
+  for (const zl of zoneLeads) {
+    console.log(`  Zone Lead:   ${zl.email} / ${zl.password}  (${zl.name})`);
+  }
+  console.log("\nRun the Excel import next: npx tsx --tsconfig tsconfig.json prisma/import-excel.ts");
 }
 
 main()
