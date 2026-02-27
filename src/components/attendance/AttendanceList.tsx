@@ -67,7 +67,8 @@ export default function AttendanceList({
       const current = prev[memberId];
       const next: DisplayStatus =
         current === "unmarked" ? "present" :
-        current === "present" ? "absent" :
+        current === "present" ? "late" :
+        current === "late" ? "absent" :
         current === "absent" ? "excused" :
         "present";
       return { ...prev, [memberId]: next };
@@ -119,14 +120,16 @@ export default function AttendanceList({
   }
 
   const presentCount = Object.values(statuses).filter((s) => s === "present").length;
+  const lateCount = Object.values(statuses).filter((s) => s === "late").length;
   const absentCount = Object.values(statuses).filter((s) => s === "absent").length;
   const excusedCount = Object.values(statuses).filter((s) => s === "excused").length;
   const unmarkedCount = Object.values(statuses).filter((s) => s === "unmarked").length;
 
   const statusConfig: Record<DisplayStatus, { bg: string; text: string; label: string }> = {
     present: { bg: "bg-green-100", text: "text-green-700", label: "Present" },
+    late: { bg: "bg-amber-100", text: "text-amber-700", label: "Late" },
     absent: { bg: "bg-red-100", text: "text-red-700", label: "Absent" },
-    excused: { bg: "bg-amber-100", text: "text-amber-700", label: "Excused" },
+    excused: { bg: "bg-yellow-100", text: "text-yellow-700", label: "Excused" },
     unmarked: { bg: "bg-gray-100", text: "text-gray-500", label: "Unmarked" },
   };
 
@@ -135,8 +138,9 @@ export default function AttendanceList({
       <div className="flex items-center justify-between mb-4">
         <div className="text-sm text-gray-600 space-x-2">
           <span className="text-green-700">{presentCount}P</span>
+          <span className="text-amber-700">{lateCount}L</span>
           <span className="text-red-700">{absentCount}A</span>
-          <span className="text-amber-700">{excusedCount}E</span>
+          <span className="text-yellow-700">{excusedCount}E</span>
           {unmarkedCount > 0 && (
             <span className="text-gray-500">{unmarkedCount} unmarked</span>
           )}

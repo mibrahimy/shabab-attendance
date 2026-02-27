@@ -13,7 +13,7 @@ type AttendanceRecord = {
 
 type ActionResult = { success?: boolean; error?: string };
 
-const VALID_STATUSES = ["present", "absent", "excused"];
+const VALID_STATUSES = ["present", "late", "absent", "excused"];
 
 export async function markAttendance(eventId: string, records: AttendanceRecord[]): Promise<ActionResult> {
   const session = await getSession();
@@ -25,7 +25,7 @@ export async function markAttendance(eventId: string, records: AttendanceRecord[
   for (const record of records) {
     if (!record.memberId) return { error: "Each record must have a memberId" };
     if (!VALID_STATUSES.includes(record.status)) {
-      return { error: `Invalid status "${record.status}". Must be present, absent, or excused` };
+      return { error: `Invalid status "${record.status}". Must be present, late, absent, or excused` };
     }
   }
 

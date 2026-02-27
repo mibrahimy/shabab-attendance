@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   BarChart,
   Bar,
@@ -24,17 +23,22 @@ interface ParkComparison {
 
 type TrendRow = Record<string, string | number>;
 
+interface TopPerformer {
+  name: string;
+  parkName: string;
+  parkId: string;
+  rate: number;
+  total: number;
+  present: number;
+  late: number;
+}
+
 interface AnalyticsClientProps {
   parkComparison: ParkComparison[];
   trendData: TrendRow[];
   parkNames: Record<string, string>;
+  topPerformers: TopPerformer[];
 }
-
-const TIME_RANGES = [
-  { label: "4 Weeks", weeks: 4 },
-  { label: "3 Months", weeks: 13 },
-  { label: "All Time", weeks: 0 },
-] as const;
 
 const PARK_COLORS = [
   "#3b82f6",
@@ -64,19 +68,18 @@ const PERCENT_Y_AXIS = {
   tickFormatter: (v: number) => `${v}%`,
 };
 
+function rateColor(r: number): string {
+  if (r >= 80) return "text-green-700";
+  if (r >= 50) return "text-amber-600";
+  return "text-red-600";
+}
+
 export default function AnalyticsClient({
   parkComparison,
   trendData,
   parkNames,
+  topPerformers,
 }: AnalyticsClientProps) {
-  const [rangeIndex, setRangeIndex] = useState(0);
-
-  const selectedRange = TIME_RANGES[rangeIndex];
-  const filteredTrend =
-    selectedRange.weeks === 0
-      ? trendData
-      : trendData.slice(-selectedRange.weeks);
-
   const parkIds = Object.keys(parkNames);
 
   function resolveParkName(key: string): string {
@@ -118,37 +121,20 @@ export default function AnalyticsClient({
 
       {/* Line Chart -- Trends */}
       <Card>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-gray-900">
-            Attendance Trends
-          </h2>
-          <div className="flex gap-1">
-            {TIME_RANGES.map((range, i) => (
-              <button
-                key={range.label}
-                onClick={() => setRangeIndex(i)}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                  rangeIndex === i
-                    ? "bg-blue-100 text-blue-700"
-                    : "text-gray-500 hover:bg-gray-100"
-                }`}
-              >
-                {range.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        {filteredTrend.length === 0 ? (
+        <h2 className="text-base font-semibold text-gray-900 mb-4">
+          Attendance Trends
+        </h2>
+        {trendData.length === 0 ? (
           <p className="text-sm text-gray-500 py-8 text-center">
             No trend data available
           </p>
         ) : (
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={filteredTrend} margin={CHART_MARGIN}>
+              <LineChart data={trendData} margin={CHART_MARGIN}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis
-                  dataKey="week"
+                  dataKey="date"
                   tick={{ ...AXIS_TICK, fontSize: 11 }}
                   tickLine={false}
                 />
@@ -184,6 +170,55 @@ export default function AnalyticsClient({
           </div>
         )}
       </Card>
+
+      {/* Top Performers by Zone */}
+      {topPerformers.length > 0 && (
+        <Card>
+          <h2 className="text-base font-semibold text-gray-900 mb-4">
+            Top Performers by Zone
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {Object.entries(
+              topPerformers.reduce<Record<string, TopPerformer[]>>(
+                (acc, p) => {
+                  (acc[p.parkName] ??= []).push(p);
+                  return acc;
+                },
+                {}
+              )
+            ).map(([parkName, members]) => (
+              <div key={parkName}>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">
+                  {parkName}
+                </h3>
+                <div className="space-y-1.5">
+                  {members.map((m, i) => (
+                    <div
+                      key={`${m.name}-${i}`}
+                      className="flex items-center gap-2 text-sm"
+                    >
+                      <span className="w-5 text-right text-gray-400 font-medium">
+                        {i + 1}.
+                      </span>
+                      <span className="flex-1 truncate text-gray-900">
+                        {m.name}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {m.present + m.late}/{m.total} sessions
+                      </span>
+                      <span
+                        className={`font-semibold text-xs w-10 text-right ${rateColor(m.rate)}`}
+                      >
+                        {m.rate}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

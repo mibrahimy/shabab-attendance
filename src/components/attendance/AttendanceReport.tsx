@@ -18,7 +18,7 @@ interface AttendanceReportProps {
 export default function AttendanceReport({ records, summary }: AttendanceReportProps) {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <Card className="!p-3 text-center">
           <p className="text-2xl font-semibold text-gray-900">{summary.rate}%</p>
           <p className="text-xs text-gray-500">Rate</p>
@@ -28,11 +28,15 @@ export default function AttendanceReport({ records, summary }: AttendanceReportP
           <p className="text-xs text-gray-500">Present</p>
         </Card>
         <Card className="!p-3 text-center">
+          <p className="text-2xl font-semibold text-amber-600">{summary.late}</p>
+          <p className="text-xs text-gray-500">Late</p>
+        </Card>
+        <Card className="!p-3 text-center">
           <p className="text-2xl font-semibold text-red-600">{summary.absent}</p>
           <p className="text-xs text-gray-500">Absent</p>
         </Card>
         <Card className="!p-3 text-center">
-          <p className="text-2xl font-semibold text-amber-600">{summary.excused}</p>
+          <p className="text-2xl font-semibold text-yellow-600">{summary.excused}</p>
           <p className="text-xs text-gray-500">Excused</p>
         </Card>
       </div>

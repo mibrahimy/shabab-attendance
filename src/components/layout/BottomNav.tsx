@@ -21,7 +21,7 @@ export default function BottomNav({ userRoles }: BottomNavProps) {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center min-w-[64px] min-h-[44px] px-2 py-1 rounded-xl transition-all duration-150 active:scale-90 ${
+              className={`flex flex-col items-center justify-center min-w-[64px] min-h-[44px] px-2 py-1 rounded-xl transition-all duration-100 active:scale-95 active:bg-blue-50 ${
                 isActive
                   ? "text-blue-600"
                   : "text-gray-400 hover:text-gray-600"

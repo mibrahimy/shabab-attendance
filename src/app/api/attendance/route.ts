@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         members: [],
         existing: [],
-        report: { records: [], summary: { total: 0, present: 0, absent: 0, excused: 0, rate: 0 } },
+        report: { records: [], summary: { total: 0, present: 0, late: 0, absent: 0, excused: 0, rate: 0 } },
         warning: "Your account is not linked to any team member. Ask an admin to link your account.",
       });
     }

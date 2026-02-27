@@ -1,4 +1,8 @@
 import { prisma } from "@/lib/db";
+import { getSession } from "@/lib/auth";
+import { isAdmin } from "@/lib/roles";
+import { getUserSubTreeMemberIds } from "@/lib/team-tree";
+import { redirect } from "next/navigation";
 import TeamClient from "./TeamClient";
 import type { MemberWithChildren } from "@/types";
 import type { Member, Park } from "@prisma/client";
@@ -27,16 +31,40 @@ function buildTree(flatMembers: MemberWithPark[]): MemberWithChildren[] {
 }
 
 export default async function TeamPage() {
-  const [allMembersWithPark, parks] = await Promise.all([
-    prisma.member.findMany({
+  const session = await getSession();
+  if (!session) redirect("/login");
+
+  // Fire parks query immediately — doesn't depend on scope
+  const parksPromise = prisma.park.findMany({ orderBy: { name: "asc" } });
+
+  let allMembersWithPark: MemberWithPark[];
+
+  if (isAdmin(session.roles)) {
+    // Admins see the full tree — fetch members in parallel with parks
+    allMembersWithPark = await prisma.member.findMany({
       include: {
         park: true,
         user: { select: { id: true, email: true } },
       },
       orderBy: { createdAt: "asc" },
-    }),
-    prisma.park.findMany({ orderBy: { name: "asc" } }),
-  ]);
+    });
+  } else {
+    // Non-admins only see their own sub-tree
+    const subTreeIds = await getUserSubTreeMemberIds(session.id);
+
+    if (!subTreeIds || subTreeIds.length === 0) {
+      return <TeamClient members={[]} parks={await parksPromise} allMembers={[]} />;
+    }
+
+    allMembersWithPark = await prisma.member.findMany({
+      where: { id: { in: subTreeIds } },
+      include: {
+        park: true,
+        user: { select: { id: true, email: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+  }
 
   const members = buildTree(allMembersWithPark);
 
@@ -46,5 +74,6 @@ export default async function TeamPage() {
     positionLabel: m.positionLabel,
   }));
 
+  const parks = await parksPromise;
   return <TeamClient members={members} parks={parks} allMembers={allMembers} />;
 }

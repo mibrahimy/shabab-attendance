@@ -66,6 +66,7 @@ model Member {
 
   @@index([parentId])
   @@index([parkId])
+  @@index([userId])
 }
 
 model Event {
@@ -101,4 +102,5 @@ model Attendance {
 
   @@unique([eventId, memberId])
   @@index([memberId])
+  @@index([createdAt])
 }

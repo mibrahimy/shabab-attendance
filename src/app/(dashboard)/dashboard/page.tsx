@@ -1,21 +1,120 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getSession } from "@/lib/auth";
+import { isAdmin } from "@/lib/roles";
+import { getUserScope } from "@/lib/team-tree";
 import StatCard from "@/components/dashboard/StatCard";
+import DashboardFilters from "@/components/dashboard/DashboardFilters";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import DeniedNotice from "@/components/dashboard/DeniedNotice";
-import { EVENT_TYPES, formatDate, getAttendanceStatusColor } from "@/lib/utils";
+import { EVENT_TYPES, formatDate, getAttendanceStatusColor, getDateRangeStart } from "@/lib/utils";
 import type { EventType } from "@/lib/utils";
 import type { BadgeColor } from "@/types";
+import { SkeletonCard } from "@/components/ui/Skeleton";
 
-export default async function DashboardPage() {
-  const [totalMembers, totalParks, activeEvents, recentAttendance, upcomingEvents] =
+function DashboardSkeleton() {
+  return (
+    <div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 lg:p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="h-3 bg-gray-200 rounded animate-pulse w-20" />
+              <div className="w-9 h-9 bg-gray-100 rounded-xl animate-pulse" />
+            </div>
+            <div className="h-7 bg-gray-200 rounded animate-pulse w-16" />
+          </div>
+        ))}
+      </div>
+      <div className="grid lg:grid-cols-2 gap-4 lg:gap-6">
+        <SkeletonCard className="h-48" />
+        <SkeletonCard className="h-48" />
+      </div>
+    </div>
+  );
+}
+
+async function DashboardContent({
+  searchParams,
+}: {
+  searchParams: Record<string, string | undefined>;
+}) {
+  const session = await getSession();
+  if (!session) redirect("/login");
+
+  const admin = isAdmin(session.roles);
+  const scope = admin ? null : await getUserScope(session.id);
+
+  // Admins see everything (empty filter = no restriction).
+  // Non-admins are scoped to their sub-tree members and parks.
+  const scopeParkIds = scope?.parkIds ?? [];
+  const memberIds = scope?.memberIds ?? [];
+
+  // --- Read filter params ---
+  const cityId = searchParams.city ?? "";
+  const parkId = searchParams.park ?? "";
+  const eventType = searchParams.type ?? "";
+  const range = searchParams.range ?? "this_month";
+
+  // --- Resolve park filter from city/park params ---
+  let filteredParkIds: string[] | null = null; // null = no restriction
+
+  if (parkId) {
+    filteredParkIds = [parkId];
+  } else if (cityId) {
+    const cityParks = await prisma.park.findMany({
+      where: { cityId },
+      select: { id: true },
+    });
+    filteredParkIds = cityParks.map((p) => p.id);
+  }
+
+  // Intersect with user scope for non-admins
+  if (!admin) {
+    const scopeSet = new Set(scopeParkIds);
+    filteredParkIds = (filteredParkIds ?? scopeParkIds).filter((id) =>
+      scopeSet.has(id)
+    );
+  }
+
+  const parkFilter = filteredParkIds
+    ? { parkId: { in: filteredParkIds } }
+    : {};
+  const memberFilter = admin ? {} : { id: { in: memberIds } };
+  const attendanceMemberFilter = admin ? {} : { memberId: { in: memberIds } };
+
+  // --- Event type filter ---
+  const eventTypeFilter = eventType ? { type: eventType } : {};
+
+  // --- Date range ---
+  const rangeStart = getDateRangeStart(range);
+  const dateFilter = rangeStart ? { createdAt: { gte: rangeStart } } : {};
+
+  const [totalMembers, totalParks, activeEvents, recentAttendance, upcomingEvents, attendanceByStatus] =
     await Promise.all([
-      prisma.member.count(),
-      prisma.park.count(),
-      prisma.event.count({ where: { status: "scheduled" } }),
+      prisma.member.count({ where: memberFilter }),
+      admin
+        ? filteredParkIds
+          ? Promise.resolve(filteredParkIds.length)
+          : prisma.park.count()
+        : Promise.resolve((filteredParkIds ?? scopeParkIds).length),
+      prisma.event.count({
+        where: { status: "scheduled", ...parkFilter, ...eventTypeFilter },
+      }),
       prisma.attendance.findMany({
+        where: {
+          ...attendanceMemberFilter,
+          ...dateFilter,
+          ...(eventType ? { event: { ...eventTypeFilter } } : {}),
+          ...(filteredParkIds
+            ? { event: { parkId: { in: filteredParkIds }, ...eventTypeFilter } }
+            : eventType
+              ? { event: { ...eventTypeFilter } }
+              : {}),
+        },
         take: 10,
         orderBy: { createdAt: "desc" },
         include: { member: true, event: true, markedBy: true },
@@ -24,36 +123,48 @@ export default async function DashboardPage() {
         where: {
           date: { gte: new Date() },
           status: "scheduled",
+          ...parkFilter,
+          ...eventTypeFilter,
         },
         take: 5,
         orderBy: { date: "asc" },
         include: { park: true },
       }),
+      prisma.attendance.groupBy({
+        by: ["status"],
+        where: {
+          ...dateFilter,
+          ...attendanceMemberFilter,
+          ...(filteredParkIds || eventType
+            ? {
+                event: {
+                  ...(filteredParkIds
+                    ? { parkId: { in: filteredParkIds } }
+                    : {}),
+                  ...eventTypeFilter,
+                },
+              }
+            : {}),
+        },
+        _count: { status: true },
+      }),
     ]);
 
-  // Calculate attendance rate this month
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
-
-  const [totalRecords, presentRecords] = await Promise.all([
-    prisma.attendance.count({
-      where: { createdAt: { gte: startOfMonth } },
-    }),
-    prisma.attendance.count({
-      where: { createdAt: { gte: startOfMonth }, status: "present" },
-    }),
-  ]);
-
+  const totalRecords = attendanceByStatus.reduce((sum, g) => sum + g._count.status, 0);
+  const presentRecords = attendanceByStatus.find((g) => g.status === "present")?._count.status ?? 0;
   const attendanceRate = totalRecords > 0 ? Math.round((presentRecords / totalRecords) * 100) : 0;
 
-  return (
-    <div>
-      <Suspense><DeniedNotice /></Suspense>
-      <h1 className="text-xl lg:text-2xl font-semibold text-gray-900 mb-6">
-        Dashboard
-      </h1>
+  const rangeLabelMap: Record<string, string> = {
+    this_month: "This month",
+    last_month: "Last month",
+    "3_months": "Last 3 months",
+    "6_months": "Last 6 months",
+    this_year: "This year",
+    all: "All time",
+  };
 
+  return (
+    <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
         <StatCard
           label="Total Members"
@@ -80,7 +191,7 @@ export default async function DashboardPage() {
         <StatCard
           label="Attendance Rate"
           value={`${attendanceRate}%`}
-          trend="This month"
+          trend={rangeLabelMap[range] ?? "This month"}
           href="/attendance"
           iconColor="text-green-600 bg-green-50"
           icon={
@@ -172,6 +283,44 @@ export default async function DashboardPage() {
           )}
         </Card>
       </div>
+    </>
+  );
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const params = await searchParams;
+
+  // Fetch filter options (lightweight queries)
+  const [cities, parks] = await Promise.all([
+    prisma.city.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.park.findMany({
+      select: { id: true, name: true, cityId: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+
+  return (
+    <div>
+      <Suspense><DeniedNotice /></Suspense>
+      <h1 className="text-xl lg:text-2xl font-semibold text-gray-900 mb-6">
+        Dashboard
+      </h1>
+      <DashboardFilters
+        cities={cities}
+        parks={parks}
+        defaultRange="this_month"
+      />
+      <Suspense fallback={<DashboardSkeleton />}>
+        <DashboardContent searchParams={params} />
+      </Suspense>
     </div>
   );
 }

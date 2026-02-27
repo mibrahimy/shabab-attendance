@@ -43,8 +43,45 @@ export const EVENT_TYPES = {
 
 export type EventType = keyof typeof EVENT_TYPES;
 
+export function getDateRangeStart(range: string): Date | null {
+  const now = new Date();
+  switch (range) {
+    case "this_month": {
+      const d = new Date(now.getFullYear(), now.getMonth(), 1);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+    case "last_month": {
+      const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+    case "3_months": {
+      const d = new Date();
+      d.setMonth(d.getMonth() - 3);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+    case "6_months": {
+      const d = new Date();
+      d.setMonth(d.getMonth() - 6);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+    case "this_year": {
+      const d = new Date(now.getFullYear(), 0, 1);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+    case "all":
+    default:
+      return null;
+  }
+}
+
 export function getAttendanceStatusColor(status: string): "green" | "amber" | "red" {
   if (status === "present") return "green";
+  if (status === "late") return "amber";
   if (status === "excused") return "amber";
   return "red";
 }
@@ -58,13 +95,15 @@ export function getEventStatusColor(status: string): "blue" | "green" | "red" {
 export function computeAttendanceSummary(records: { status: string }[]) {
   const total = records.length;
   const present = records.filter((r) => r.status === "present").length;
+  const late = records.filter((r) => r.status === "late").length;
   const absent = records.filter((r) => r.status === "absent").length;
   const excused = records.filter((r) => r.status === "excused").length;
   return {
     total,
     present,
+    late,
     absent,
     excused,
-    rate: total > 0 ? Math.round((present / total) * 100) : 0,
+    rate: total > 0 ? Math.round(((present + late) / total) * 100) : 0,
   };
 }
