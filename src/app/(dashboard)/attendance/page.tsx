@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { isAdmin } from "@/lib/roles";
+import { isAdmin, isSuperAdmin } from "@/lib/roles";
 import { getUserScope } from "@/lib/team-tree";
 import AttendanceClient from "./AttendanceClient";
 
@@ -20,7 +20,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   if (!isAdmin(session.roles)) {
     const scope = await getUserScope(session.id);
     if (!scope || scope.parkIds.length === 0) {
-      return <AttendanceClient events={[]} initialEventId={eventId} />;
+      return <AttendanceClient events={[]} initialEventId={eventId} isSuperAdmin={false} />;
     }
     parkFilter = { parkId: { in: scope.parkIds } };
   }
@@ -34,5 +34,5 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     orderBy: { date: "desc" },
   });
 
-  return <AttendanceClient events={events} initialEventId={eventId} />;
+  return <AttendanceClient events={events} initialEventId={eventId} isSuperAdmin={isSuperAdmin(session.roles)} />;
 }

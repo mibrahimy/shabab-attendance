@@ -6,6 +6,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import EventCard from "@/components/events/EventCard";
 import AttendanceList from "@/components/attendance/AttendanceList";
 import AttendanceReport from "@/components/attendance/AttendanceReport";
+import Button from "@/components/ui/Button";
 import { EVENT_TYPES } from "@/lib/utils";
 import type { EventType } from "@/lib/utils";
 import type { AttendanceSummary } from "@/types";
@@ -43,9 +44,10 @@ interface ReportData {
 interface AttendanceClientProps {
   events: EventData[];
   initialEventId?: string;
+  isSuperAdmin?: boolean;
 }
 
-export default function AttendanceClient({ events, initialEventId }: AttendanceClientProps) {
+export default function AttendanceClient({ events, initialEventId, isSuperAdmin }: AttendanceClientProps) {
   const [selectedEventId, setSelectedEventId] = useState(initialEventId || "");
   const [tab, setTab] = useState<"mark" | "report">("mark");
   const [members, setMembers] = useState<MemberData[]>([]);
@@ -57,8 +59,30 @@ export default function AttendanceClient({ events, initialEventId }: AttendanceC
   const [filter, setFilter] = useState<"all" | "scheduled" | "completed">("all");
   const [parkFilter, setParkFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   const selectedEvent = events.find((e) => e.id === selectedEventId);
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const res = await fetch("/api/attendance/export");
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "attendance-export.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("Failed to export attendance data.");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const parks = useMemo(() => {
     const seen = new Map<string, string>();
@@ -260,6 +284,14 @@ export default function AttendanceClient({ events, initialEventId }: AttendanceC
               <option key={key} value={key}>{val.label}</option>
             ))}
           </select>
+          {isSuperAdmin && (
+            <Button variant="secondary" size="sm" loading={exporting} onClick={handleExport} className="hidden lg:inline-flex">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Export
+            </Button>
+          )}
         </div>
       </div>
 
