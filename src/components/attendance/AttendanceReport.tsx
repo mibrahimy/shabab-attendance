@@ -6,7 +6,7 @@ import type { AttendanceSummary } from "@/types";
 interface AttendanceRecord {
   id: string;
   status: string;
-  member: { id: string; name: string; classAssignment: string | null };
+  member: { id: string; name: string; classAssignment: string | null; positionLabel: string };
   markedBy?: { name: string } | null;
 }
 
@@ -56,11 +56,10 @@ export default function AttendanceReport({ records, summary }: AttendanceReportP
                   <p className="text-sm font-medium text-gray-900">
                     {record.member.name}
                   </p>
-                  {record.member.classAssignment && (
-                    <p className="text-xs text-gray-500">
-                      {record.member.classAssignment}
-                    </p>
-                  )}
+                  <p className="text-xs text-gray-500">
+                    {record.member.positionLabel}
+                    {record.member.classAssignment && ` · ${record.member.classAssignment}`}
+                  </p>
                 </div>
               </div>
               <Badge color={getAttendanceStatusColor(record.status)}>

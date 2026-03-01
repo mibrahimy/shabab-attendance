@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     },
     include: {
       member: {
-        select: { id: true, name: true, classAssignment: true },
+        select: { id: true, name: true, classAssignment: true, positionLabel: true },
       },
       markedBy: {
         select: { id: true, name: true, email: true },

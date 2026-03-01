@@ -35,7 +35,7 @@ interface ReportData {
   records: {
     id: string;
     status: string;
-    member: { id: string; name: string; classAssignment: string | null };
+    member: { id: string; name: string; classAssignment: string | null; positionLabel: string };
     markedBy?: { name: string } | null;
   }[];
   summary: AttendanceSummary;
@@ -285,12 +285,14 @@ export default function AttendanceClient({ events, initialEventId, isSuperAdmin 
             ))}
           </select>
           {isSuperAdmin && (
-            <Button variant="secondary" size="sm" loading={exporting} onClick={handleExport} className="hidden lg:inline-flex">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Export
-            </Button>
+            <span className="hidden lg:inline-flex">
+              <Button variant="secondary" size="sm" loading={exporting} onClick={handleExport}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Export
+              </Button>
+            </span>
           )}
         </div>
       </div>

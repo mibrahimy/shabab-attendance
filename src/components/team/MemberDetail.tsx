@@ -7,26 +7,19 @@ import Button from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { getInitials } from "@/lib/utils";
 import type { ParkOption, MemberOption } from "@/types";
-
-interface MemberDetailData {
-  id: string;
-  name: string;
-  positionLabel: string;
-  isTeaching: boolean;
-  classAssignment: string | null;
-  canManageTeam: boolean;
-  phone: string | null;
-  parentId?: string | null;
-  park?: { id: string; name: string } | null;
-  user?: { id: string; email: string } | null;
-}
+import type { MemberNodeData } from "@/components/team/MemberNode";
 
 interface MemberDetailProps {
-  member: MemberDetailData;
+  member: MemberNodeData & {
+    parentId?: string | null;
+    user?: { id: string; email: string } | null;
+  };
   onClose: () => void;
   parks?: ParkOption[];
   allMembers?: MemberOption[];
 }
+
+const inputClass = "w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 export default function MemberDetail({ member, onClose, parks, allMembers }: MemberDetailProps) {
   const [removing, setRemoving] = useState(false);
@@ -47,6 +40,9 @@ export default function MemberDetail({ member, onClose, parks, allMembers }: Mem
     parentId: member.parentId || "",
   });
 
+  const updateField = (field: keyof typeof form, value: string | boolean) =>
+    setForm((prev) => ({ ...prev, [field]: value }));
+
   async function handleRemove() {
     setRemoving(true);
 
@@ -55,7 +51,6 @@ export default function MemberDetail({ member, onClose, parks, allMembers }: Mem
 
       if (result?.error) {
         toast(result.error, "error");
-        setRemoving(false);
         return;
       }
 
@@ -86,7 +81,6 @@ export default function MemberDetail({ member, onClose, parks, allMembers }: Mem
 
       if (result?.error) {
         toast(result.error, "error");
-        setSaving(false);
         return;
       }
 
@@ -102,12 +96,12 @@ export default function MemberDetail({ member, onClose, parks, allMembers }: Mem
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40 lg:hidden animate-[modalBackdropIn_0.2s_ease-out]"
+        className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[60] lg:hidden animate-[modalBackdropIn_0.2s_ease-out]"
         onClick={onClose}
       />
 
-      <div className="fixed bottom-0 inset-x-0 lg:top-0 lg:bottom-auto lg:left-auto lg:right-0 lg:w-[380px] lg:h-full bg-white z-50 rounded-t-xl lg:rounded-none border-t lg:border-l border-gray-200/80 shadow-xl overflow-y-auto animate-[modalSheetIn_0.25s_ease-out]">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-4 flex items-center justify-between">
+      <div className="fixed bottom-0 inset-x-0 lg:top-0 lg:bottom-auto lg:left-auto lg:right-0 lg:w-[380px] lg:h-full bg-white z-[60] rounded-t-xl lg:rounded-none border-t lg:border-l border-gray-200/80 shadow-xl flex flex-col max-h-[85vh] lg:max-h-none overflow-hidden animate-[modalSheetIn_0.25s_ease-out]">
+        <div className="bg-white border-b border-gray-200 px-4 py-4 flex items-center justify-between shrink-0">
           <h2 className="text-lg font-semibold text-gray-900">
             {editing ? "Edit Member" : "Member Details"}
           </h2>
@@ -121,17 +115,17 @@ export default function MemberDetail({ member, onClose, parks, allMembers }: Mem
           </button>
         </div>
 
-        <div className="p-4 lg:p-6 space-y-6">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 lg:p-6 space-y-6">
           {editing ? (
-            <form onSubmit={handleSave} className="space-y-4">
+            <form onSubmit={handleSave} className="space-y-4" id="edit-member-form">
               <div>
                 <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                 <input
                   id="edit-name"
                   required
                   value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  onChange={(e) => updateField("name", e.target.value)}
+                  className={inputClass}
                 />
               </div>
               <div>
@@ -139,8 +133,8 @@ export default function MemberDetail({ member, onClose, parks, allMembers }: Mem
                 <input
                   id="edit-phone"
                   value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  onChange={(e) => updateField("phone", e.target.value)}
+                  className={inputClass}
                 />
               </div>
               <div>
@@ -149,8 +143,8 @@ export default function MemberDetail({ member, onClose, parks, allMembers }: Mem
                   id="edit-position"
                   required
                   value={form.positionLabel}
-                  onChange={(e) => setForm({ ...form, positionLabel: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  onChange={(e) => updateField("positionLabel", e.target.value)}
+                  className={inputClass}
                 />
               </div>
               {parks && parks.length > 0 && (
@@ -159,8 +153,8 @@ export default function MemberDetail({ member, onClose, parks, allMembers }: Mem
                   <select
                     id="edit-park"
                     value={form.parkId}
-                    onChange={(e) => setForm({ ...form, parkId: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    onChange={(e) => updateField("parkId", e.target.value)}
+                    className={inputClass}
                   >
                     <option value="">None</option>
                     {parks.map((p) => (
@@ -175,8 +169,8 @@ export default function MemberDetail({ member, onClose, parks, allMembers }: Mem
                   <select
                     id="edit-parent"
                     value={form.parentId}
-                    onChange={(e) => setForm({ ...form, parentId: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    onChange={(e) => updateField("parentId", e.target.value)}
+                    className={inputClass}
                   >
                     <option value="">None (root)</option>
                     {allMembers.filter((m) => m.id !== member.id).map((m) => (
@@ -189,7 +183,7 @@ export default function MemberDetail({ member, onClose, parks, allMembers }: Mem
                 <input
                   type="checkbox"
                   checked={form.isTeaching}
-                  onChange={(e) => setForm({ ...form, isTeaching: e.target.checked })}
+                  onChange={(e) => updateField("isTeaching", e.target.checked)}
                   className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span className="text-sm text-gray-700">Teaching member</span>
@@ -200,9 +194,9 @@ export default function MemberDetail({ member, onClose, parks, allMembers }: Mem
                   <input
                     id="edit-class"
                     value={form.classAssignment}
-                    onChange={(e) => setForm({ ...form, classAssignment: e.target.value })}
+                    onChange={(e) => updateField("classAssignment", e.target.value)}
                     placeholder="e.g., Grade 5A"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className={inputClass}
                   />
                 </div>
               )}
@@ -210,20 +204,12 @@ export default function MemberDetail({ member, onClose, parks, allMembers }: Mem
                 <input
                   type="checkbox"
                   checked={form.canManageTeam}
-                  onChange={(e) => setForm({ ...form, canManageTeam: e.target.checked })}
+                  onChange={(e) => updateField("canManageTeam", e.target.checked)}
                   className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span className="text-sm text-gray-700">Can manage own team</span>
               </label>
 
-              <div className="flex gap-2 pt-2">
-                <Button type="submit" disabled={saving} className="flex-1">
-                  {saving ? "Saving..." : "Save Changes"}
-                </Button>
-                <Button type="button" variant="secondary" className="flex-1" onClick={() => setEditing(false)}>
-                  Cancel
-                </Button>
-              </div>
             </form>
           ) : (
             <>
@@ -320,6 +306,17 @@ export default function MemberDetail({ member, onClose, parks, allMembers }: Mem
             </>
           )}
         </div>
+
+        {editing && (
+          <div className="border-t border-gray-200 bg-white px-4 py-3 flex gap-2 shrink-0">
+            <Button type="submit" form="edit-member-form" disabled={saving} className="flex-1">
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
+            <Button type="button" variant="secondary" className="flex-1" onClick={() => setEditing(false)}>
+              Cancel
+            </Button>
+          </div>
+        )}
       </div>
     </>
   );

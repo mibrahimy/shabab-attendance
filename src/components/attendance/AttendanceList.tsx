@@ -166,9 +166,10 @@ export default function AttendanceList({
               </div>
               <div className="flex-1 text-left">
                 <p className="text-sm font-medium text-gray-900">{member.name}</p>
-                {member.classAssignment && (
-                  <p className="text-xs text-gray-500">{member.classAssignment}</p>
-                )}
+                <p className="text-xs text-gray-500">
+                  {member.positionLabel}
+                  {member.classAssignment && ` · ${member.classAssignment}`}
+                </p>
               </div>
               <span
                 className={`px-3 py-1 rounded-full text-xs font-medium min-w-[72px] text-center transition-colors duration-150 ${config.bg} ${config.text}`}
