@@ -10,7 +10,7 @@ import DashboardFilters from "@/components/dashboard/DashboardFilters";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import DeniedNotice from "@/components/dashboard/DeniedNotice";
-import { EVENT_TYPES, formatDate, getAttendanceStatusColor, getDateRangeStart } from "@/lib/utils";
+import { EVENT_TYPES, formatDate, getAttendanceStatusColor, getDateRangeStart, attendanceRate } from "@/lib/utils";
 import type { EventType } from "@/lib/utils";
 import type { BadgeColor } from "@/types";
 import { SkeletonCard } from "@/components/ui/Skeleton";
@@ -91,9 +91,9 @@ async function DashboardContent({
 
   // --- Date range ---
   const rangeStart = getDateRangeStart(range);
-  const dateFilter = rangeStart ? { createdAt: { gte: rangeStart } } : {};
+  const eventDateFilter = rangeStart ? { date: { gte: rangeStart } } : {};
 
-  const [totalMembers, totalParks, activeEvents, recentAttendance, upcomingEvents, attendanceByStatus] =
+  const [totalMembers, totalParks, activeEvents, recentAttendance, upcomingEvents, attendanceByStatus, completedEventsByPark, memberCountsByPark] =
     await Promise.all([
       prisma.member.count({ where: memberFilter }),
       admin
@@ -107,13 +107,13 @@ async function DashboardContent({
       prisma.attendance.findMany({
         where: {
           ...attendanceMemberFilter,
-          ...dateFilter,
-          ...(eventType ? { event: { ...eventTypeFilter } } : {}),
-          ...(filteredParkIds
-            ? { event: { parkId: { in: filteredParkIds }, ...eventTypeFilter } }
-            : eventType
-              ? { event: { ...eventTypeFilter } }
+          event: {
+            ...eventDateFilter,
+            ...(filteredParkIds
+              ? { parkId: { in: filteredParkIds } }
               : {}),
+            ...eventTypeFilter,
+          },
         },
         take: 10,
         orderBy: { createdAt: "desc" },
@@ -133,26 +133,45 @@ async function DashboardContent({
       prisma.attendance.groupBy({
         by: ["status"],
         where: {
-          ...dateFilter,
           ...attendanceMemberFilter,
-          ...(filteredParkIds || eventType
-            ? {
-                event: {
-                  ...(filteredParkIds
-                    ? { parkId: { in: filteredParkIds } }
-                    : {}),
-                  ...eventTypeFilter,
-                },
-              }
-            : {}),
+          event: {
+            status: "completed",
+            ...eventDateFilter,
+            ...(filteredParkIds
+              ? { parkId: { in: filteredParkIds } }
+              : {}),
+            ...eventTypeFilter,
+          },
         },
         _count: { status: true },
       }),
+      prisma.event.groupBy({
+        by: ["parkId"],
+        where: {
+          status: "completed",
+          ...parkFilter,
+          ...eventTypeFilter,
+          ...eventDateFilter,
+        },
+        _count: { _all: true },
+      }),
+      prisma.member.groupBy({
+        by: ["parkId"],
+        where: {
+          ...memberFilter,
+          ...(filteredParkIds ? { parkId: { in: filteredParkIds } } : {}),
+        },
+        _count: { _all: true },
+      }),
     ]);
 
-  const totalRecords = attendanceByStatus.reduce((sum, g) => sum + g._count.status, 0);
+  const membersByPark = new Map(memberCountsByPark.map((g) => [g.parkId, g._count._all]));
+  const totalExpected = completedEventsByPark.reduce((sum, g) => {
+    return sum + g._count._all * (membersByPark.get(g.parkId) ?? 0);
+  }, 0);
   const presentRecords = attendanceByStatus.find((g) => g.status === "present")?._count.status ?? 0;
-  const attendanceRate = totalRecords > 0 ? Math.round((presentRecords / totalRecords) * 100) : 0;
+  const lateRecords = attendanceByStatus.find((g) => g.status === "late")?._count.status ?? 0;
+  const attRate = attendanceRate(presentRecords, lateRecords, totalExpected);
 
   const rangeLabelMap: Record<string, string> = {
     this_month: "This month",
@@ -190,7 +209,7 @@ async function DashboardContent({
         />
         <StatCard
           label="Attendance Rate"
-          value={`${attendanceRate}%`}
+          value={`${attRate}%`}
           trend={rangeLabelMap[range] ?? "This month"}
           href="/attendance"
           iconColor="text-green-600 bg-green-50"
