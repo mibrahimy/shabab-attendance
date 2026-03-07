@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import * as XLSX from "xlsx";
 
 const prisma = new PrismaClient();
-const EXCEL_PATH = "/home/mi/Desktop/shababxit/Roots Of Wisdom Attendance .xlsx";
+const EXCEL_PATH = "/home/mi/Desktop/shababxit/Roots Of Wisdom Attendance_updated.xlsx";
 
 // Excel serial 46046 = Jan 24, 2026 (Saturday) — confirmed by user
 const BASE_SERIAL = 46046;
