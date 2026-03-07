@@ -3,11 +3,11 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { isAdmin, isSuperAdmin } from "@/lib/roles";
 import { getUserScope } from "@/lib/team-tree";
-import { getDateRangeStart } from "@/lib/utils";
+import { getDateRangeStart, attendanceRate } from "@/lib/utils";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
 import AnalyticsClient from "./AnalyticsClient";
 
-type Tally = { total: number; present: number; late: number };
+type Tally = { present: number; late: number };
 
 type TopPerformer = {
   name: string;
@@ -19,10 +19,6 @@ type TopPerformer = {
   late: number;
 };
 
-function rate(t: Tally): number {
-  return t.total > 0 ? Math.round(((t.present + t.late) / t.total) * 100) : 0;
-}
-
 function getOrInit<K, V>(map: Map<K, V>, key: K, init: () => V): V {
   let val = map.get(key);
   if (!val) {
@@ -32,7 +28,7 @@ function getOrInit<K, V>(map: Map<K, V>, key: K, init: () => V): V {
   return val;
 }
 
-const TALLY_INIT = (): Tally => ({ total: 0, present: 0, late: 0 });
+const TALLY_INIT = (): Tally => ({ present: 0, late: 0 });
 
 const MIN_RECORDS_FOR_TOP = 3;
 const TOP_PER_PARK = 5;
@@ -122,7 +118,7 @@ export default async function AnalyticsPage({
   // --- Date range ---
   const rangeStart = getDateRangeStart(range);
 
-  const [parks, attendanceRecords] = await Promise.all([
+  const [parks, attendanceRecords, memberCounts, completedEvents] = await Promise.all([
     prisma.park.findMany({
       where: scopedParkIds ? { id: { in: scopedParkIds } } : undefined,
       select: { id: true, name: true },
@@ -130,17 +126,14 @@ export default async function AnalyticsPage({
     }),
     prisma.attendance.findMany({
       where: {
-        ...(rangeStart ? { createdAt: { gte: rangeStart } } : {}),
-        ...(scopedParkIds || eventType
-          ? {
-              event: {
-                ...(scopedParkIds
-                  ? { parkId: { in: scopedParkIds } }
-                  : {}),
-                ...eventTypeFilter,
-              },
-            }
-          : {}),
+        event: {
+          status: "completed",
+          ...(rangeStart ? { date: { gte: rangeStart } } : {}),
+          ...(scopedParkIds
+            ? { parkId: { in: scopedParkIds } }
+            : {}),
+          ...eventTypeFilter,
+        },
       },
       select: {
         status: true,
@@ -149,7 +142,36 @@ export default async function AnalyticsPage({
         event: { select: { date: true, parkId: true } },
       },
     }),
+    prisma.member.groupBy({
+      by: ["parkId"],
+      where: scopedParkIds ? { parkId: { in: scopedParkIds } } : undefined,
+      _count: { _all: true },
+    }),
+    prisma.event.findMany({
+      where: {
+        status: "completed",
+        ...(scopedParkIds ? { parkId: { in: scopedParkIds } } : {}),
+        ...eventTypeFilter,
+        ...(rangeStart ? { date: { gte: rangeStart } } : {}),
+      },
+      select: { parkId: true, date: true },
+    }),
   ]);
+
+  // Build member-count and completed-event maps for correct denominator
+  const memberCountByPark = new Map<string, number>();
+  for (const g of memberCounts) {
+    if (g.parkId) memberCountByPark.set(g.parkId, g._count._all);
+  }
+
+  const eventCountByPark = new Map<string, number>();
+  const eventsOnDate = new Map<string, Map<string, number>>();
+  for (const e of completedEvents) {
+    eventCountByPark.set(e.parkId, (eventCountByPark.get(e.parkId) ?? 0) + 1);
+    const dk = new Date(e.date).toISOString().slice(0, 10);
+    const dp = getOrInit(eventsOnDate, dk, () => new Map<string, number>());
+    dp.set(e.parkId, (dp.get(e.parkId) ?? 0) + 1);
+  }
 
   // Single pass: build park totals, per-date breakdowns, and member stats
   const parkStats = new Map<string, Tally>();
@@ -159,7 +181,7 @@ export default async function AnalyticsPage({
   >();
   const memberStats = new Map<
     string,
-    { name: string; parkId: string | null; total: number; present: number; late: number }
+    { name: string; parkId: string | null; marked: number; present: number; late: number }
   >();
 
   for (const r of attendanceRecords) {
@@ -167,24 +189,21 @@ export default async function AnalyticsPage({
     const isPresent = r.status === "present";
     const isLate = r.status === "late";
 
-    // Park totals
+    // Park totals (present/late only — total comes from member count × events)
     const park = getOrInit(parkStats, recParkId, TALLY_INIT);
-    park.total++;
     if (isPresent) park.present++;
     if (isLate) park.late++;
 
-    // Per-date breakdown (YYYY-MM-DD for sorting, displayed as short date)
+    // Per-date breakdown
     const dateKey = new Date(date).toISOString().slice(0, 10);
     const dayBucket = getOrInit(dateMap, dateKey, () => ({
       overall: TALLY_INIT(),
       byPark: new Map(),
     }));
-    dayBucket.overall.total++;
     if (isPresent) dayBucket.overall.present++;
     if (isLate) dayBucket.overall.late++;
 
     const dayPark = getOrInit(dayBucket.byPark, recParkId, TALLY_INIT);
-    dayPark.total++;
     if (isPresent) dayPark.present++;
     if (isLate) dayPark.late++;
 
@@ -193,30 +212,45 @@ export default async function AnalyticsPage({
       const ms = getOrInit(memberStats, r.memberId, () => ({
         name: r.member?.name ?? "Unknown",
         parkId: r.member?.parkId ?? null,
-        total: 0,
+        marked: 0,
         present: 0,
         late: 0,
       }));
-      ms.total++;
+      ms.marked++;
       if (isPresent) ms.present++;
       if (isLate) ms.late++;
     }
   }
 
+  // Park comparison: denominator = memberCount × completedEventCount
   const parkComparison = parks.map((p) => {
     const stats = parkStats.get(p.id) ?? TALLY_INIT();
+    const mc = memberCountByPark.get(p.id) ?? 0;
+    const ec = eventCountByPark.get(p.id) ?? 0;
+    const total = mc * ec;
     return {
       name: p.name,
-      rate: rate(stats),
-      total: stats.total,
+      rate: attendanceRate(stats.present, stats.late, total),
+      total,
       present: stats.present,
     };
   });
 
-  const trendData = Array.from(dateMap.keys())
+  // Trend data: use completed events for denominator per date
+  const allDateKeys = new Set([...dateMap.keys(), ...eventsOnDate.keys()]);
+  const trendData = Array.from(allDateKeys)
     .sort()
     .map((dateKey) => {
-      const bucket = dateMap.get(dateKey)!;
+      const bucket = dateMap.get(dateKey);
+      const dateParks = eventsOnDate.get(dateKey);
+
+      let overallTotal = 0;
+      if (dateParks) {
+        for (const [pId, ec] of dateParks) {
+          overallTotal += (memberCountByPark.get(pId) ?? 0) * ec;
+        }
+      }
+
       const d = new Date(dateKey + "T00:00:00");
       const label = d.toLocaleDateString("en-US", {
         month: "short",
@@ -224,27 +258,35 @@ export default async function AnalyticsPage({
       });
       const row: Record<string, string | number> = {
         date: label,
-        overall: rate(bucket.overall),
+        overall: attendanceRate(bucket?.overall.present ?? 0, bucket?.overall.late ?? 0, overallTotal),
       };
-      for (const [pId, stats] of bucket.byPark) {
-        row[pId] = rate(stats);
+
+      if (dateParks) {
+        for (const [pId, ec] of dateParks) {
+          const parkTotal = (memberCountByPark.get(pId) ?? 0) * ec;
+          const parkBucket = bucket?.byPark.get(pId);
+          row[pId] = attendanceRate(parkBucket?.present ?? 0, parkBucket?.late ?? 0, parkTotal);
+        }
       }
+
       return row;
     });
 
   const parkNames = Object.fromEntries(parks.map((p) => [p.id, p.name]));
 
-  // Top performers: group by park, sort by rate, take top 5
+  // Top performers: denominator = completed events in their park
   const byPark = new Map<string, TopPerformer[]>();
   for (const [, ms] of memberStats) {
-    if (ms.total < MIN_RECORDS_FOR_TOP || !ms.parkId) continue;
+    if (ms.marked < MIN_RECORDS_FOR_TOP || !ms.parkId) continue;
+    const total = eventCountByPark.get(ms.parkId) ?? 0;
+    if (total === 0) continue;
     const list = getOrInit(byPark, ms.parkId, () => [] as TopPerformer[]);
     list.push({
       name: ms.name,
       parkName: parkNames[ms.parkId] ?? ms.parkId,
       parkId: ms.parkId,
-      rate: rate(ms),
-      total: ms.total,
+      rate: attendanceRate(ms.present, ms.late, total),
+      total,
       present: ms.present,
       late: ms.late,
     });
