@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
     })),
     report: {
       records: existingRecords,
-      summary: computeAttendanceSummary(existingRecords),
+      summary: computeAttendanceSummary(existingRecords, members.length),
     },
     ...(warning ? { warning } : {}),
   });

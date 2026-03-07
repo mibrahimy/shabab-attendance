@@ -92,8 +92,12 @@ export function getEventStatusColor(status: string): "blue" | "green" | "red" {
   return "red";
 }
 
-export function computeAttendanceSummary(records: { status: string }[]) {
-  const total = records.length;
+export function attendanceRate(present: number, late: number, total: number): number {
+  return total > 0 ? Math.round(((present + late) / total) * 100) : 0;
+}
+
+export function computeAttendanceSummary(records: { status: string }[], totalMembers?: number) {
+  const total = totalMembers ?? records.length;
   const present = records.filter((r) => r.status === "present").length;
   const late = records.filter((r) => r.status === "late").length;
   const absent = records.filter((r) => r.status === "absent").length;
@@ -104,6 +108,6 @@ export function computeAttendanceSummary(records: { status: string }[]) {
     late,
     absent,
     excused,
-    rate: total > 0 ? Math.round(((present + late) / total) * 100) : 0,
+    rate: attendanceRate(present, late, total),
   };
 }
