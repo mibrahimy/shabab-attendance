@@ -33,11 +33,12 @@ interface TeamClientProps {
   members: MemberNodeData[];
   parks: ParkOption[];
   allMembers: MemberOption[];
+  canManageMembers?: boolean;
 }
 
 const selectClass = "rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
-export default function TeamClient({ members, parks, allMembers }: TeamClientProps) {
+export default function TeamClient({ members, parks, allMembers, canManageMembers = false }: TeamClientProps) {
   const [showAdd, setShowAdd] = useState(false);
   const [selected, setSelected] = useState<MemberNodeData | null>(null);
   const [search, setSearch] = useState("");
@@ -138,12 +139,14 @@ export default function TeamClient({ members, parks, allMembers }: TeamClientPro
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl lg:text-2xl font-semibold text-gray-900">Team</h1>
-        <Button onClick={() => setShowAdd(true)}>
-          <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Add Member
-        </Button>
+        {canManageMembers && (
+          <Button onClick={() => setShowAdd(true)}>
+            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Member
+          </Button>
+        )}
       </div>
 
       {members.length > 0 && (
@@ -328,6 +331,7 @@ export default function TeamClient({ members, parks, allMembers }: TeamClientPro
           onClose={() => setSelected(null)}
           parks={parks}
           allMembers={allMembers}
+          canManageMembers={canManageMembers}
         />
       )}
     </div>

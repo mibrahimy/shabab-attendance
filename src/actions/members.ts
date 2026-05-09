@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { isAdmin } from "@/lib/roles";
-import { getUserSubTreeMemberIds } from "@/lib/team-tree";
+import { getUserSubTreeMemberIds, getUserManagedParkIds } from "@/lib/team-tree";
 
 type MemberInput = {
   name: string;
@@ -77,14 +77,25 @@ export async function addMember(data: MemberInput): Promise<ActionResult> {
   const session = await getSession();
   if (!session) return { error: "Unauthorized" };
 
-  // Non-admins can only add members under their own sub-tree
   if (!isAdmin(session.roles)) {
-    if (!data.parentId) {
-      return { error: "You must specify a parent member" };
-    }
-    const allowed = await isInUserSubTree(session.id, data.parentId);
-    if (!allowed) {
-      return { error: "You can only add members under your own team" };
+    const managedParkIds = await getUserManagedParkIds(session.id);
+    if (managedParkIds.length > 0) {
+      // Park managers can add members to their park(s) without requiring a parentId
+      if (data.parkId && !managedParkIds.includes(data.parkId)) {
+        return { error: "You can only add members to your own park" };
+      }
+      if (!data.parkId) {
+        return { error: "You must assign a park when adding a member" };
+      }
+    } else {
+      // Regular non-admins can only add under their own sub-tree
+      if (!data.parentId) {
+        return { error: "You must specify a parent member" };
+      }
+      const allowed = await isInUserSubTree(session.id, data.parentId);
+      if (!allowed) {
+        return { error: "You can only add members under your own team" };
+      }
     }
   }
 
@@ -133,9 +144,16 @@ export async function removeMember(id: string): Promise<ActionResult> {
   const session = await getSession();
   if (!session) return { error: "Unauthorized" };
 
-  // Only admins can remove members
   if (!isAdmin(session.roles)) {
-    return { error: "Only admins can remove members" };
+    const managedParkIds = await getUserManagedParkIds(session.id);
+    if (managedParkIds.length === 0) {
+      return { error: "Only admins can remove members" };
+    }
+    // Park managers can only remove members from their park(s)
+    const target = await prisma.member.findUnique({ where: { id }, select: { parkId: true } });
+    if (!target || !target.parkId || !managedParkIds.includes(target.parkId)) {
+      return { error: "You can only remove members from your own park" };
+    }
   }
 
   if (!id) return { error: "Member ID is required" };

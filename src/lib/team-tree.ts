@@ -46,6 +46,19 @@ export async function getSubTreeMemberIds(memberId: string): Promise<string[]> {
 }
 
 /**
+ * Returns park IDs where the user has a direct Member record with canManageTeam = true.
+ * Used to scope add/remove member permissions for park-level managers.
+ */
+export async function getUserManagedParkIds(userId: string): Promise<string[]> {
+  const rows = await prisma.member.findMany({
+    where: { userId, canManageTeam: true, parkId: { not: null } },
+    select: { parkId: true },
+    distinct: ["parkId"],
+  });
+  return rows.map((r) => r.parkId!);
+}
+
+/**
  * Finds the user's linked Member(s) and returns the combined sub-tree IDs via a single recursive CTE.
  * Returns null if the user has no linked members.
  */

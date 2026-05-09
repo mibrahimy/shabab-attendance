@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { isAdmin } from "@/lib/roles";
-import { getUserSubTreeMemberIds } from "@/lib/team-tree";
+import { getUserSubTreeMemberIds, getUserManagedParkIds } from "@/lib/team-tree";
 import { redirect } from "next/navigation";
 import TeamClient from "./TeamClient";
 import type { MemberWithChildren } from "@/types";
@@ -34,46 +34,53 @@ export default async function TeamPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  // Fire parks query immediately — doesn't depend on scope
-  const parksPromise = prisma.park.findMany({ orderBy: { name: "asc" } });
+  // Fire parks and managed-park-ids queries in parallel
+  const admin = isAdmin(session.roles);
+  const [allParks, managedParkIds] = await Promise.all([
+    prisma.park.findMany({ orderBy: { name: "asc" } }),
+    admin ? Promise.resolve([] as string[]) : getUserManagedParkIds(session.id),
+  ]);
+
+  const canManageMembers = admin || managedParkIds.length > 0;
 
   let allMembersWithPark: MemberWithPark[];
 
-  if (isAdmin(session.roles)) {
-    // Admins see the full tree — fetch members in parallel with parks
+  if (admin) {
     allMembersWithPark = await prisma.member.findMany({
-      include: {
-        park: true,
-        user: { select: { id: true, email: true } },
-      },
+      include: { park: true, user: { select: { id: true, email: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+  } else if (managedParkIds.length > 0) {
+    // Park managers see all members in their park(s)
+    allMembersWithPark = await prisma.member.findMany({
+      where: { parkId: { in: managedParkIds } },
+      include: { park: true, user: { select: { id: true, email: true } } },
       orderBy: { createdAt: "asc" },
     });
   } else {
-    // Non-admins only see their own sub-tree
+    // Regular non-admins only see their own sub-tree
     const subTreeIds = await getUserSubTreeMemberIds(session.id);
-
     if (!subTreeIds || subTreeIds.length === 0) {
-      return <TeamClient members={[]} parks={await parksPromise} allMembers={[]} />;
+      return <TeamClient members={[]} parks={allParks} allMembers={[]} canManageMembers={false} />;
     }
-
     allMembersWithPark = await prisma.member.findMany({
       where: { id: { in: subTreeIds } },
-      include: {
-        park: true,
-        user: { select: { id: true, email: true } },
-      },
+      include: { park: true, user: { select: { id: true, email: true } } },
       orderBy: { createdAt: "asc" },
     });
   }
 
   const members = buildTree(allMembersWithPark);
-
   const allMembers = allMembersWithPark.map((m) => ({
     id: m.id,
     name: m.name,
     positionLabel: m.positionLabel,
   }));
 
-  const parks = await parksPromise;
-  return <TeamClient members={members} parks={parks} allMembers={allMembers} />;
+  // Park managers only see their own parks in dropdowns; admins see all
+  const parks = managedParkIds.length > 0 && !admin
+    ? allParks.filter((p) => managedParkIds.includes(p.id))
+    : allParks;
+
+  return <TeamClient members={members} parks={parks} allMembers={allMembers} canManageMembers={canManageMembers} />;
 }

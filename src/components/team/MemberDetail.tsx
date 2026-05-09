@@ -17,11 +17,12 @@ interface MemberDetailProps {
   onClose: () => void;
   parks?: ParkOption[];
   allMembers?: MemberOption[];
+  canManageMembers?: boolean;
 }
 
 const inputClass = "w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
-export default function MemberDetail({ member, onClose, parks, allMembers }: MemberDetailProps) {
+export default function MemberDetail({ member, onClose, parks, allMembers, canManageMembers = false }: MemberDetailProps) {
   const [removing, setRemoving] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -262,6 +263,7 @@ export default function MemberDetail({ member, onClose, parks, allMembers }: Mem
                 </div>
               </div>
 
+              {canManageMembers && (
               <div className="pt-4 border-t border-gray-200 space-y-2">
                 <Button
                   variant="secondary"
@@ -303,11 +305,12 @@ export default function MemberDetail({ member, onClose, parks, allMembers }: Mem
                   </div>
                 )}
               </div>
+              )}
             </>
           )}
         </div>
 
-        {editing && (
+        {editing && canManageMembers && (
           <div className="border-t border-gray-200 bg-white px-4 py-3 flex gap-2 shrink-0">
             <Button type="submit" form="edit-member-form" disabled={saving} className="flex-1">
               {saving ? "Saving..." : "Save Changes"}
