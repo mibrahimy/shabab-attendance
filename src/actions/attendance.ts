@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { isAdmin } from "@/lib/roles";
-import { getUserSubTreeMemberIds } from "@/lib/team-tree";
+import { getUserSubTreeMemberIds, getUserManagedParkIds } from "@/lib/team-tree";
 
 type AttendanceRecord = {
   memberId: string;
@@ -29,19 +29,31 @@ export async function markAttendance(eventId: string, records: AttendanceRecord[
     }
   }
 
-  // For non-admins, verify all members are in their sub-tree
+  // For non-admins, verify all members are in scope
   if (!isAdmin(session.roles)) {
-    const subTreeIds = await getUserSubTreeMemberIds(session.id);
+    const managedParkIds = await getUserManagedParkIds(session.id);
 
-    if (subTreeIds === null) {
-      return { error: "Your account is not linked to any team member" };
-    }
-
-    const subTreeSet = new Set(subTreeIds);
-    const outOfScope = records.filter((r) => !subTreeSet.has(r.memberId));
-
-    if (outOfScope.length > 0) {
-      return { error: "You can only mark attendance for members in your team" };
+    if (managedParkIds.length > 0) {
+      // Park managers: verify all members belong to one of their parks
+      const memberParkRows = await prisma.member.findMany({
+        where: { id: { in: records.map((r) => r.memberId) } },
+        select: { id: true, parkId: true },
+      });
+      const managedSet = new Set(managedParkIds);
+      const outOfScope = memberParkRows.filter((m) => !m.parkId || !managedSet.has(m.parkId));
+      if (outOfScope.length > 0) {
+        return { error: "You can only mark attendance for members in your park" };
+      }
+    } else {
+      const subTreeIds = await getUserSubTreeMemberIds(session.id);
+      if (subTreeIds === null) {
+        return { error: "Your account is not linked to any team member" };
+      }
+      const subTreeSet = new Set(subTreeIds);
+      const outOfScope = records.filter((r) => !subTreeSet.has(r.memberId));
+      if (outOfScope.length > 0) {
+        return { error: "You can only mark attendance for members in your team" };
+      }
     }
   }
 
