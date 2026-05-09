@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { computeAttendanceSummary } from "@/lib/utils";
 import { getSession } from "@/lib/auth";
 import { isAdmin } from "@/lib/roles";
-import { getUserSubTreeMemberIds } from "@/lib/team-tree";
+import { getUserSubTreeMemberIds, getUserManagedParkIds } from "@/lib/team-tree";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -40,22 +40,27 @@ export async function GET(request: NextRequest) {
 
   let warning: string | undefined;
 
-  // For non-admins, filter to sub-tree members only
+  // For non-admins, scope visible members
   if (!isAdmin(session.roles)) {
-    const subTreeIds = await getUserSubTreeMemberIds(session.id);
+    const managedParkIds = await getUserManagedParkIds(session.id);
 
-    if (subTreeIds === null) {
-      // User has no linked member
-      return NextResponse.json({
-        members: [],
-        existing: [],
-        report: { records: [], summary: { total: 0, present: 0, late: 0, absent: 0, excused: 0, rate: 0 } },
-        warning: "Your account is not linked to any team member. Ask an admin to link your account.",
-      });
+    if (managedParkIds.includes(event.parkId)) {
+      // Park managers see all members of the event's park — no further filtering needed
+    } else {
+      const subTreeIds = await getUserSubTreeMemberIds(session.id);
+
+      if (subTreeIds === null) {
+        return NextResponse.json({
+          members: [],
+          existing: [],
+          report: { records: [], summary: { total: 0, present: 0, late: 0, absent: 0, excused: 0, rate: 0 } },
+          warning: "Your account is not linked to any team member. Ask an admin to link your account.",
+        });
+      }
+
+      const subTreeSet = new Set(subTreeIds);
+      members = members.filter((m) => subTreeSet.has(m.id));
     }
-
-    const subTreeSet = new Set(subTreeIds);
-    members = members.filter((m) => subTreeSet.has(m.id));
   }
 
   const memberIds = members.map((m) => m.id);
