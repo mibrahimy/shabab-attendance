@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { isAdmin } from "@/lib/roles";
-import { getUserScope } from "@/lib/team-tree";
+import { getUserScope, getUserManagedParkIds } from "@/lib/team-tree";
 import StatCard from "@/components/dashboard/StatCard";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
 import Card from "@/components/ui/Card";
@@ -46,11 +46,16 @@ async function DashboardContent({
   if (!session) redirect("/login");
 
   const admin = isAdmin(session.roles);
-  const scope = admin ? null : await getUserScope(session.id);
+  const [scope, managedParkIds] = await Promise.all([
+    admin ? Promise.resolve(null) : getUserScope(session.id),
+    admin ? Promise.resolve([] as string[]) : getUserManagedParkIds(session.id),
+  ]);
+
+  const isParkManager = managedParkIds.length > 0;
 
   // Admins see everything (empty filter = no restriction).
   // Non-admins are scoped to their sub-tree members and parks.
-  const scopeParkIds = scope?.parkIds ?? [];
+  const scopeParkIds = isParkManager ? managedParkIds : (scope?.parkIds ?? []);
   const memberIds = scope?.memberIds ?? [];
 
   // --- Read filter params ---
@@ -83,8 +88,13 @@ async function DashboardContent({
   const parkFilter = filteredParkIds
     ? { parkId: { in: filteredParkIds } }
     : {};
-  const memberFilter = admin ? {} : { id: { in: memberIds } };
-  const attendanceMemberFilter = admin ? {} : { memberId: { in: memberIds } };
+  // Park managers scope by park (not member subtree); regular teachers scope by member subtree
+  const memberFilter = admin
+    ? {}
+    : isParkManager
+      ? (filteredParkIds ? { parkId: { in: filteredParkIds } } : {})
+      : { id: { in: memberIds } };
+  const attendanceMemberFilter = (admin || isParkManager) ? {} : { memberId: { in: memberIds } };
 
   // --- Event type filter ---
   const eventTypeFilter = eventType ? { type: eventType } : {};
