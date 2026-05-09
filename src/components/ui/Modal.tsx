@@ -7,9 +7,10 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  footer?: React.ReactNode;
 }
 
-export default function Modal({ open, onClose, title, children }: ModalProps) {
+export default function Modal({ open, onClose, title, children, footer }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -46,7 +47,7 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      className="fixed inset-0 z-50 flex items-end lg:items-center justify-center"
+      className="fixed inset-0 z-[60] flex items-end lg:items-center justify-center"
       onClick={(e) => {
         if (e.target === overlayRef.current || e.target === backdropRef.current) onClose();
       }}
@@ -55,8 +56,8 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
         ref={backdropRef}
         className="fixed inset-0 bg-black/40 backdrop-blur-[2px] animate-[modalBackdropIn_0.2s_ease-out]"
       />
-      <div className="relative bg-white w-full lg:max-w-lg lg:rounded-xl rounded-t-xl max-h-[85vh] overflow-y-auto shadow-xl animate-[modalSheetIn_0.25s_ease-out] lg:animate-[modalContentIn_0.2s_ease-out]">
-        <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-gray-200/80 px-4 lg:px-6 py-4 flex items-center justify-between rounded-t-xl z-10">
+      <div className="relative bg-white w-full lg:max-w-lg lg:rounded-xl rounded-t-xl max-h-[85vh] flex flex-col shadow-xl animate-[modalSheetIn_0.25s_ease-out] lg:animate-[modalContentIn_0.2s_ease-out]">
+        <div className="bg-white/95 backdrop-blur-sm border-b border-gray-200/80 px-4 lg:px-6 py-4 flex items-center justify-between rounded-t-xl flex-shrink-0">
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
           <button
             onClick={onClose}
@@ -67,7 +68,12 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
             </svg>
           </button>
         </div>
-        <div className="p-4 lg:p-6">{children}</div>
+        <div className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</div>
+        {footer && (
+          <div className="flex-shrink-0 border-t border-gray-200 px-4 lg:px-6 py-4 bg-white rounded-b-xl">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

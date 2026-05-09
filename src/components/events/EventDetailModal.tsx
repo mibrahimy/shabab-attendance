@@ -130,11 +130,22 @@ export default function EventDetailModal({ event, open, onClose, parks }: EventD
     }
   }
 
+  const editingFooter = editing ? (
+    <div className="flex gap-3">
+      <Button type="submit" form="edit-event-form" disabled={saving} className="flex-1">
+        {saving ? "Saving..." : "Save Changes"}
+      </Button>
+      <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
+        Cancel
+      </Button>
+    </div>
+  ) : undefined;
+
   return (
     <>
-      <Modal open={open} onClose={onClose} title={editing ? "Edit Event" : event.name}>
+      <Modal open={open} onClose={onClose} title={editing ? "Edit Event" : event.name} footer={editingFooter}>
         {editing ? (
-          <form onSubmit={handleSave} className="space-y-4">
+          <form id="edit-event-form" onSubmit={handleSave} className="space-y-4">
             <div>
               <label htmlFor="event-name" className="block text-sm font-medium text-gray-700 mb-1">Event Name *</label>
               <input
@@ -219,14 +230,6 @@ export default function EventDetailModal({ event, open, onClose, parks }: EventD
                   className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <Button type="submit" disabled={saving} className="flex-1">
-                {saving ? "Saving..." : "Save Changes"}
-              </Button>
-              <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
-                Cancel
-              </Button>
             </div>
           </form>
         ) : (

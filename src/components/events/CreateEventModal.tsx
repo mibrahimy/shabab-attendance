@@ -54,9 +54,20 @@ export default function CreateEventModal({ open, onClose, parks }: CreateEventMo
     }
   }
 
+  const footer = (
+    <div className="flex gap-3">
+      <Button type="submit" form="create-event-form" disabled={loading} className="flex-1">
+        {loading ? "Creating..." : "Create Event"}
+      </Button>
+      <Button type="button" variant="secondary" onClick={onClose}>
+        Cancel
+      </Button>
+    </div>
+  );
+
   return (
-    <Modal open={open} onClose={onClose} title="Create Event">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal open={open} onClose={onClose} title="Create Event" footer={footer}>
+      <form id="create-event-form" onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Event Name *
@@ -153,14 +164,6 @@ export default function CreateEventModal({ open, onClose, parks }: CreateEventMo
           </div>
         </div>
 
-        <div className="flex gap-3 pt-2">
-          <Button type="submit" disabled={loading} className="flex-1">
-            {loading ? "Creating..." : "Create Event"}
-          </Button>
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-        </div>
       </form>
     </Modal>
   );
