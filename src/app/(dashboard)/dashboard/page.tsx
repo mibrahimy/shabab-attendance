@@ -131,12 +131,11 @@ async function DashboardContent({
       }),
       prisma.event.findMany({
         where: {
-          date: { gte: new Date() },
+          date: { gte: new Date(), lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
           status: "scheduled",
           ...parkFilter,
           ...eventTypeFilter,
         },
-        take: 5,
         orderBy: { date: "asc" },
         include: { park: true },
       }),
