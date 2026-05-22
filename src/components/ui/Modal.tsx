@@ -56,12 +56,12 @@ export default function Modal({ open, onClose, title, children, footer }: ModalP
         ref={backdropRef}
         className="fixed inset-0 bg-black/40 backdrop-blur-[2px] animate-[modalBackdropIn_0.2s_ease-out]"
       />
-      <div className="relative bg-white w-full lg:max-w-lg lg:rounded-xl rounded-t-xl max-h-[85vh] flex flex-col shadow-xl animate-[modalSheetIn_0.25s_ease-out] lg:animate-[modalContentIn_0.2s_ease-out]">
-        <div className="bg-white/95 backdrop-blur-sm border-b border-gray-200/80 px-4 lg:px-6 py-4 flex items-center justify-between rounded-t-xl flex-shrink-0">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+      <div className="relative bg-white w-full lg:max-w-lg lg:rounded-lg rounded-t-lg max-h-[85vh] flex flex-col shadow-lg border border-gray-200 animate-[modalSheetIn_0.25s_ease-out] lg:animate-[modalContentIn_0.2s_ease-out]">
+        <div className="border-b border-gray-200 px-4 lg:px-6 py-4 flex items-center justify-between rounded-t-lg flex-shrink-0">
+          <h2 className="text-base font-semibold text-gray-900">{title}</h2>
           <button
             onClick={onClose}
-            className="min-h-[44px] min-w-[44px] lg:min-h-0 lg:min-w-0 lg:p-1.5 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors active:scale-95"
+            className="min-h-[44px] min-w-[44px] lg:min-h-0 lg:min-w-0 lg:p-1.5 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors active:scale-95"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -70,7 +70,7 @@ export default function Modal({ open, onClose, title, children, footer }: ModalP
         </div>
         <div className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</div>
         {footer && (
-          <div className="flex-shrink-0 border-t border-gray-200 px-4 lg:px-6 py-4 bg-white rounded-b-xl">
+          <div className="flex-shrink-0 border-t border-gray-200 px-4 lg:px-6 py-4 bg-white rounded-b-lg">
             {footer}
           </div>
         )}

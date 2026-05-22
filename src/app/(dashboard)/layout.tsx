@@ -16,7 +16,7 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar userRoles={userRoles} />
-      <div className="lg:pl-60">
+      <div className="lg:pl-56">
         <TopBar />
         <main className="p-4 lg:p-6 pb-20 lg:pb-6 animate-fade-in">
           <ToastProvider>

@@ -14,7 +14,7 @@ export default function StatCard({ label, value, icon, trend, href, iconColor = 
     <>
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm text-gray-500 font-medium">{label}</span>
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${iconColor}`}>
+        <div className={`w-8 h-8 rounded-md flex items-center justify-center ${iconColor}`}>
           {icon}
         </div>
       </div>
@@ -27,7 +27,7 @@ export default function StatCard({ label, value, icon, trend, href, iconColor = 
     return (
       <Link
         href={href}
-        className="block bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 lg:p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+        className="block bg-white rounded-lg border border-gray-200 p-4 lg:p-5 hover:border-gray-300 transition-colors duration-150"
       >
         {content}
       </Link>
@@ -35,7 +35,7 @@ export default function StatCard({ label, value, icon, trend, href, iconColor = 
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 lg:p-5">
+    <div className="bg-white rounded-lg border border-gray-200 p-4 lg:p-5">
       {content}
     </div>
   );
