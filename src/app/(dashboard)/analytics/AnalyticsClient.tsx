@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import {
   BarChart,
   Bar,
+  LabelList,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -10,7 +12,6 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
-  Legend,
 } from "recharts";
 import Card from "@/components/ui/Card";
 
@@ -51,8 +52,6 @@ const PARK_COLORS = [
   "#84cc16",
 ];
 
-const CHART_MARGIN = { top: 8, right: 16, left: 0, bottom: 0 };
-
 const TOOLTIP_STYLE = {
   borderRadius: "8px",
   border: "1px solid #e5e7eb",
@@ -81,6 +80,21 @@ export default function AnalyticsClient({
   topPerformers,
 }: AnalyticsClientProps) {
   const parkIds = Object.keys(parkNames);
+  const [selectedPark, setSelectedPark] = useState<string | null>(null);
+
+  // Weighted overall rate
+  const totalSlots = parkComparison.reduce((s, p) => s + p.total, 0);
+  const overallRate =
+    totalSlots > 0
+      ? Math.round(
+          parkComparison.reduce((s, p) => s + p.rate * p.total, 0) / totalSlots
+        )
+      : 0;
+  const bestPark =
+    parkComparison.length > 0
+      ? parkComparison.reduce((a, b) => (a.rate >= b.rate ? a : b))
+      : null;
+  const activeParks = parkComparison.filter((p) => p.total > 0).length;
 
   function resolveParkName(key: string): string {
     return key === "overall" ? "Overall" : parkNames[key] || key;
@@ -88,7 +102,37 @@ export default function AnalyticsClient({
 
   return (
     <div className="space-y-6">
-      {/* Bar Chart -- Park Comparison */}
+      {/* ── At-a-glance stats ── */}
+      {parkComparison.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
+            <div className={`text-2xl font-semibold ${rateColor(overallRate)}`}>
+              {overallRate}%
+            </div>
+            <div className="text-xs text-gray-500 mt-0.5">Overall</div>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
+            <div
+              className={`text-xl font-semibold leading-tight ${
+                bestPark ? rateColor(bestPark.rate) : "text-gray-900"
+              }`}
+            >
+              {bestPark ? `${bestPark.rate}%` : "—"}
+            </div>
+            <div className="text-xs text-gray-500 mt-0.5 truncate">
+              {bestPark?.name ?? "—"}
+            </div>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
+            <div className="text-2xl font-semibold text-gray-900">
+              {activeParks}
+            </div>
+            <div className="text-xs text-gray-500 mt-0.5">Parks</div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Horizontal bar chart ── */}
       <Card>
         <h2 className="text-base font-semibold text-gray-900 mb-4">
           Attendance Rate by Park
@@ -98,40 +142,109 @@ export default function AnalyticsClient({
             No attendance data yet
           </p>
         ) : (
-          <div className="h-72">
+          <div
+            style={{ height: Math.max(200, parkComparison.length * 52) }}
+          >
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={parkComparison} margin={CHART_MARGIN}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <BarChart
+                data={parkComparison}
+                layout="vertical"
+                margin={{ top: 4, right: 40, left: 0, bottom: 4 }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#e5e7eb"
+                  horizontal={false}
+                />
                 <XAxis
+                  type="number"
+                  domain={[0, 100]}
+                  tick={AXIS_TICK}
+                  tickLine={false}
+                  tickFormatter={(v) => `${v}%`}
+                />
+                <YAxis
+                  type="category"
                   dataKey="name"
                   tick={AXIS_TICK}
                   tickLine={false}
+                  width={88}
                 />
-                <YAxis {...PERCENT_Y_AXIS} />
                 <Tooltip
                   formatter={(value) => [`${value}%`, "Rate"]}
                   contentStyle={TOOLTIP_STYLE}
                 />
-                <Bar dataKey="rate" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey="rate"
+                  fill="var(--accent)"
+                  radius={[0, 4, 4, 0]}
+                >
+                  <LabelList
+                    dataKey="rate"
+                    position="right"
+                    formatter={(v: unknown) => `${v}%`}
+                    style={{ fontSize: 12, fill: "#6b7280" }}
+                  />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
         )}
       </Card>
 
-      {/* Line Chart -- Trends */}
+      {/* ── Trend line chart with park toggle ── */}
       <Card>
-        <h2 className="text-base font-semibold text-gray-900 mb-4">
+        <h2 className="text-base font-semibold text-gray-900 mb-3">
           Attendance Trends
         </h2>
+
+        {/* Park selector pills */}
+        {parkIds.length > 0 && (
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar mb-4 pb-0.5">
+            <button
+              onClick={() => setSelectedPark(null)}
+              className={`shrink-0 px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                selectedPark === null
+                  ? "bg-[var(--accent-light)] text-[var(--accent-text)]"
+                  : "text-gray-500 hover:bg-gray-100"
+              }`}
+            >
+              Overall
+            </button>
+            {parkIds.map((id, i) => (
+              <button
+                key={id}
+                onClick={() =>
+                  setSelectedPark(selectedPark === id ? null : id)
+                }
+                className={`shrink-0 px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                  selectedPark === id
+                    ? "bg-[var(--accent-light)] text-[var(--accent-text)]"
+                    : "text-gray-500 hover:bg-gray-100"
+                }`}
+                style={
+                  selectedPark === id
+                    ? {}
+                    : { borderLeft: `3px solid ${PARK_COLORS[i % PARK_COLORS.length]}` }
+                }
+              >
+                {parkNames[id]}
+              </button>
+            ))}
+          </div>
+        )}
+
         {trendData.length === 0 ? (
           <p className="text-sm text-gray-500 py-8 text-center">
             No trend data available
           </p>
         ) : (
-          <div className="h-80">
+          <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData} margin={CHART_MARGIN}>
+              <LineChart
+                data={trendData}
+                margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis
                   dataKey="date"
@@ -146,32 +259,34 @@ export default function AnalyticsClient({
                   ]}
                   contentStyle={TOOLTIP_STYLE}
                 />
-                <Legend formatter={resolveParkName} />
                 <Line
                   type="monotone"
                   dataKey="overall"
                   stroke="#111827"
                   strokeWidth={2.5}
                   dot={false}
+                  name="overall"
                 />
-                {parkIds.map((parkId, i) => (
+                {selectedPark && (
                   <Line
-                    key={parkId}
                     type="monotone"
-                    dataKey={parkId}
-                    stroke={PARK_COLORS[i % PARK_COLORS.length]}
-                    strokeWidth={1.5}
+                    dataKey={selectedPark}
+                    stroke={
+                      PARK_COLORS[parkIds.indexOf(selectedPark) % PARK_COLORS.length]
+                    }
+                    strokeWidth={2}
                     dot={false}
                     connectNulls
+                    name={selectedPark}
                   />
-                ))}
+                )}
               </LineChart>
             </ResponsiveContainer>
           </div>
         )}
       </Card>
 
-      {/* Top Performers by Zone */}
+      {/* ── Top Performers — two-line rows ── */}
       {topPerformers.length > 0 && (
         <Card>
           <h2 className="text-base font-semibold text-gray-900 mb-4">
@@ -188,26 +303,28 @@ export default function AnalyticsClient({
               )
             ).map(([parkName, members]) => (
               <div key={parkName}>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">
+                <h3 className="text-sm font-medium text-gray-500 mb-3">
                   {parkName}
                 </h3>
-                <div className="space-y-1.5">
+                <div className="space-y-3">
                   {members.map((m, i) => (
                     <div
                       key={`${m.name}-${i}`}
-                      className="flex items-center gap-2 text-sm"
+                      className="flex items-center gap-3"
                     >
-                      <span className="w-5 text-right text-gray-400 font-medium">
+                      <span className="w-5 text-right text-gray-400 font-medium text-sm shrink-0">
                         {i + 1}.
                       </span>
-                      <span className="flex-1 truncate text-gray-900">
-                        {m.name}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {m.present + m.late}/{m.total} sessions
-                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900 truncate">
+                          {m.name}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {m.present + m.late}/{m.total} sessions
+                        </div>
+                      </div>
                       <span
-                        className={`font-semibold text-xs w-10 text-right ${rateColor(m.rate)}`}
+                        className={`font-semibold text-sm shrink-0 ${rateColor(m.rate)}`}
                       >
                         {m.rate}%
                       </span>

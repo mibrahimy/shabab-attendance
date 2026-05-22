@@ -56,84 +56,84 @@ export default function DashboardFilters({
     : parks;
 
   return (
-    <div className="flex flex-wrap items-center gap-3 mb-6">
-      {/* City */}
-      <select
-        value={cityId}
-        onChange={(e) => {
-          const newCity = e.target.value;
-          // Clearing city also clears park
-          if (!newCity) {
-            updateParams({ city: "", park: "" });
-          } else {
-            // If current park doesn't belong to new city, clear it
-            const parkStillValid = parks.some(
-              (p) => p.id === parkId && p.cityId === newCity
-            );
-            updateParams({
-              city: newCity,
-              park: parkStillValid ? parkId : "",
-            });
-          }
-        }}
-        className={selectClass}
-      >
-        <option value="">All Cities</option>
-        {cities.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </select>
+    <div className="mb-6 space-y-2">
+      {/* Dropdowns row */}
+      <div className="flex flex-wrap gap-2">
+        {/* City */}
+        <select
+          value={cityId}
+          onChange={(e) => {
+            const newCity = e.target.value;
+            if (!newCity) {
+              updateParams({ city: "", park: "" });
+            } else {
+              const parkStillValid = parks.some(
+                (p) => p.id === parkId && p.cityId === newCity
+              );
+              updateParams({
+                city: newCity,
+                park: parkStillValid ? parkId : "",
+              });
+            }
+          }}
+          className={selectClass}
+        >
+          <option value="">All Cities</option>
+          {cities.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
 
-      {/* Park */}
-      <select
-        value={parkId}
-        onChange={(e) => {
-          const newPark = e.target.value;
-          if (newPark) {
-            // Auto-select city when park is selected
-            const parkCity = parks.find((p) => p.id === newPark)?.cityId ?? "";
-            updateParams({ park: newPark, city: parkCity });
-          } else {
-            updateParams({ park: "" });
-          }
-        }}
-        className={selectClass}
-      >
-        <option value="">All Parks</option>
-        {filteredParks.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
+        {/* Park */}
+        <select
+          value={parkId}
+          onChange={(e) => {
+            const newPark = e.target.value;
+            if (newPark) {
+              const parkCity = parks.find((p) => p.id === newPark)?.cityId ?? "";
+              updateParams({ park: newPark, city: parkCity });
+            } else {
+              updateParams({ park: "" });
+            }
+          }}
+          className={selectClass}
+        >
+          <option value="">All Parks</option>
+          {filteredParks.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
 
-      {/* Event Type */}
-      <select
-        value={eventType}
-        onChange={(e) => updateParams({ type: e.target.value })}
-        className={selectClass}
-      >
-        <option value="">All Event Types</option>
-        {Object.entries(EVENT_TYPES).map(([key, { label }]) => (
-          <option key={key} value={key}>
-            {label}
-          </option>
-        ))}
-      </select>
+        {/* Event Type */}
+        <select
+          value={eventType}
+          onChange={(e) => updateParams({ type: e.target.value })}
+          className={selectClass}
+        >
+          <option value="">All Event Types</option>
+          {Object.entries(EVENT_TYPES).map(([key, { label }]) => (
+            <option key={key} value={key}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      {/* Date Range pills */}
-      <div className="flex gap-1">
+      {/* Date range pills — horizontally scrollable on mobile */}
+      <div className="flex gap-1 overflow-x-auto no-scrollbar pb-0.5">
         {DATE_RANGES.map((r) => (
           <button
             key={r.key}
             onClick={() =>
               updateParams({ range: r.key === defaultRange ? "" : r.key })
             }
-            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+            className={`shrink-0 px-3 py-1 text-xs font-medium rounded-md transition-colors ${
               range === r.key
-                ? "bg-blue-100 text-blue-700"
+                ? "bg-[var(--accent-light)] text-[var(--accent-text)]"
                 : "text-gray-500 hover:bg-gray-100"
             }`}
           >
