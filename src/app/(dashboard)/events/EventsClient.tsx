@@ -28,21 +28,55 @@ interface EventsClientProps {
   parks: ParkOption[];
 }
 
+type DateFilter = "upcoming" | "this_week" | "this_month" | "past" | "all";
+
+const DATE_FILTER_LABELS: Record<DateFilter, string> = {
+  upcoming: "Upcoming",
+  this_week: "This Week",
+  this_month: "This Month",
+  past: "Past",
+  all: "All",
+};
+
+function matchesDateFilter(date: Date, df: DateFilter): boolean {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const eventDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  switch (df) {
+    case "upcoming":
+      return eventDay >= today;
+    case "this_week": {
+      const weekOut = new Date(today);
+      weekOut.setDate(today.getDate() + 7);
+      return eventDay >= today && eventDay <= weekOut;
+    }
+    case "this_month":
+      return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+    case "past":
+      return eventDay < today;
+    case "all":
+      return true;
+  }
+}
+
 export default function EventsClient({ events, parks }: EventsClientProps) {
   const [showCreate, setShowCreate] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<EventData | null>(null);
+  const [dateFilter, setDateFilter] = useState<DateFilter>("upcoming");
   const [filter, setFilter] = useState<"all" | "scheduled" | "completed">("all");
   const [parkFilter, setParkFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
 
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {
+      if (!matchesDateFilter(new Date(e.date), dateFilter)) return false;
       if (filter !== "all" && e.status !== filter) return false;
       if (parkFilter && e.park.id !== parkFilter) return false;
       if (typeFilter && e.type !== typeFilter) return false;
       return true;
     });
-  }, [events, filter, parkFilter, typeFilter]);
+  }, [events, dateFilter, filter, parkFilter, typeFilter]);
 
   return (
     <div>
@@ -56,42 +90,62 @@ export default function EventsClient({ events, parks }: EventsClientProps) {
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        {(["all", "scheduled", "completed"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium min-h-[44px] lg:min-h-0 transition-colors ${
-              filter === f
-                ? "bg-blue-50 text-blue-700"
-                : "text-gray-500 hover:bg-gray-100"
-            }`}
-          >
-            {f.charAt(0).toUpperCase() + f.slice(1)}
-          </button>
-        ))}
+      <div className="space-y-2 mb-4">
+        {/* Date range pills */}
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+          {(Object.keys(DATE_FILTER_LABELS) as DateFilter[]).map((df) => (
+            <button
+              key={df}
+              onClick={() => setDateFilter(df)}
+              className={`shrink-0 px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                dateFilter === df
+                  ? "bg-[var(--accent-light)] text-[var(--accent-text)]"
+                  : "text-gray-500 hover:bg-gray-100"
+              }`}
+            >
+              {DATE_FILTER_LABELS[df]}
+            </button>
+          ))}
+        </div>
 
-        <div className="flex gap-2 ml-auto">
-          <select
-            value={parkFilter}
-            onChange={(e) => setParkFilter(e.target.value)}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option value="">All Parks</option>
-            {parks.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option value="">All Types</option>
-            {Object.entries(EVENT_TYPES).map(([key, val]) => (
-              <option key={key} value={key}>{val.label}</option>
-            ))}
-          </select>
+        {/* Status + dropdowns */}
+        <div className="flex flex-wrap items-center gap-2">
+          {(["all", "scheduled", "completed"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium min-h-[44px] lg:min-h-0 transition-colors ${
+                filter === f
+                  ? "bg-blue-50 text-blue-700"
+                  : "text-gray-500 hover:bg-gray-100"
+              }`}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+
+          <div className="flex gap-2 ml-auto">
+            <select
+              value={parkFilter}
+              onChange={(e) => setParkFilter(e.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="">All Parks</option>
+              {parks.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="">All Types</option>
+              {Object.entries(EVENT_TYPES).map(([key, val]) => (
+                <option key={key} value={key}>{val.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
