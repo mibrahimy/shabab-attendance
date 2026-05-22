@@ -136,6 +136,7 @@ async function DashboardContent({
           ...parkFilter,
           ...eventTypeFilter,
         },
+        take: 5,
         orderBy: { date: "asc" },
         include: { park: true },
       }),

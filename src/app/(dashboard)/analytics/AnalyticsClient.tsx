@@ -271,9 +271,10 @@ export default function AnalyticsClient({
                   <Line
                     type="monotone"
                     dataKey={selectedPark}
-                    stroke={
-                      PARK_COLORS[parkIds.indexOf(selectedPark) % PARK_COLORS.length]
-                    }
+                    stroke={(() => {
+                      const idx = parkIds.indexOf(selectedPark);
+                      return PARK_COLORS[((idx % PARK_COLORS.length) + PARK_COLORS.length) % PARK_COLORS.length];
+                    })()}
                     strokeWidth={2}
                     dot={false}
                     connectNulls

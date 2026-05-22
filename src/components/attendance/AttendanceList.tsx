@@ -62,17 +62,11 @@ export default function AttendanceList({
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasChanges]);
 
-  function toggleStatus(memberId: string) {
-    setStatuses((prev) => {
-      const current = prev[memberId];
-      const next: DisplayStatus =
-        current === "unmarked" ? "present" :
-        current === "present" ? "late" :
-        current === "late" ? "absent" :
-        current === "absent" ? "excused" :
-        "present";
-      return { ...prev, [memberId]: next };
-    });
+  function setStatus(memberId: string, newStatus: DisplayStatus) {
+    setStatuses((prev) => ({
+      ...prev,
+      [memberId]: prev[memberId] === newStatus ? "unmarked" : newStatus,
+    }));
   }
 
   const markAllPresent = useCallback(() => {
@@ -94,6 +88,10 @@ export default function AttendanceList({
       return;
     }
 
+    // Snapshot what we're about to save before the async call so the ref
+    // reflects exactly what reached the server, not whatever state the user
+    // may have set on chips while the request was in-flight.
+    const savedSnapshot = { ...statuses };
     setSaving(true);
 
     try {
@@ -110,7 +108,7 @@ export default function AttendanceList({
       }
 
       toast("Attendance saved successfully");
-      initialStatusesRef.current = { ...statuses };
+      initialStatusesRef.current = savedSnapshot;
       onDone();
     } catch {
       toast("Something went wrong", "error");
@@ -125,24 +123,31 @@ export default function AttendanceList({
   const excusedCount = Object.values(statuses).filter((s) => s === "excused").length;
   const unmarkedCount = Object.values(statuses).filter((s) => s === "unmarked").length;
 
-  const statusConfig: Record<DisplayStatus, { bg: string; text: string; label: string }> = {
-    present: { bg: "bg-green-100", text: "text-green-700", label: "Present" },
-    late: { bg: "bg-amber-100", text: "text-amber-700", label: "Late" },
-    absent: { bg: "bg-red-100", text: "text-red-700", label: "Absent" },
-    excused: { bg: "bg-yellow-100", text: "text-yellow-700", label: "Excused" },
-    unmarked: { bg: "bg-gray-100", text: "text-gray-500", label: "Unmarked" },
-  };
+  const STATUS_CHIPS: Array<{ key: Exclude<DisplayStatus, "unmarked">; label: string; activeClass: string; inactiveClass: string }> = [
+    { key: "present", label: "P", activeClass: "bg-green-500 text-white", inactiveClass: "bg-gray-100 text-gray-400" },
+    { key: "late",    label: "L", activeClass: "bg-amber-500 text-white", inactiveClass: "bg-gray-100 text-gray-400" },
+    { key: "absent",  label: "A", activeClass: "bg-red-500 text-white",   inactiveClass: "bg-gray-100 text-gray-400" },
+    { key: "excused", label: "E", activeClass: "bg-yellow-500 text-white", inactiveClass: "bg-gray-100 text-gray-400" },
+  ];
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <div className="text-sm text-gray-600 space-x-2">
-          <span className="text-green-700">{presentCount}P</span>
-          <span className="text-amber-700">{lateCount}L</span>
-          <span className="text-red-700">{absentCount}A</span>
-          <span className="text-yellow-700">{excusedCount}E</span>
+      <div className="flex items-center justify-between mb-4 gap-3">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {presentCount > 0 && (
+            <span className="text-xs bg-green-100 text-green-700 font-medium px-2 py-0.5 rounded-full">{presentCount} Present</span>
+          )}
+          {lateCount > 0 && (
+            <span className="text-xs bg-amber-100 text-amber-700 font-medium px-2 py-0.5 rounded-full">{lateCount} Late</span>
+          )}
+          {absentCount > 0 && (
+            <span className="text-xs bg-red-100 text-red-700 font-medium px-2 py-0.5 rounded-full">{absentCount} Absent</span>
+          )}
+          {excusedCount > 0 && (
+            <span className="text-xs bg-yellow-100 text-yellow-700 font-medium px-2 py-0.5 rounded-full">{excusedCount} Excused</span>
+          )}
           {unmarkedCount > 0 && (
-            <span className="text-gray-500">{unmarkedCount} unmarked</span>
+            <span className="text-xs text-gray-400 font-medium">{unmarkedCount} unmarked</span>
           )}
         </div>
         <Button variant="secondary" size="sm" onClick={markAllPresent}>
@@ -153,30 +158,37 @@ export default function AttendanceList({
       <div className="space-y-1">
         {members.map((member) => {
           const status = statuses[member.id];
-          const config = statusConfig[status];
           return (
-            <button
+            <div
               key={member.id}
-              type="button"
-              onClick={() => toggleStatus(member.id)}
-              className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-50 transition-all duration-150 min-h-[52px] active:scale-[0.98]"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md min-h-[52px]"
             >
-              <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-medium shrink-0">
+              <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-xs font-medium shrink-0">
                 {getInitials(member.name)}
               </div>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-medium text-gray-900">{member.name}</p>
-                <p className="text-xs text-gray-500">
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">{member.name}</p>
+                <p className="text-xs text-gray-500 truncate">
                   {member.positionLabel}
                   {member.classAssignment && ` · ${member.classAssignment}`}
                 </p>
               </div>
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-medium min-w-[72px] text-center transition-colors duration-150 ${config.bg} ${config.text}`}
-              >
-                {config.label}
-              </span>
-            </button>
+              <div className="flex items-center gap-1 shrink-0">
+                {STATUS_CHIPS.map((chip) => (
+                  <button
+                    key={chip.key}
+                    type="button"
+                    aria-label={chip.key}
+                    onClick={() => setStatus(member.id, chip.key)}
+                    className={`w-8 h-8 rounded-md text-xs font-semibold transition-colors duration-100 active:scale-90 ${
+                      status === chip.key ? chip.activeClass : chip.inactiveClass
+                    }`}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           );
         })}
       </div>
