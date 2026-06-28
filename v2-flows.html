@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>v2 — Admin &amp; Provisioning Flows</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:#f0f2f5; color:#1a1a2e; padding:32px 24px; }
+    h1 { font-size:1.8rem; font-weight:700; margin-bottom:6px; }
+    .subtitle { color:#6b7280; font-size:0.95rem; margin-bottom:14px; }
+    .pill { display:inline-block; font-size:0.72rem; font-weight:600; padding:3px 10px; border-radius:20px; background:#ede9fe; color:#5b21b6; margin-bottom:32px; }
+    .section { background:#fff; border-radius:12px; padding:28px 32px; margin-bottom:28px; box-shadow:0 1px 4px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04); }
+    .section h2 { font-size:1.05rem; font-weight:600; margin-bottom:8px; display:flex; align-items:center; gap:10px; }
+    .section h2 .num { width:26px; height:26px; border-radius:7px; background:#6366f1; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:0.8rem; flex-shrink:0; }
+    .section .lead { color:#6b7280; font-size:0.88rem; margin-bottom:20px; line-height:1.5; }
+    .mermaid { overflow-x:auto; }
+    table { border-collapse:collapse; width:100%; font-size:0.85rem; margin-top:4px; }
+    th { text-align:left; padding:8px 12px; background:#f9fafb; color:#374151; font-weight:600; border-bottom:2px solid #e5e7eb; }
+    td { padding:8px 12px; border-bottom:1px solid #f3f4f6; color:#374151; vertical-align:top; }
+    tr:last-child td { border-bottom:none; }
+    code { background:#f3f4f6; border-radius:4px; padding:1px 5px; font-size:0.82rem; font-family:"SF Mono", monospace; }
+    .note { margin-top:18px; padding:14px 18px; background:#fffbeb; border-left:3px solid #f59e0b; border-radius:6px; font-size:0.85rem; color:#78350f; line-height:1.55; }
+    .note strong { color:#92400e; }
+    .open { background:#eff6ff; border-left-color:#3b82f6; color:#1e3a8a; }
+    .open strong { color:#1e40af; }
+    .tag { display:inline-block; font-size:0.66rem; font-weight:700; padding:1px 7px; border-radius:5px; letter-spacing:0.03em; }
+    .lean { background:#dcfce7; color:#166534; }
+    .tbd  { background:#fef9c3; color:#854d0e; }
+  </style>
+</head>
+<body>
+
+<h1>v2 — Flows</h1>
+<p class="subtitle">Provisioning, onboarding, and everyday attendance. Companion to <code>target-architecture.html</code>.</p>
+<span class="pill">PLANNING ARTIFACT · no code written</span>
+
+<!-- ROLE MAP -->
+<div class="section">
+  <h2><span class="num">0</span> Roles in terms of the data model</h2>
+  <p class="lead">Every provisioning action below is just "create an <code>OrgNode</code>" or "create an <code>Assignment</code>." Nothing new in the model.</p>
+  <table>
+    <tr><th>Role</th><th>= in the model</th><th>Anchored at</th><th>Scope</th></tr>
+    <tr><td><strong>Superadmin</strong></td><td>Person + User + Assignment(<em>Super Admin</em>)</td><td>global root</td><td>global — countries, cities, provision city admins</td></tr>
+    <tr><td><strong>City admin</strong></td><td>Person + User + Assignment(<em>City Admin</em>)</td><td>city node</td><td>that city — hierarchy + people</td></tr>
+    <tr><td><strong>Role holders</strong></td><td>Person + User? + Assignment(<em>role</em>)</td><td>their node</td><td>subtree × function</td></tr>
+    <tr><td><strong>Students</strong></td><td>Person + Assignment(<em>Student</em>)</td><td>Class node</td><td>none (no login)</td></tr>
+  </table>
+</div>
+
+<!-- CASCADE + BOOTSTRAP -->
+<div class="section">
+  <h2><span class="num">1</span> The onboarding cascade — start to members</h2>
+  <p class="lead">Each level creates the next. Only the first account is seeded outside the app; everything below is in-app.</p>
+  <div class="mermaid">
+flowchart LR
+    SEED["① Seed (one-time)\nglobal root + first Superadmin"] --> SUP["② Superadmin\nadds Countries &amp; Cities"]
+    SUP --> CITY["③ City + its City Admin\n(provisioned together)"]
+    CITY --> HIER["④ City Admin\nbuilds Hierarchy"]
+    HIER --> MEM["⑤ Members added\nstaff (accounts) + students (profile-only)"]
+  </div>
+  <div class="note"><strong>Stage 0 — bootstrap:</strong> a one-time <code>seed</code> script creates the <strong>global root</strong> <code>OrgNode</code> + the <strong>first Superadmin</strong> (Person + User + Assignment @ global root; CNIC + initial password from env). The only account ever created outside the app.</div>
+</div>
+
+<!-- FLOW 1 -->
+<div class="section">
+  <h2><span class="num">2</span> Superadmin adds Countries &amp; Cities <span style="font-size:0.7rem;font-weight:500;color:#9ca3af">— city + its admin together</span></h2>
+  <p class="lead">Superadmin holds a global-root position. Creating a city also provisions that city's admin account inline — one separate account per city, no orphan cities. (More city admins can be added later.)</p>
+  <div class="mermaid">
+flowchart TD
+    SA["Superadmin\n(Assignment @ global root, global perms)"] --> P1["Countries &amp; Cities page"]
+    P1 --> CC["Create Country\n→ OrgNode type=Country (under global root)"]
+    P1 --> CY["Create City\n→ OrgNode type=City (under a Country)"]
+    CY --> CA["Provision City Admin (inline)\nenter name + CNIC + phone →\nPerson + User + Assignment(City Admin @ city)"]
+    CA --> TMP["Random temp password (superadmin shares)"]
+    TMP --> READY["City ready — admin logs in (city-scoped),\nforced password change on first login"]
+  </div>
+</div>
+
+<!-- FLOW 2 -->
+<div class="section">
+  <h2><span class="num">3</span> City admin defines the hierarchy <span style="font-size:0.7rem;font-weight:500;color:#9ca3af">— separate page</span></h2>
+  <p class="lead">A dedicated Hierarchy page. The city admin builds their own tree (dynamic depth, per-city), optionally seeded from a template.</p>
+  <div class="mermaid">
+flowchart TD
+    CADM["City Admin\n(Assignment @ city node, city perms)"] --> HP["Hierarchy page"]
+    HP --> TPL{"Start from a template?"}
+    TPL -->|yes| SEED["Seed levels: Zone → Sector → Park → Class\n(default NodeTypes)"]
+    TPL -->|blank| DEF["Define NodeTypes (level names + order)\nper this city"]
+    SEED & DEF --> BUILD["Build the tree:\nadd Zones · Sectors · Parks · Classes\n→ OrgNode rows; path + depth computed"]
+    BUILD --> SAVE["Saved — city's structural tree exists"]
+  </div>
+  <div class="note">People attach at the lowest node (<strong>Class/Halqa</strong>). Levels are <code>NodeType</code> rows (data, not schema) — adding a level above Zone is just another node type.</div>
+</div>
+
+<!-- FLOW 3 -->
+<div class="section">
+  <h2><span class="num">4</span> Adding members — two paths</h2>
+  <p class="lead">A member enters either by <strong>self-service</strong> (two public forms — <strong>Team registration</strong> or <strong>Shabab apply</strong>, both need approval) or by <strong>direct add</strong> (an admin/role-holder enters them — trusted, no approval). Staff get accounts; students are profile-only. Who can add is permission-driven, not only the city admin.</p>
+  <div class="mermaid">
+flowchart TD
+    subgraph A["Path A — self-service (needs approval)"]
+      PUB["PUBLIC registration form (no auth)\nname · CNIC* · phone · segment · requested city"] --> REQ["Person · status = pending"]
+      REQ --> QUEUE["Approvals queue\ncity admin (that city) · superadmin (any)"]
+      QUEUE --> REVA{"Approve?"}
+      REVA -->|reject| REJ["status = rejected (notes)"]
+      REVA -->|approve| PLACEA["Place Position @ node · status = active"]
+    end
+    subgraph B["Path B — direct add (no approval)"]
+      ADDER["City admin / any role-holder\nwith add_member (within their subtree)"] --> KIND{"Staff or student?"}
+      KIND -->|student| STU["Person + Assignment(Student @ Class)\nprofile only · bulk import OK"]
+      KIND -->|staff| PLACEB["Person + Assignment(role @ node)\nstatus = active immediately"]
+    end
+    PLACEA --> ACCT["Staff → create User\nusername = CNIC · random temp password"]
+    PLACEB --> ACCT
+    ACCT --> LOGIN["Login → forced password change\n→ role's scoped permissions active"]
+  </div>
+  <div class="note"><strong>Who can add:</strong> <code>add_member</code> is scoped to one's subtree — the city admin is the broadest case, but a <strong>Park Admin can add murabbis/students in their own park</strong> if granted. Direct-add is trusted (the adder vouches) so staff accounts activate immediately; only the public form needs approval.</div>
+  <div class="note"><strong>Students:</strong> profile-only, no account, no CNIC required, bulk-importable. <strong>Account policy</strong> (either path): username = <code>CNIC</code> · random temp password (≥12 chars, mixed) · bcrypt · forced change on first login.</div>
+
+  <h3 style="font-size:0.85rem;color:#6366f1;margin:26px 0 10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Shabab application → interview → placement</h3>
+  <p class="lead" style="margin-bottom:12px">The public surface is <strong>two forms</strong>: <strong>Team registration</strong> (staff → account) and <strong>Shabab apply</strong> (a youth/guardian → student profile). Shabab apply is profile-only, runs through approval into the park's <strong>unassigned pool</strong>, gets an <strong>interview</strong> stored on their profile, then a murabbi picks them into a class.</p>
+  <div class="mermaid">
+flowchart LR
+    APPLY["PUBLIC apply form (no auth)\nname · phone/WhatsApp · segment · DOB · city + park · guardian\n☑ WhatsApp consent"] --> PEND["Person · status = pending"]
+    PEND --> WA1>"WhatsApp template:\n&quot;application received&quot;"]
+    PEND --> AQ["Approvals queue (city)"]
+    AQ --> REV{"Approve?"}
+    REV -->|reject| RJ["status = rejected"]
+    REV -->|approve| POOL["Student @ Park · unassigned pool\nstatus = active (profile only)"]
+    POOL --> WA2>"WhatsApp template:\n&quot;enrolled — murabbi will reach out&quot;"]
+    POOL --> INT["Interview form filled\n(park admin / interviewer · conduct_interview)\nstored on profile"]
+    INT --> SLOT["Murabbi / park admin\nassigns to a Class"]
+    SLOT --> VIS["Assigned Murabbi can view the\ninterview on the student's profile"]
+  </div>
+  <div class="note"><strong>Two public routes:</strong> <code>/register/team</code> (CNIC required → account on approval) and <code>/apply</code> (shabab, CNIC optional → profile only). Both land in the same <code>pending</code> approvals pipeline; they differ only in form fields and whether a <code>User</code> is minted.</div>
+  <div class="note"><strong>WhatsApp (Meta Cloud API):</strong> business-initiated messages must be <strong>pre-approved templates</strong> — fire on shabab <em>submit</em> (<code>application_received</code>) and on <em>approval</em> (<code>enrollment_approved</code>). Sent via a <code>NotificationService</code> → thin <code>WhatsAppClient</code> in <code>server/integrations/</code> (never inline in a route); phone normalized to E.164, consent captured on the form.</div>
+  <div class="note"><strong>Interview form:</strong> a structured questionnaire + free notes, stored as a <code>FormResponse</code> against the <code>Person</code> (history kept; latest canonical). Filled during intake by a holder of <code>conduct_interview</code> (subtree-scoped). <strong>Visibility</strong> follows the one rule: a role-holder sees it iff the student's Class assignment is in their subtree — so the <strong>assigned Murabbi</strong> sees it the moment the student is slotted into their class.</div>
+  <div class="note"><strong>Forms are configurable — the city admin owns the questions.</strong> Interview <em>and</em> the 4-week Evaluation share ONE engine: a <code>FormTemplate</code> (per city · <code>kind = interview | evaluation</code>) holding ordered <code>FormQuestion</code>s. Each question = a <strong>1–5 score (MCQ)</strong> + a <strong>per-question comment box</strong> for the interviewer/murabbi's feedback. Filling one writes a <code>FormResponse</code> (person · evaluator · cycle) with a <code>FormAnswer</code> per question (<code>score 1–5</code> + <code>comment</code>). The question text + scale are <strong>snapshotted onto each answer</strong> → editing/removing a question never rewrites past responses; the progress trend stays aligned by stable <code>questionId</code>. Overall = average of items (raw kept) + optional summary comment. City admin edits these on a <strong>Forms</strong> page.</div>
+</div>
+
+<!-- EVERYDAY -->
+<div class="section">
+  <h2><span class="num">5</span> Everyday attendance — mark your slice</h2>
+  <p class="lead">The day-to-day loop for any role-holder, scoped by the one permission rule. On login the landing shows <strong>today's events</strong> — what needs marking now — not future ones.</p>
+  <div class="mermaid">
+flowchart LR
+    LOGIN["Login (CNIC + password)"] --> DASH["Landing: TODAY's events\n(not future)"]
+    DASH --> PICK["Pick event"]
+    PICK --> SLICE["Roster = event roster ∩ MY scope\n(my slice)"]
+    SLICE --> MARK["Mark — default ABSENT →\nflip present / late / excused"]
+    MARK --> SAVE["Save (markedById = me)"]
+    SAVE --> REP["Report: counts · rate · per-person"]
+  </div>
+  <div class="note"><strong>Landing = today.</strong> A Murabbi logs in to mark today's class, so the dashboard surfaces today's events. Future/past events live on the Events page (filter by date · function · status) — not the landing focus.</div>
+
+  <h3 style="font-size:0.85rem;color:#6366f1;margin:22px 0 10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">The slice mechanic</h3>
+  <p class="lead" style="margin-bottom:12px">The roster <em>you</em> mark = the event roster ∩ <em>your</em> scope. Same event, different slice per marker; the event's attendance is the <strong>union</strong>. Falls straight out of "you can only mark people in your subtree."</p>
+  <table>
+    <tr><th>Who logs in (a park-wide class event)</th><th>Slice they mark</th></tr>
+    <tr><td>Murabbi of Class A</td><td>Class A's students</td></tr>
+    <tr><td>Murabbi of Class B</td><td>Class B's students</td></tr>
+    <tr><td>Park Admin (scope = whole park)</td><td>all students — can fill gaps</td></tr>
+  </table>
+  <div class="note">A progress indicator (<em>"X of Y slices marked"</em>) lets a higher role see which classes are done. No one steps on anyone else.</div>
+
+  <div class="note"><strong>Marking UX:</strong> default everyone <strong>ABSENT</strong> (record who showed up); "mark all present" available; optional reason on excused/override (<code>overrideReason</code>); <strong>warn — not block —</strong> on completed/cancelled. <strong>Storage:</strong> on save, write an explicit <code>Attendance</code> row for every person in the slice, so "taken &amp; all absent" ≠ "not taken yet". <code>markedById</code> = the marker.</div>
+
+  <div class="note"><strong>Event creation</strong> (anyone with <code>create_event</code>, scoped): anchor (defaults to your node) · depth (default 1) · audience (segment + target position) · date/time · program/function. Park Admin → park-wide; Murabbi → their class.</div>
+
+  <h3 style="font-size:0.85rem;color:#6366f1;margin:26px 0 10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Periodic — 4-week shabab evaluations &amp; progress</h3>
+  <p class="lead" style="margin-bottom:12px">Beyond daily marking, each <strong>Murabbi evaluates every shabab in their class on a 4-week cadence</strong>. The system surfaces an evaluation as <strong>due</strong> per student once 4 weeks have elapsed (from enrollment, then from the last evaluation) and lists it on the murabbi's dashboard next to today's events. Cycles accumulate into a <strong>progress view</strong> the murabbi and everyone above can read.</p>
+  <div class="mermaid">
+flowchart LR
+    ENR["Shabab enrolled in class (t0)"] --> CYC["Every 4 weeks\n→ Evaluation DUE per student"]
+    CYC --> DASH2["Murabbi dashboard:\n'N evaluations due'"]
+    DASH2 --> FILL["Murabbi fills Evaluation\n(rubric scores + notes)"]
+    FILL --> STORE["Stored on student profile\n(one row per cycle)"]
+    STORE --> PROG["Progress view: score trend\n+ attendance trend over the course"]
+    STORE --> CYC
+  </div>
+  <div class="note"><strong>Evaluation record</strong> per <em>(student × cycle)</em>: a <code>FormResponse</code> (<code>kind = evaluation</code>) with <code>evaluatorId</code> = the murabbi, <code>FormAnswer</code>s (1–5 score + comment per question), <code>status: due → submitted</code>, anchored cycle number + due date. Uses the SAME configurable <code>FormTemplate</code> engine as the interview (see Forms note above); one-time intake and recurring evaluation both hang off <code>Person</code>.</div>
+  <div class="note"><strong>Who can see it (read up the tree):</strong> the assigned <strong>Murabbi</strong> <em>and the whole hierarchy above</em> (park → sector → zone → city admin) can view each shabab's evaluations and <strong>progress over the course</strong> — same subtree rule pointed upward, breadth = how high you sit (<code>view_evaluation</code>). The <strong>progress view</strong> is a per-student timeline: rubric scores across the 4-week cycles plus the attendance trend for the same course.</div>
+  <div class="note"><strong>Open decision — what "4 weeks" counts:</strong> calendar weeks from enrollment (simplest, recommended; cycle length configurable per city/program) <em>vs.</em> 4 weeks of <em>held</em> classes (attendance-driven, more accurate but heavier). Defaulting to calendar-anchored unless you want session-counted.</div>
+</div>
+
+<!-- PAGES -->
+<div class="section">
+  <h2><span class="num">6</span> Page map</h2>
+  <table>
+    <tr><th>Who</th><th>Pages</th></tr>
+    <tr><td><strong>Public (no login)</strong></td><td><strong>Team registration</strong> (<code>/register/team</code>) · <strong>Shabab apply</strong> (<code>/apply</code>) — both → approval queue</td></tr>
+    <tr><td><strong>Superadmin</strong></td><td>Countries &amp; Cities · (global) Positions &amp; Permissions catalog · <strong>Approvals</strong> (all cities)</td></tr>
+    <tr><td><strong>City admin</strong></td><td><strong>Hierarchy</strong> (builder) · People &amp; Roles (add / attach persons) · <strong>Approvals</strong> (their city) · <strong>Forms</strong> (interview/evaluation question sets) · City dashboard</td></tr>
+    <tr><td><strong>Role holders</strong></td><td>Scoped dashboard (today's events + <strong>evaluations due</strong>) · Attendance · <strong>student profiles</strong> (interview + evaluation <strong>progress</strong>, within subtree) · <strong>interview / evaluation forms</strong> (if granted) · add members in subtree (if granted)</td></tr>
+  </table>
+</div>
+
+<!-- DECISIONS (SETTLED) -->
+<div class="section">
+  <h2><span class="num">7</span> Decisions <span class="tag lean" style="font-size:0.66rem">SETTLED</span></h2>
+  <table>
+    <tr><th>#</th><th>Decision</th><th>Resolution</th></tr>
+    <tr><td>0</td><td><strong>First superadmin (bootstrap)</strong></td><td>Created once by a <code>seed</code> script (global root + Superadmin, CNIC + password from env). Only account made outside the app.</td></tr>
+    <tr><td>F</td><td><strong>Adding a city</strong></td><td>Provisions the city's first <strong>City Admin inline</strong> (name + CNIC + phone → account + temp password). No orphan cities; more admins addable later.</td></tr>
+    <tr><td>G</td><td><strong>Member entry paths</strong></td><td><strong>Both:</strong> public self-service (→ approval) <em>and</em> admin/role-holder <strong>direct add</strong> (trusted → staff active immediately).</td></tr>
+    <tr><td>H</td><td><strong>Who can add members</strong></td><td><code>add_member</code> is <strong>permission-driven, subtree-scoped</strong> — not only the city admin; e.g. a Park Admin can add in their own park.</td></tr>
+    <tr><td>A</td><td><strong>Which roles get login accounts?</strong></td><td>Staff/leadership get accounts. <strong>Students = profile-only</strong> (no login), added individually or in bulk.</td></tr>
+    <tr><td>B</td><td><strong>Credentials</strong></td><td>Admin generates a <strong>random temp password</strong> — min 12 chars · upper+lower+digit+symbol · bcrypt · <strong>forced change on first login</strong>. No email service; credentials shared directly.</td></tr>
+    <tr><td>C</td><td><strong>Hierarchy bootstrap</strong></td><td>Default template (<code>Zone → Sector → Park → Class</code>) + full per-city customization.</td></tr>
+    <tr><td>D</td><td><strong>Profile + activation</strong></td><td><strong>Public</strong> registration form (anyone) → request → city admin/superadmin <strong>approves</strong> &amp; places on a role → account created → login. Status: <code>pending → active / rejected</code>.</td></tr>
+    <tr><td>E</td><td><strong>Identity / username</strong></td><td><strong>CNIC</strong> — nullable, unique where set; <strong>required for account-holders</strong> as the <strong>login username</strong> (replaces email; email = optional contact). Students may omit it (no login). Doubles as the dedup/identity key.</td></tr>
+    <tr><td>I</td><td><strong>Landing on login</strong></td><td><strong>Today's events</strong> (not future). Future/past behind a filter on the Events page.</td></tr>
+    <tr><td>J</td><td><strong>Marking default</strong></td><td><strong>Everyone ABSENT</strong>; "mark all present" available. On save, an explicit <code>Attendance</code> row per person in the slice (so taken-&amp;-all-absent ≠ not-taken).</td></tr>
+    <tr><td>K</td><td><strong>Slice / collaborative marking</strong></td><td>Roster = event roster ∩ marker's scope; an event's attendance = <strong>union</strong> across markers; progress indicator shows slices done.</td></tr>
+    <tr><td>L</td><td><strong>Event creation &amp; edit window</strong></td><td><code>create_event</code> permission-driven, scoped (anchor defaults to creator's node). Attendance stays <strong>editable</strong>; warn-not-block on completed/cancelled; <strong>no hard lock</strong> (v1).</td></tr>
+    <tr><td>M</td><td><strong>Two public intake forms</strong></td><td><strong>Team registration</strong> (<code>/register/team</code>, CNIC req → account) and <strong>Shabab apply</strong> (<code>/apply</code>, CNIC optional → profile only). Both feed the same <code>pending</code> approvals queue. Shabab approve → <strong>park unassigned pool</strong>, murabbi slots into a class.</td></tr>
+    <tr><td>N</td><td><strong>WhatsApp notifications</strong></td><td><strong>Meta Cloud API (direct)</strong>, pre-approved <strong>templates</strong>. Fire on shabab <em>submit</em> + <em>approval</em>. <code>NotificationService</code> → <code>WhatsAppClient</code> in <code>server/integrations/</code>; E.164 phone; consent checkbox on the form.</td></tr>
+    <tr><td>O</td><td><strong>Interview form (intake)</strong></td><td>One-time structured form stored on the <code>Person</code> (history kept). Filled by <code>conduct_interview</code> holder during intake. Visible to the assigned Murabbi (and up the subtree) once the student is in their class.</td></tr>
+    <tr><td>P</td><td><strong>Shabab evaluations (periodic)</strong></td><td><strong>4-week cadence</strong>, one response per student per cycle by their Murabbi; surfaced as <em>due</em> on the dashboard. Murabbi <strong>+ all ancestors</strong> see evaluations &amp; a <strong>progress view</strong> (score trend + attendance) via <code>view_evaluation</code>. Open: calendar-weeks vs held-classes for the cadence.</td></tr>
+    <tr><td>Q</td><td><strong>Configurable scored forms</strong></td><td>City admin defines/edits the Interview &amp; Evaluation question sets (<code>FormTemplate</code> per city per kind). Each question = <strong>1–5 score (MCQ) + comment box</strong>. <code>FormResponse</code> snapshots question text → editing questions never alters history; progress aligns by <code>questionId</code>. Overall = average of items (raw kept) + optional summary comment.</td></tr>
+  </table>
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad:true, theme:"default", flowchart:{ curve:"basis", padding:16, nodeSpacing:45, rankSpacing:50 },
+    themeVariables:{ primaryColor:"#e0e7ff", primaryTextColor:"#1e1b4b", primaryBorderColor:"#6366f1", lineColor:"#6366f1" } });
+</script>
+</body>
+</html>

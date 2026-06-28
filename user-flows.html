@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Shabab Attendance — User Flow Diagrams</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      padding: 32px 24px;
+    }
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #1a1a2e;
+    }
+    .subtitle {
+      color: #6b7280;
+      font-size: 0.95rem;
+      margin-bottom: 40px;
+    }
+    .section {
+      background: #fff;
+      border-radius: 12px;
+      padding: 28px 32px;
+      margin-bottom: 28px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+    }
+    .section h2 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .badge-all    { background: #e0f2fe; color: #0369a1; }
+    .badge-admin  { background: #fce7f3; color: #9d174d; }
+    .badge-mgr    { background: #fef3c7; color: #92400e; }
+    .mermaid { overflow-x: auto; }
+
+    /* role legend */
+    .legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 32px;
+      padding: 16px 20px;
+      background: #fff;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      font-size: 0.85rem;
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot-sa  { background: #7c3aed; }
+    .dot-adm { background: #db2777; }
+    .dot-mgr { background: #d97706; }
+    .dot-tch { background: #059669; }
+  </style>
+</head>
+<body>
+
+<h1>Shabab Attendance — User Flows</h1>
+<p class="subtitle">Role-by-role flows across all pages. Generated from source code.</p>
+
+<div class="legend">
+  <strong>Role key:</strong>
+  <span class="legend-item"><span class="legend-dot dot-sa"></span> super_admin — full access + manage super_admins</span>
+  <span class="legend-item"><span class="legend-dot dot-adm"></span> admin — full access</span>
+  <span class="legend-item"><span class="legend-dot dot-mgr"></span> park manager (teacher + canManageTeam) — parks-scoped write access</span>
+  <span class="legend-item"><span class="legend-dot dot-tch"></span> teacher — read-only/sub-tree only</span>
+</div>
+
+<!-- ── 1. AUTH ──────────────────────────────────────────────────────────── -->
+<div class="section">
+  <h2>1. Authentication &amp; Route Access <span class="badge badge-all">All roles</span></h2>
+  <div class="mermaid">
+flowchart TD
+    Visit(["User visits any URL"]) --> MW{"Middleware\nJWT cookie valid?"}
+    MW -->|"No / expired"| Login["/login"]
+    MW -->|Valid| Check{"User\nrole?"}
+
+    Login --> Form["Enter email + password"]
+    Form --> Act{"login()"}
+    Act -->|"User not found\nor wrong password"| E1["⚠ Invalid email or password"]
+    Act -->|"isActive = false"| E2["⚠ Account deactivated — contact admin"]
+    Act -->|Success| JWT["Set JWT cookie (7 days)"]
+    JWT --> Dashboard["/dashboard"]
+    E1 & E2 --> Form
+
+    Check -->|"super_admin\nor admin"| AR["All routes + Users page"]
+    Check -->|"teacher +\ncanManageTeam"| MR["Dashboard · Team · Events\nAttendance · Analytics · Parks (own)"]
+    Check -->|"teacher"| TR["Dashboard · Team · Events\nAttendance\n(sub-tree scoped)"]
+
+    AR & MR & TR --> Dashboard
+
+    Dashboard --> Logout["Logout"]
+    Logout --> Clear["Clear JWT cookie"]
+    Clear --> Login
+  </div>
+</div>
+
+<!-- ── 2. DASHBOARD ─────────────────────────────────────────────────────── -->
+<div class="section">
+  <h2>2. Dashboard <span class="badge badge-all">All roles</span></h2>
+  <div class="mermaid">
+flowchart TD
+    DB["/dashboard"] --> Scope{"Role scope"}
+    Scope -->|Admin| All["All parks"]
+    Scope -->|Park manager| Pk["Managed parks only"]
+    Scope -->|Teacher| Sub["Sub-tree only"]
+
+    All & Pk & Sub --> Content
+
+    subgraph Content["Page content"]
+        Filters["URL filters: city · park · event type · date range"]
+        Stats["Stat cards"]
+        UE["Upcoming events (next 7 days)"]
+        RA["Recent activity (last 10 attendance records)"]
+    end
+
+    Stats --> S1["Total Members → /team"]
+    Stats --> S2["Active Events → /events"]
+    Stats --> S3["Attendance Rate → /attendance"]
+    Stats --> S4["Parks → /parks"]
+
+    UE --> ELink["Click event → /attendance?eventId=X"]
+
+    DB --> Denied{"?denied=1\nin URL?"}
+    Denied -->|Yes| DN["⚠ DeniedNotice shown\n(redirected from restricted page)"]
+  </div>
+</div>
+
+<!-- ── 3. EVENTS ────────────────────────────────────────────────────────── -->
+<div class="section">
+  <h2>3. Events <span class="badge badge-all">All roles</span></h2>
+  <div class="mermaid">
+flowchart TD
+    EV["/events"] --> Scope{"Role scope"}
+    Scope -->|Admin| AE["All events"]
+    Scope -->|Park manager| PE["Events in managed parks"]
+    Scope -->|Teacher| TE["Events in sub-tree parks\n(empty if no parks)"]
+
+    AE & PE & TE --> Grid["Event card grid"]
+
+    Grid --> CF["Client filters\nDate range · Status · Park · Type"]
+    CF --> Grid
+
+    Grid --> CreateBtn["+ Create Event\n(all authenticated users)"]
+    CreateBtn --> CM["CreateEventModal"]
+    CM --> CForm["Name · Type · Date · Start/End time\nPark · isRecurring\n[End date if type = camp]"]
+    CForm --> CS{"Submit"}
+    CS -->|Success| EAdded["Event added to grid"]
+    CS -->|Error| CErr["⚠ Error shown"]
+
+    Grid --> Click["Click event card"]
+    Click --> DM["EventDetailModal"]
+
+    DM --> Edit["Edit fields\nName · Type · Date · Times · Park · isRecurring"]
+    Edit --> ES{"Save"}
+    ES -->|Success| EU["Event updated"]
+
+    DM --> Status["Change status"]
+    Status --> S1["scheduled"]
+    Status --> S2["completed"]
+    Status --> S3["cancelled"]
+
+    DM --> Del["Delete Event"]
+    Del --> CD{"Confirm?"}
+    CD -->|Yes| DA["Delete event +\nall attendance records"]
+    CD -->|No| DM
+  </div>
+</div>
+
+<!-- ── 4. ATTENDANCE ────────────────────────────────────────────────────── -->
+<div class="section">
+  <h2>4. Attendance <span class="badge badge-all">All roles</span></h2>
+  <div class="mermaid">
+flowchart TD
+    AT["/attendance\n(or /attendance?eventId=X)"] --> Scope{"Role scope"}
+    Scope -->|Admin| AA["All events"]
+    Scope -->|Park manager| PA["Events in managed parks"]
+    Scope -->|Teacher| TA["Events in sub-tree parks\n(empty if no parks)"]
+
+    AA & PA & TA --> EGrid["Event grid\nFilters: status · park · type"]
+
+    EGrid --> Sel["Select event\n(auto-selects if ?eventId param present)"]
+    Sel --> Warn{"Event\nstatus?"}
+    Warn -->|"completed\nor cancelled"| WB["⚠ Warning banner"]
+    Warn -->|scheduled| Tabs
+    WB --> Tabs
+
+    subgraph Tabs["Two-tab view"]
+        MT["Mark tab"] --> ML["Member list\n(all members in event's park)"]
+        ML --> MS["Mark each: Present · Late · Absent · Excused"]
+        MS --> Sub{"Submit"}
+        Sub -->|Admin| SA["Save all members"]
+        Sub -->|Park manager| SP["Save own-park members only"]
+        Sub -->|Teacher| ST["Save sub-tree members only"]
+
+        RT["Report tab"] --> RS["Per-member status\n+ Summary counts + attendance rate"]
+    end
+
+    SA & SP & ST --> Done["Attendance saved"]
+
+    AT --> ExBtn{"Export button\nsuper_admin · desktop only"}
+    ExBtn --> XLSX["GET /api/attendance/export\n→ download .xlsx"]
+  </div>
+</div>
+
+<!-- ── 5. TEAM ──────────────────────────────────────────────────────────── -->
+<div class="section">
+  <h2>5. Team <span class="badge badge-all">All roles</span></h2>
+  <div class="mermaid">
+flowchart TD
+    TM["/team"] --> Scope{"Role scope"}
+    Scope -->|Admin| AM["All members (full tree)"]
+    Scope -->|Park manager| PM["Members in managed park(s)"]
+    Scope -->|Teacher| TM2["Sub-tree members\n(empty if no sub-tree)"]
+
+    AM & PM & TM2 --> Tree["Hierarchical member table\n(collapse / expand rows)"]
+    Tree --> TF["Filters: zone · position · park · text search"]
+
+    Tree --> CMCheck{"canManageMembers?\n(admin OR park manager)"}
+    CMCheck -->|Yes| AddBtn["+ Add Member"]
+    AddBtn --> AF["Name · phone · position · park\nparent · isTeaching · classAssignment · canManageTeam"]
+    AF --> AScope{"Role"}
+    AScope -->|Admin| AA["Any park, any parent"]
+    AScope -->|Park manager| AP["Must assign to managed park"]
+    AScope -->|Teacher| AT["Must specify parentId\nwithin own sub-tree"]
+    AA & AP & AT --> Saved["Member added"]
+
+    Tree --> ClickRow["Click member row"]
+    ClickRow --> MD["MemberDetail modal\nName · phone · position · park · parent · class · linked user email"]
+
+    MD --> EditCheck{"canManageMembers\nor target in sub-tree?"}
+    EditCheck -->|Yes| EF["Edit fields"]
+    EF --> ES{"Save"}
+    ES -->|Cycle detected| CE["⚠ Parent change would create cycle"]
+    ES -->|Not in sub-tree| AE["⚠ Not authorized"]
+    ES -->|OK| EU["Member updated"]
+
+    MD --> DelCheck{"Admin or park manager\nof that member's park?"}
+    DelCheck -->|Yes| TC{"isTeaching\n= true?"}
+    TC -->|Yes| DB["⚠ Must unassign class first"]
+    TC -->|No| Conf{"Confirm?"}
+    Conf -->|Yes| Del["Delete member\n(children re-parented to deleted member's parent,\nattendance records deleted)"]
+    Conf -->|No| MD
+  </div>
+</div>
+
+<!-- ── 6. USERS ─────────────────────────────────────────────────────────── -->
+<div class="section">
+  <h2>6. Users <span class="badge badge-admin">Admin only</span></h2>
+  <div class="mermaid">
+flowchart TD
+    USR["/users"] --> Gate{"isAdmin?"}
+    Gate -->|No| Deny["/dashboard?denied=1"]
+    Gate -->|Yes| Table["User table\nname · email · role badge · linked member · active status · actions"]
+
+    Table --> CU["+ Create User"]
+    CU --> CF["Name · email · password (min 6) · phone (optional) · role"]
+    CF --> RO{"Caller role"}
+    RO -->|admin| RA["Role options: teacher · admin"]
+    RO -->|super_admin| RS["Role options: teacher · admin · super_admin"]
+    RA & RS --> UC["User created"]
+
+    Table --> Toggle["Toggle Active / Inactive"]
+    Toggle --> TC{"Checks"}
+    TC -->|Own account| BS["⚠ Cannot deactivate yourself"]
+    TC -->|"Admin toggling\nsuper_admin"| BSA["⚠ Not authorized\n(only super_admin can modify super_admins)"]
+    TC -->|OK| Conf{"Confirm?"}
+    Conf -->|Yes| TD["Status toggled"]
+
+    Table --> Link["Link Member"]
+    Link --> LD["Dropdown: members with userId = null"]
+    LD --> LS["member.userId = this user"]
+
+    Table --> Unlink["Unlink Member"]
+    Unlink --> UC2{"Confirm?"}
+    UC2 -->|Yes| US["member.userId = null"]
+    UC2 -->|No| Table
+  </div>
+</div>
+
+<!-- ── 7. ANALYTICS ─────────────────────────────────────────────────────── -->
+<div class="section">
+  <h2>7. Analytics <span class="badge badge-mgr">Admin + Park managers</span></h2>
+  <div class="mermaid">
+flowchart TD
+    AN["/analytics"] --> AC{"Access check"}
+    AC -->|Admin| AA["All parks\n(filter by city/park params)"]
+    AC -->|"teacher +\ncanManageTeam"| MA["Scoped to managed parks"]
+    AC -->|"teacher only\n(no canManageTeam)"| DA["/dashboard?denied=1"]
+
+    AA & MA --> Charts
+
+    subgraph Charts["Charts &amp; Tables"]
+        BC["Bar chart: attendance rate per park"]
+        TC["Trend chart: rate over time, per park"]
+        TP["Top performers table\n(members ≥3 records · top 5 per park by rate)"]
+    end
+
+    Charts --> ANF["Filters: city · park · event type · date range"]
+    ANF --> Charts
+  </div>
+</div>
+
+<!-- ── 8. PARKS ─────────────────────────────────────────────────────────── -->
+<div class="section">
+  <h2>8. Parks <span class="badge badge-mgr">Admin + Park managers</span></h2>
+  <div class="mermaid">
+flowchart TD
+    PK["/parks\n(linked from Dashboard 'Parks' stat card)"] --> AC{"Access check"}
+    AC -->|Admin| AA["All areas &amp; parks"]
+    AC -->|"Park manager\n(managedParkIds.length &gt; 0)"| MA["Managed areas only"]
+    AC -->|"Teacher\n(no managed parks)"| DA["/dashboard?denied=1"]
+
+    AA & MA --> PL["Parks grouped by Area\n(Area → Parks hierarchy)"]
+
+    PL --> CP["+ Add Park"]
+    CP --> CPF["Name · Area · Capacity (default 100)"]
+    CPF --> CPR{"Role"}
+    CPR -->|Admin| AnyA["Any area"]
+    CPR -->|Park manager| MgdA["Managed areas only"]
+    AnyA & MgdA --> PC["Park created"]
+
+    PL --> EP["✏ Edit Park"]
+    EP --> EPF["Name · Capacity · isActive toggle"]
+    EPF --> EPR{"Role"}
+    EPR -->|Admin| AdminE["Any park"]
+    EPR -->|Park manager| MgrE["Own-area parks only"]
+    AdminE & MgrE --> PU["Park updated"]
+
+    PL --> DP["Delete Park\n(admin only in action)"]
+    DP --> DPC{"Has members\nor events?"}
+    DPC -->|Yes| SD["Soft delete\n(isActive = false)"]
+    DPC -->|No| HD["Hard delete"]
+  </div>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: "default",
+    flowchart: { curve: "basis", padding: 20 },
+    themeVariables: {
+      primaryColor: "#e0e7ff",
+      primaryTextColor: "#1e1b4b",
+      primaryBorderColor: "#6366f1",
+      lineColor: "#6366f1",
+      secondaryColor: "#f0fdf4",
+      tertiaryColor: "#fff7ed",
+    }
+  });
+</script>
+
+</body>
+</html>

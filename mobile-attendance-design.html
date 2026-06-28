@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mobile — Everyday Attendance · design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1:#e8ebf7; --bg2:#f4f5fc;
+    --card:#fff; --surface:#eef1f8; --ink:#1b2440; --ink2:#697089; --ink3:#a3a9bd;
+    --hair:rgba(27,36,64,.08); --line2:#f1f2f9;
+    --blue:#2f55ea; --blue-deep:#2444cf; --blue-soft:#eef1fe; --panel:#f5f6fd;
+    --magenta:#c41f6a; --magenta-deep:#a51a5a;
+    --present:#15a34a; --present-soft:#e7f6ed;
+    --late:#ef8a23; --late-soft:#fdf1e3;
+    --absent:#dc2626; --absent-soft:#fdecec;
+    --excused:#5b6b8c; --excused-soft:#eef1f6;
+    --grad:linear-gradient(135deg,#2b27c2 0%,#6f1f9e 50%,#c41f6a 100%);
+    --sh-sm:0 1px 2px rgba(27,36,64,.05);
+    --sh-md:0 4px 14px -6px rgba(27,36,64,.16);
+    --sh-lg:0 22px 44px -20px rgba(27,36,64,.4);
+    --r:14px; --r-lg:18px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"DM Sans",-apple-system,sans-serif;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:var(--ink);font-size:14px;-webkit-font-smoothing:antialiased;padding:34px 20px;min-height:100vh;letter-spacing:-.005em}
+  .mono{font-family:"JetBrains Mono",monospace;font-feature-settings:"tnum"}
+  ::selection{background:var(--blue-soft)}
+  .ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block;flex-shrink:0}
+
+  .head{max-width:1200px;margin:0 auto 4px}
+  .eyebrow{display:flex;align-items:center;gap:11px;font-size:11.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--blue)}
+  .eyebrow .rule{height:1.5px;width:30px;background:var(--blue);border-radius:2px;opacity:.5}
+  h1{font-size:2.15rem;font-weight:700;letter-spacing:-.035em;margin-top:12px}
+  .lede{max-width:680px;color:var(--ink2);font-size:14.5px;margin-top:8px;line-height:1.6}
+  .lede b{color:var(--ink);font-weight:600}
+  .tokens{max-width:1200px;margin:20px auto 32px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .sw{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:500;color:var(--ink2);background:var(--card);border:1px solid var(--hair);border-radius:30px;padding:6px 13px 6px 9px;box-shadow:var(--sh-sm)}
+  .sw i{width:13px;height:13px;border-radius:4px;display:block}
+
+  .phones{max-width:1200px;margin:0 auto;display:flex;gap:38px;flex-wrap:wrap;justify-content:center}
+  .phone{width:314px}
+  .scr{border:11px solid #131a30;border-radius:46px;overflow:hidden;background:var(--surface);box-shadow:var(--sh-lg);height:660px;display:flex;flex-direction:column;position:relative}
+  .cap{text-align:center;font-size:12.5px;color:var(--ink2);margin-top:15px;font-weight:500;line-height:1.5;padding:0 8px}
+  .cap b{color:var(--ink);font-weight:600}
+  .cap .n{color:var(--blue);font-weight:700;margin-right:5px}
+
+  .body{flex:1;overflow:auto}
+  .body::-webkit-scrollbar{width:0}
+
+  /* status bar */
+  .sbar{display:flex;align-items:center;justify-content:space-between;padding:9px 20px 3px;font-size:12.5px;font-weight:600;flex-shrink:0;letter-spacing:0}
+  .sbar .dots{display:flex;align-items:center;gap:5px}
+  .sbar .bat{width:20px;height:10px;border:1.3px solid currentColor;border-radius:3px;position:relative;opacity:.9}
+  .sbar .bat::after{content:"";position:absolute;right:-3px;top:2.5px;width:2px;height:4px;background:currentColor;border-radius:0 2px 2px 0}
+  .sbar .bat i{position:absolute;inset:1.5px;width:62%;background:currentColor;border-radius:1px}
+  .sbar.light{color:#fff}
+
+  /* tab bar */
+  .tabs{display:flex;border-top:1px solid var(--hair);background:var(--card);flex-shrink:0;padding:4px 0}
+  .tabs a{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 9px;font-size:10.5px;font-weight:600;color:var(--ink3);text-decoration:none}
+  .tabs a .ic{width:22px;height:22px}
+  .tabs a.on{color:var(--blue)}
+
+  /* ===== LOGIN ===== */
+  .lhead{background:var(--grad);padding:14px 28px 40px;position:relative;flex-shrink:0}
+  .brand{display:flex;align-items:center;gap:13px;margin-top:30px}
+  .logochip{width:46px;height:46px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 8px 18px -8px rgba(27,36,64,.5)}
+  .logochip img{width:32px;height:32px;object-fit:contain;display:block}
+  .logochip.sm{width:34px;height:34px;border-radius:10px}.logochip.sm img{width:23px;height:23px}
+  .brand .bn{color:#fff;font-weight:700;font-size:22px;letter-spacing:-.02em}
+  .lwelcome{color:#d4ddfb;font-size:13px;margin-top:30px;font-weight:500}
+  .lwelcome b{color:#fff;font-weight:700;font-size:23px;display:block;margin-top:4px;letter-spacing:-.03em}
+  .lform{padding:28px 26px 0}
+  .fl{font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--ink3);margin:0 0 8px 3px;text-transform:uppercase}
+  .ipt{display:block;width:100%;padding:15px 16px;border:1.5px solid var(--hair);border-radius:14px;font:inherit;font-size:16px;margin-bottom:17px;outline:0;background:#fafbff;transition:border-color .12s,box-shadow .12s}
+  .ipt:focus-visible{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-soft);background:#fff}
+  .big{display:block;width:100%;padding:16px;border:0;border-radius:14px;background:var(--magenta);color:#fff;font:inherit;font-weight:600;font-size:16px;cursor:pointer;margin-top:6px;box-shadow:0 10px 22px -12px var(--magenta);transition:background .15s}
+  .big:hover{background:var(--magenta-deep)}
+  .lhint{color:var(--ink3);font-size:12.5px;text-align:center;margin-top:20px}
+
+  /* ===== TODAY ===== */
+  .thead{background:var(--grad);padding:2px 18px 18px;flex-shrink:0}
+  .thead .top{display:flex;align-items:center;gap:12px;margin-top:6px}
+  .thead .hi{color:#d4ddfb;font-size:12.5px;font-weight:500}
+  .thead .dt{color:#fff;font-weight:700;font-size:21px;letter-spacing:-.03em;margin-top:11px}
+  .seclbl{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--ink3);padding:19px 19px 10px;display:flex;align-items:center;gap:8px;text-transform:uppercase}
+  .seclbl .ct{background:var(--blue-soft);color:var(--blue);border-radius:20px;padding:1px 8px;font-size:10.5px;font-family:"JetBrains Mono"}
+  .ev{margin:0 16px 13px;border:1px solid var(--hair);border-radius:var(--r-lg);background:var(--card);overflow:hidden;cursor:pointer;box-shadow:var(--sh-sm);transition:transform .14s,box-shadow .14s}
+  .ev:hover{transform:translateY(-2px);box-shadow:var(--sh-md)}
+  .ev .strip{height:3px}
+  .ev .in{padding:16px}
+  .ev .r1{display:flex;align-items:center;gap:9px}
+  .ev .tg{font-size:10px;font-weight:600;letter-spacing:.04em;padding:4px 9px;border-radius:7px;text-transform:uppercase}
+  .ev .time{margin-left:auto;font-weight:700;font-size:17px;letter-spacing:-.02em}
+  .ev .time .ap{font-size:11px;color:var(--ink3);font-weight:600;margin-left:1px}
+  .ev .nm{font-size:20px;font-weight:700;margin-top:11px;letter-spacing:-.025em}
+  .ev .meta{color:var(--ink2);font-size:13px;margin-top:3px}
+  .ev .r3{display:flex;align-items:center;gap:8px;margin-top:14px}
+  .badge{font-size:11px;font-weight:600;padding:5px 11px 5px 9px;border-radius:20px;display:inline-flex;align-items:center;gap:5px}
+  .badge .d{width:6px;height:6px;border-radius:50%}
+  .badge.todo{background:var(--blue-soft);color:var(--blue)}
+  .badge.done{background:var(--present-soft);color:var(--present)}
+  .go{margin-left:auto;color:var(--blue);font-weight:600;font-size:13px;display:flex;align-items:center;gap:2px}
+  .go .ic{width:16px;height:16px}
+  .seeall{text-align:center;color:var(--blue);font-weight:600;font-size:13px;padding:2px 0 16px}
+
+  /* ===== MARK ===== */
+  .mhdr{padding:4px 16px 15px;flex-shrink:0;background:var(--card);border-bottom:1px solid var(--line2)}
+  .back{display:flex;align-items:center;gap:6px;color:var(--ink2);font-size:13px;font-weight:600;margin-top:4px;cursor:pointer}
+  .mhdr .t{font-size:20px;font-weight:700;margin-top:11px;letter-spacing:-.03em}
+  .mhdr .m{font-size:12.5px;color:var(--ink2);margin-top:3px}
+  .tool{display:flex;align-items:center;gap:8px;padding:11px 16px;background:var(--panel);border-bottom:1px solid var(--line2);flex-shrink:0}
+  .tool .info{font-size:12px;color:var(--ink2);font-weight:500;flex:1}
+  .allp{font-size:12px;font-weight:600;color:var(--present);border:1.5px solid #b9e6c7;background:var(--present-soft);padding:7px 13px;border-radius:10px;cursor:pointer}
+  .srow{display:flex;align-items:center;gap:11px;padding:9px 15px;border-bottom:1px solid var(--line2)}
+  .srow .av{width:32px;height:32px;border-radius:50%;background:var(--panel);color:var(--ink2);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:11.5px;flex-shrink:0;border:1px solid var(--hair)}
+  .srow .nm{font-weight:500;flex:1;font-size:14.5px}
+  .seg{display:inline-flex;background:#edeff5;border-radius:11px;padding:3px;gap:2px}
+  .seg b{min-width:33px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:9px;font-weight:600;font-size:12.5px;color:var(--ink3);cursor:pointer;transition:color .12s,background .12s;font-family:"JetBrains Mono"}
+  .seg b.on{color:#fff}
+  .seg b.on.p{background:var(--present);box-shadow:0 2px 6px -2px var(--present)}
+  .seg b.on.l{background:var(--late);box-shadow:0 2px 6px -2px var(--late)}
+  .seg b.on.a{background:var(--absent);box-shadow:0 2px 6px -2px var(--absent)}
+  .seg b.on.e{background:var(--excused);box-shadow:0 2px 6px -2px var(--excused)}
+  .savebar{padding:12px 14px 14px;border-top:1px solid var(--hair);background:var(--card);flex-shrink:0}
+  .sum{text-align:center;font-size:12px;color:var(--ink3);margin-bottom:10px;font-weight:500}
+  .sum b{color:var(--present);font-weight:700}
+  .savebtn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:15px;border:0;border-radius:14px;background:var(--magenta);color:#fff;font:inherit;font-weight:600;font-size:16px;cursor:pointer;box-shadow:0 10px 22px -12px var(--magenta);transition:background .15s}
+  .savebtn:hover{background:var(--magenta-deep)}
+  .offbar{display:flex;align-items:center;gap:9px;padding:10px 16px;background:#fbf1e3;color:#9a5a17;font-size:12px;font-weight:600;border-bottom:1px solid #f3dcb8;flex-shrink:0}
+  .offbar .ic{width:17px;height:17px}
+
+  /* ===== REPORT ===== */
+  .rhero{background:var(--grad);padding:30px 22px 26px;text-align:center;color:#fff;flex-shrink:0}
+  .rhero .ck{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;margin:0 auto 13px}
+  .rhero .ck .ic{width:27px;height:27px;stroke-width:2.4}
+  .rhero h2{font-size:20px;font-weight:700;letter-spacing:-.02em}
+  .rhero p{color:#d4ddfb;font-size:12.5px;margin-top:4px}
+  .answer{margin:16px;background:var(--card);border:1px solid var(--hair);border-radius:var(--r-lg);padding:19px 20px;box-shadow:var(--sh-sm)}
+  .answer .lead{font-size:18px;font-weight:600;letter-spacing:-.02em;line-height:1.35}
+  .answer .lead b{color:var(--blue);font-weight:700}
+  .answer .row{display:flex;align-items:center;gap:11px;margin-top:14px}
+  .answer .dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+  .answer .lab{font-weight:600;font-size:14px;width:74px}
+  .answer .delta{font-family:"JetBrains Mono";font-weight:600;font-size:14px}
+  .answer .why{color:var(--ink2);font-size:12.5px}
+
+  .principles{max-width:1200px;margin:40px auto 0;background:var(--card);border:1px solid var(--hair);border-radius:20px;padding:24px 28px;box-shadow:var(--sh-sm)}
+  .principles h3{font-size:15px;font-weight:700;letter-spacing:-.02em}
+  .principles .gl{height:2px;width:30px;background:var(--blue);border-radius:2px;margin:9px 0 14px}
+  .principles ul{padding-left:18px;color:var(--ink2);font-size:13.5px;line-height:1.85}
+  .principles b{color:var(--ink);font-weight:600}
+
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  @media(max-width:680px){.phones{gap:26px}}
+</style>
+</head>
+<body>
+
+<!-- icon sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20.5 20.5-3.4-3.4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-today" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><path d="M16 2.5v4M8 2.5v4M3 9.5h18"/></symbol>
+  <symbol id="i-events" viewBox="0 0 24 24"><path d="m12 3 8.5 4.5L12 12 3.5 7.5 12 3Z"/><path d="m3.5 12 8.5 4.5 8.5-4.5"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20c.8-3.6 4-5.5 7.5-5.5s6.7 1.9 7.5 5.5"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v4.5M12 17.5h.01"/></symbol>
+</svg>
+
+<div class="head">
+  <div class="eyebrow"><span class="rule"></span> Everyday attendance — mobile</div>
+  <h1>The field flow, in four taps.</h1>
+  <p class="lede">What a Murabbi runs every session — outdoors, one thumb, bright sun. The <b>Shabab logo</b> drives the look: its blue→magenta gradient on the headers, royal blue for the UI, <b>absent in red</b>, on a soft off-white surface to cut glare.</p>
+</div>
+<div class="tokens">
+  <span class="sw"><i style="background:var(--grad)"></i> Logo gradient — headers</span>
+  <span class="sw"><i style="background:var(--magenta)"></i> Magenta — buttons (variant)</span>
+  <span class="sw"><i style="background:var(--blue)"></i> Royal blue — links</span>
+  <span class="sw"><i style="background:var(--present)"></i> Present</span>
+  <span class="sw"><i style="background:var(--late)"></i> Late</span>
+  <span class="sw"><i style="background:var(--absent)"></i> Absent (default)</span>
+  <span class="sw"><i style="background:var(--excused)"></i> Excused</span>
+</div>
+
+<div class="phones">
+
+  <!-- 1 LOGIN -->
+  <div class="phone">
+    <div class="scr">
+      <div class="lhead">
+        <div class="sbar light"><span>9:41</span><span class="dots"><svg class="ic" style="width:16px;height:16px" viewBox="0 0 24 24"><path d="M12 20h.01M8.5 16.4a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 14 0"/></svg><span class="bat"><i></i></span></span></div>
+        <div class="brand"><span class="logochip"><img src="public/logo.png" alt="Shabab" /></span><span class="bn">Shabab</span></div>
+        <div class="lwelcome">Assalamu alaikum<b>Sign in to mark today</b></div>
+      </div>
+      <div class="lform">
+        <div class="fl">CNIC</div>
+        <input class="ipt mono" value="35201-1234567-1" inputmode="numeric" />
+        <div class="fl">Password</div>
+        <input class="ipt" type="password" value="••••••••••" />
+        <button class="big">Log in</button>
+        <div class="lhint">Forgot it? Ask your admin to reset.</div>
+      </div>
+    </div>
+    <div class="cap"><span class="n">1</span><b>Login.</b> CNIC is the username — logo on a white chip over the brand gradient.</div>
+  </div>
+
+  <!-- 2 TODAY -->
+  <div class="phone">
+    <div class="scr">
+      <div class="thead">
+        <div class="sbar light"><span>9:41</span><span class="dots"><svg class="ic" style="width:16px;height:16px" viewBox="0 0 24 24"><path d="M12 20h.01M8.5 16.4a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 14 0"/></svg><span class="bat"><i></i></span></span></div>
+        <div class="top"><span class="logochip sm"><img src="public/logo.png" alt="" /></span><span class="hi">Assalamu alaikum, Yusuf</span></div>
+        <div class="dt">Today · Tue 27 Jun</div>
+      </div>
+      <div class="body">
+        <div class="seclbl">To mark <span class="ct">1</span></div>
+        <div class="ev">
+          <div class="strip" style="background:var(--blue)"></div>
+          <div class="in">
+            <div class="r1"><span class="tg" style="background:var(--blue-soft);color:var(--blue)">Shabab Batch</span><span class="time">4:30<span class="ap">PM</span></span></div>
+            <div class="nm">Class A</div>
+            <div class="meta">Park 3 · your 12 students</div>
+            <div class="r3"><span class="badge todo"><span class="d" style="background:var(--blue)"></span> Not marked</span><span class="go">Mark <svg class="ic"><use href="#i-right"/></svg></span></div>
+          </div>
+        </div>
+        <div class="seclbl">Done <span class="ct">1</span></div>
+        <div class="ev" style="opacity:.92">
+          <div class="strip" style="background:var(--excused)"></div>
+          <div class="in">
+            <div class="r1"><span class="tg" style="background:var(--excused-soft);color:var(--excused)">Sports</span><span class="time">3:00<span class="ap">PM</span></span></div>
+            <div class="nm">Park 3 — Sports</div>
+            <div class="meta mono" style="font-size:12px">10 / 12 marked</div>
+            <div class="r3"><span class="badge done"><svg class="ic" style="width:13px;height:13px"><use href="#i-check"/></svg> Marked</span><span class="go">View <svg class="ic"><use href="#i-right"/></svg></span></div>
+          </div>
+        </div>
+        <div class="seeall">View all events</div>
+      </div>
+      <div class="tabs">
+        <a class="on"><svg class="ic"><use href="#i-today"/></svg> Today</a>
+        <a><svg class="ic"><use href="#i-events"/></svg> Events</a>
+        <a><svg class="ic"><use href="#i-user"/></svg> Profile</a>
+      </div>
+    </div>
+    <div class="cap"><span class="n">2</span><b>Today.</b> Only today's sessions; coloured strip + confident time, real tab icons.</div>
+  </div>
+
+  <!-- 3 MARK -->
+  <div class="phone">
+    <div class="scr">
+      <div class="mhdr">
+        <div class="sbar"><span>9:41</span><span class="dots"><svg class="ic" style="width:16px;height:16px" viewBox="0 0 24 24"><path d="M12 20h.01M8.5 16.4a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 14 0"/></svg><span class="bat"><i></i></span></span></div>
+        <div class="back"><svg class="ic"><use href="#i-back"/></svg> Today</div>
+        <div class="t">Class A · 4:30 PM</div>
+        <div class="m">Park 3 · your 12 students</div>
+      </div>
+      <div class="tool"><span class="info">Everyone starts absent</span><button class="allp">Mark all present</button></div>
+      <div class="body">
+        <div class="srow"><span class="av">AR</span><span class="nm">Ahmad R.</span><div class="seg"><b class="on p">P</b><b>L</b><b>A</b><b>E</b></div></div>
+        <div class="srow"><span class="av">BK</span><span class="nm">Bilal K.</span><div class="seg"><b class="on p">P</b><b>L</b><b>A</b><b>E</b></div></div>
+        <div class="srow"><span class="av">HS</span><span class="nm">Hamza S.</span><div class="seg"><b>P</b><b class="on l">L</b><b>A</b><b>E</b></div></div>
+        <div class="srow"><span class="av">UT</span><span class="nm">Usman T.</span><div class="seg"><b>P</b><b>L</b><b class="on a">A</b><b>E</b></div></div>
+        <div class="srow"><span class="av">SA</span><span class="nm">Saad A.</span><div class="seg"><b class="on p">P</b><b>L</b><b>A</b><b>E</b></div></div>
+        <div class="srow"><span class="av">TZ</span><span class="nm">Talha Z.</span><div class="seg"><b>P</b><b>L</b><b>A</b><b class="on e">E</b></div></div>
+        <div class="srow"><span class="av">ZI</span><span class="nm">Zain I.</span><div class="seg"><b>P</b><b>L</b><b class="on a">A</b><b>E</b></div></div>
+        <div class="srow"><span class="av">IH</span><span class="nm">Ibrahim H.</span><div class="seg"><b class="on p">P</b><b>L</b><b>A</b><b>E</b></div></div>
+      </div>
+      <div class="savebar">
+        <div class="sum"><b>5 present</b> · 1 late · 1 excused · 5 absent</div>
+        <button class="savebtn">Save attendance</button>
+      </div>
+    </div>
+    <div class="cap"><span class="n">3</span><b>Mark — default absent.</b> Cleaner segmented control; tap P as kids arrive.</div>
+  </div>
+
+  <!-- 4 REPORT -->
+  <div class="phone">
+    <div class="scr">
+      <div class="body" style="background:var(--surface)">
+        <div class="rhero">
+          <div class="sbar light"><span>9:41</span><span class="dots"><svg class="ic" style="width:16px;height:16px" viewBox="0 0 24 24"><path d="M12 20h.01M8.5 16.4a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 14 0"/></svg><span class="bat"><i></i></span></span></div>
+          <div class="ck"><svg class="ic"><use href="#i-check"/></svg></div>
+          <h2>Attendance saved</h2>
+          <p>Class A · Tue 27 Jun</p>
+        </div>
+        <div class="answer">
+          <div class="lead">Class A — <b>58% attended</b>, 7 of 12.</div>
+          <div class="row"><span class="dot" style="background:var(--present)"></span><span class="lab">Present</span><span class="delta" style="color:var(--present)">5</span></div>
+          <div class="row"><span class="dot" style="background:var(--late)"></span><span class="lab">Late</span><span class="delta" style="color:var(--late)">1</span><span class="why">— after 4:45</span></div>
+          <div class="row"><span class="dot" style="background:var(--absent)"></span><span class="lab">Absent</span><span class="delta" style="color:var(--absent)">5</span></div>
+          <div class="row"><span class="dot" style="background:var(--excused)"></span><span class="lab">Excused</span><span class="delta" style="color:var(--excused)">1</span><span class="why">— informed ahead</span></div>
+        </div>
+      </div>
+      <div class="savebar"><button class="savebtn" style="background:var(--card);color:var(--magenta);border:1.5px solid var(--hair);box-shadow:none">Done</button></div>
+    </div>
+    <div class="cap"><span class="n">4</span><b>Report.</b> Rate in gradient text — the one signature moment.</div>
+  </div>
+
+  <!-- 5 OFFLINE -->
+  <div class="phone">
+    <div class="scr">
+      <div class="offbar"><svg class="ic"><use href="#i-alert"/></svg> No signal — saved on this device, will sync</div>
+      <div class="mhdr" style="padding-top:0">
+        <div class="back"><svg class="ic"><use href="#i-back"/></svg> Today</div>
+        <div class="t">Class A · 4:30 PM</div>
+        <div class="m">Park 3 · your 12 students</div>
+      </div>
+      <div class="tool"><span class="info">Everyone starts absent</span><button class="allp">Mark all present</button></div>
+      <div class="body">
+        <div class="srow"><span class="av">AR</span><span class="nm">Ahmad R.</span><div class="seg"><b class="on p">P</b><b>L</b><b>A</b><b>E</b></div></div>
+        <div class="srow"><span class="av">BK</span><span class="nm">Bilal K.</span><div class="seg"><b class="on p">P</b><b>L</b><b>A</b><b>E</b></div></div>
+        <div class="srow"><span class="av">HS</span><span class="nm">Hamza S.</span><div class="seg"><b>P</b><b>L</b><b class="on a">A</b><b>E</b></div></div>
+        <div class="srow"><span class="av">UT</span><span class="nm">Usman T.</span><div class="seg"><b>P</b><b>L</b><b class="on a">A</b><b>E</b></div></div>
+      </div>
+      <div class="savebar">
+        <div class="sum" style="color:#9a5a17">Queued — syncs when you're back online</div>
+        <button class="savebtn" style="background:#9a5a17;box-shadow:none">Save offline</button>
+      </div>
+    </div>
+    <div class="cap"><span class="n">?</span><b>If offline</b> — illustrative. The <b>offline decision</b> is still open.</div>
+  </div>
+
+</div>
+
+<div class="principles">
+  <h3>What changed in the polish pass</h3>
+  <div class="gl"></div>
+  <ul>
+    <li><b>Real icon set.</b> Inline stroke icons (back, search, chevrons, tab bar, check, alert) replace the emoji glyphs — the biggest "templated" tell, gone.</li>
+    <li><b>Refined depth &amp; rhythm.</b> Layered soft shadows, hairline borders, an 8px spacing system, consistent radii — instead of flat default cards.</li>
+    <li><b>Cleaner marking control.</b> Calmer segmented pills with status-coloured fills + soft glow, no gimmicky scale.</li>
+    <li><b>Logo-driven brand.</b> Headers carry the logo's own blue→magenta gradient (so they match the mark); the UI — buttons, links, selection — stays royal blue. Status is unambiguous: present green, late amber, <b>absent red</b>, excused slate.</li>
+    <li><b>Soft surface for sun.</b> Broad areas use a soft off-white (not pure white) to cut glare; pure white is reserved for elevated cards so they still pop. Light scheme, kept high-contrast — better outdoors than dark.</li>
+  </ul>
+</div>
+
+</body>
+</html>

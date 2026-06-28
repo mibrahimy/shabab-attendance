@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Forms Builder &amp; Student Progress · design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1:#e8ebf7; --bg2:#f4f5fc;
+    --card:#fff; --surface:#eef1f8; --ink:#1b2440; --ink2:#697089; --ink3:#a3a9bd;
+    --hair:rgba(27,36,64,.08); --line2:#f1f2f9;
+    --blue:#2f55ea; --blue-deep:#2444cf; --blue-soft:#eef1fe; --panel:#f5f6fd;
+    --magenta:#c41f6a; --magenta-deep:#a51a5a; --magenta-soft:#fce8f1;
+    --present:#15a34a; --present-soft:#e7f6ed;
+    --late:#ef8a23; --late-soft:#fdf1e3;
+    --absent:#dc2626; --absent-soft:#fdecec;
+    --excused:#5b6b8c; --excused-soft:#eef1f6;
+    --grad:linear-gradient(135deg,#2b27c2 0%,#6f1f9e 50%,#c41f6a 100%);
+    --sh-sm:0 1px 2px rgba(27,36,64,.05);
+    --sh-md:0 4px 14px -6px rgba(27,36,64,.16);
+    --sh-lg:0 22px 44px -20px rgba(27,36,64,.4);
+    --r:14px; --r-lg:18px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"DM Sans",-apple-system,sans-serif;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:var(--ink);font-size:14px;-webkit-font-smoothing:antialiased;padding:34px 20px;min-height:100vh;letter-spacing:-.005em}
+  .mono{font-family:"JetBrains Mono",monospace;font-feature-settings:"tnum"}
+  ::selection{background:var(--blue-soft)}
+  .ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block;flex-shrink:0}
+
+  .head{max-width:1200px;margin:0 auto 4px}
+  .eyebrow{display:flex;align-items:center;gap:11px;font-size:11.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--blue)}
+  .eyebrow .rule{height:1.5px;width:30px;background:var(--blue);border-radius:2px;opacity:.5}
+  h1{font-size:2.15rem;font-weight:700;letter-spacing:-.035em;margin-top:12px}
+  .lede{max-width:720px;color:var(--ink2);font-size:14.5px;margin-top:8px;line-height:1.6}
+  .lede b{color:var(--ink);font-weight:600}
+
+  .tokens{max-width:1200px;margin:20px auto 30px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .sw{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:500;color:var(--ink2);background:var(--card);border:1px solid var(--hair);border-radius:30px;padding:6px 13px 6px 9px;box-shadow:var(--sh-sm)}
+  .sw i{width:13px;height:13px;border-radius:4px;display:block}
+
+  .secband{max-width:1200px;margin:38px auto 18px;display:flex;align-items:center;gap:14px}
+  .secband .lbl{font-size:11.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);white-space:nowrap}
+  .secband .tt{font-size:1.3rem;font-weight:700;letter-spacing:-.025em}
+  .secband .ds{flex:1;height:1px;background:var(--hair)}
+
+  .phones{max-width:1200px;margin:0 auto;display:flex;gap:38px;flex-wrap:wrap;justify-content:center}
+  .phone{width:314px}
+  .scr{border:11px solid #131a30;border-radius:46px;overflow:hidden;background:var(--surface);box-shadow:var(--sh-lg);height:712px;display:flex;flex-direction:column;position:relative}
+  .cap{text-align:center;font-size:12.5px;color:var(--ink2);margin-top:15px;font-weight:500;line-height:1.5;padding:0 8px}
+  .cap b{color:var(--ink);font-weight:600}
+  .cap .n{color:var(--blue);font-weight:700;margin-right:5px}
+
+  .body{flex:1;overflow:auto}
+  .body::-webkit-scrollbar{width:0}
+
+  /* status bar */
+  .sbar{display:flex;align-items:center;justify-content:space-between;padding:9px 20px 3px;font-size:12.5px;font-weight:600;flex-shrink:0;letter-spacing:0}
+  .sbar .dots{display:flex;align-items:center;gap:5px}
+  .sbar .bat{width:20px;height:10px;border:1.3px solid currentColor;border-radius:3px;position:relative;opacity:.9}
+  .sbar .bat::after{content:"";position:absolute;right:-3px;top:2.5px;width:2px;height:4px;background:currentColor;border-radius:0 2px 2px 0}
+  .sbar .bat i{position:absolute;inset:1.5px;width:62%;background:currentColor;border-radius:1px}
+  .sbar.light{color:#fff}
+
+  /* gradient header band */
+  .ghead{background:var(--grad);padding:2px 18px 18px;flex-shrink:0}
+  .ghead .top{display:flex;align-items:center;gap:12px;margin-top:6px}
+  .logochip{width:46px;height:46px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 8px 18px -8px rgba(27,36,64,.5)}
+  .logochip img{width:32px;height:32px;object-fit:contain;display:block}
+  .logochip.sm{width:34px;height:34px;border-radius:10px}.logochip.sm img{width:23px;height:23px}
+  .ghead .hi{color:#d4ddfb;font-size:12.5px;font-weight:500}
+  .ghead .ttl{color:#fff;font-weight:700;font-size:22px;letter-spacing:-.03em;margin-top:11px}
+  .ghead .sub{color:#d4ddfb;font-size:12.5px;margin-top:3px;font-weight:500}
+  .back{display:flex;align-items:center;gap:6px;color:rgba(255,255,255,.85);font-size:13px;font-weight:600;margin-top:4px;cursor:pointer}
+
+  /* segmented control (Interview / Evaluation) */
+  .segctl{display:flex;background:rgba(255,255,255,.16);border-radius:13px;padding:3px;margin-top:16px;gap:3px}
+  .segctl b{flex:1;text-align:center;padding:10px 0;border-radius:10px;font-weight:600;font-size:13.5px;color:#e7ebfb;cursor:pointer;transition:background .14s,color .14s}
+  .segctl b.on{background:#fff;color:var(--blue);box-shadow:0 4px 10px -5px rgba(0,0,0,.35)}
+
+  /* section label */
+  .seclbl{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--ink3);padding:18px 18px 9px;display:flex;align-items:center;gap:8px;text-transform:uppercase}
+  .seclbl .ct{background:var(--blue-soft);color:var(--blue);border-radius:20px;padding:1px 8px;font-size:10.5px;font-family:"JetBrains Mono"}
+  .seclbl .sp{flex:1}
+  .seclbl .hint{font-family:"DM Sans";text-transform:none;letter-spacing:0;font-weight:500;color:var(--ink3);font-size:11px}
+
+  /* ===== FORMS — question card ===== */
+  .qcard{margin:0 16px 12px;border:1px solid var(--hair);border-radius:var(--r-lg);background:var(--card);box-shadow:var(--sh-sm);overflow:hidden}
+  .qcard .qtop{display:flex;align-items:flex-start;gap:9px;padding:13px 14px 11px}
+  .grip{color:var(--ink3);margin-top:2px;cursor:grab;flex-shrink:0}
+  .grip .ic{width:18px;height:18px}
+  .qnum{font-family:"JetBrains Mono";font-weight:600;font-size:12px;color:var(--blue);background:var(--blue-soft);border-radius:7px;min-width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+  .qtext{flex:1;font-weight:600;font-size:14.5px;line-height:1.4;letter-spacing:-.01em}
+  .qtext.edit{border:1.5px solid var(--blue);box-shadow:0 0 0 4px var(--blue-soft);border-radius:10px;padding:8px 10px;background:#fafbff;outline:0}
+  .qacts{display:flex;gap:4px;flex-shrink:0}
+  .qbtn{width:30px;height:30px;border:1px solid var(--hair);background:#fff;border-radius:8px;color:var(--ink2);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .qbtn:hover{background:#f8fafc}
+  .qbtn .ic{width:16px;height:16px}
+  .qbtn.del{color:var(--absent)}
+  .qbtn.del:hover{background:var(--absent-soft)}
+
+  .scalerow{display:flex;align-items:center;gap:8px;padding:0 14px 6px 14px}
+  .scalelead{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3);flex-shrink:0}
+  .scale{display:flex;gap:6px;flex:1}
+  .scale b{flex:1;height:38px;display:flex;align-items:center;justify-content:center;border-radius:10px;font-family:"JetBrains Mono";font-weight:600;font-size:14px;background:var(--panel);color:var(--ink3);border:1px solid var(--hair);cursor:pointer}
+  .scale b.on{background:var(--blue);color:#fff;border-color:var(--blue);box-shadow:0 4px 10px -4px var(--blue)}
+  .scaletags{display:flex;justify-content:space-between;padding:2px 14px 6px;font-size:10px;color:var(--ink3);font-weight:500}
+
+  .qfoot{display:flex;align-items:center;gap:7px;padding:9px 14px 12px;border-top:1px dashed var(--hair);margin-top:4px;color:var(--ink2);font-size:12px;font-weight:500}
+  .qfoot .ic{width:15px;height:15px;color:var(--blue)}
+  .qfoot .cmt{flex:1;background:var(--panel);border:1px solid var(--hair);border-radius:9px;padding:7px 10px;color:var(--ink3);font-size:12px}
+
+  .addrow{display:flex;align-items:center;justify-content:center;gap:8px;margin:4px 16px 8px;padding:13px;color:var(--magenta);font-weight:600;font-size:14px;cursor:pointer;border-radius:var(--r-lg);border:1.5px dashed var(--magenta-soft);background:var(--magenta-soft)}
+  .addrow:hover{background:#fbdfeb}
+  .addrow .ic{width:18px;height:18px}
+
+  /* add-question editor */
+  .editor{margin:0 16px 12px;border:1.5px solid var(--blue);border-radius:var(--r-lg);background:#fff;box-shadow:0 10px 26px -16px rgba(47,85,234,.5);overflow:hidden}
+  .editor .eh{padding:11px 14px;background:var(--blue-soft);font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--blue);display:flex;align-items:center;gap:7px}
+  .editor .eh .ic{width:15px;height:15px}
+  .editor .eb{padding:13px 14px}
+  .editor .fl{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+  .editor textarea{width:100%;border:1.5px solid var(--hair);border-radius:10px;padding:10px 11px;font:inherit;font-size:14px;color:var(--ink);resize:none;outline:0;background:#fafbff}
+  .editor textarea:focus{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-soft);background:#fff}
+  .snap{display:flex;align-items:flex-start;gap:8px;margin-top:11px;padding:9px 11px;background:var(--panel);border:1px solid var(--hair);border-radius:10px;font-size:11.5px;color:var(--ink2);line-height:1.45}
+  .snap .ic{width:15px;height:15px;color:var(--blue);flex-shrink:0;margin-top:1px}
+  .snap b{color:var(--ink);font-weight:600}
+  .editor .ef{display:flex;gap:9px;margin-top:13px}
+  .editor .ef button{flex:1;padding:11px;border-radius:10px;font:inherit;font-weight:600;font-size:13.5px;cursor:pointer;border:1px solid var(--hair);background:#fff;color:var(--ink2)}
+  .editor .ef button.go{background:var(--magenta);border-color:var(--magenta);color:#fff;box-shadow:0 8px 18px -10px var(--magenta)}
+
+  /* pinned save bar */
+  .savebar{padding:12px 14px 14px;border-top:1px solid var(--hair);background:var(--card);flex-shrink:0}
+  .sum{text-align:center;font-size:12px;color:var(--ink3);margin-bottom:10px;font-weight:500}
+  .sum b{color:var(--ink);font-weight:700}
+  .savebtn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:15px;border:0;border-radius:14px;background:var(--magenta);color:#fff;font:inherit;font-weight:600;font-size:16px;cursor:pointer;box-shadow:0 10px 22px -12px var(--magenta)}
+  .savebtn:hover{background:var(--magenta-deep)}
+  .savebtn .ic{width:18px;height:18px}
+
+  /* ===== STUDENT PROFILE ===== */
+  .phero{background:var(--grad);padding:2px 20px 20px;flex-shrink:0;color:#fff}
+  .phero .ava{width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:19px;font-family:"JetBrains Mono";flex-shrink:0;border:1px solid rgba(255,255,255,.25)}
+  .phero .nmrow{display:flex;align-items:center;gap:13px;margin-top:8px}
+  .phero .nm{font-size:21px;font-weight:700;letter-spacing:-.03em}
+  .phero .chips{display:flex;gap:7px;margin-top:4px}
+  .pchip{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:rgba(255,255,255,.18);color:#fff;letter-spacing:.01em}
+  .phero .stats{display:flex;gap:10px;margin-top:16px}
+  .pstat{flex:1;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.16);border-radius:13px;padding:11px 12px}
+  .pstat .v{font-family:"JetBrains Mono";font-weight:600;font-size:21px;letter-spacing:-.02em}
+  .pstat .k{font-size:10.5px;color:#d4ddfb;font-weight:500;margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
+
+  /* profile tabs */
+  .ptabs{display:flex;background:var(--card);border-bottom:1px solid var(--hair);flex-shrink:0;padding:0 8px}
+  .ptabs b{flex:1;text-align:center;padding:13px 0 11px;font-weight:600;font-size:13px;color:var(--ink3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .ptabs b.on{color:var(--blue);border-bottom-color:var(--blue);font-weight:700}
+
+  /* interview read-only Q */
+  .iq{margin:0 16px 11px;border:1px solid var(--hair);border-radius:var(--r-lg);background:var(--card);box-shadow:var(--sh-sm);padding:14px}
+  .iq .q{font-weight:600;font-size:14px;line-height:1.4;letter-spacing:-.01em}
+  .iq .sc{display:flex;align-items:center;gap:6px;margin-top:11px}
+  .iq .sc .pip{flex:1;height:7px;border-radius:4px;background:var(--panel)}
+  .iq .sc .pip.on{background:var(--blue)}
+  .iq .sc .val{font-family:"JetBrains Mono";font-weight:600;font-size:13px;color:var(--blue);margin-left:4px;min-width:30px;text-align:right}
+  .iq .cmt{margin-top:11px;background:var(--panel);border-left:3px solid var(--blue-soft);border-radius:0 9px 9px 0;padding:9px 12px;font-size:12.5px;color:var(--ink2);line-height:1.5}
+  .iq .cmt .who{display:block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);margin-bottom:3px}
+
+  .meta-band{margin:0 16px 14px;padding:10px 13px;background:var(--blue-soft);border-radius:12px;font-size:12px;color:var(--blue-deep);display:flex;align-items:center;gap:9px;font-weight:500}
+  .meta-band .ic{width:16px;height:16px;flex-shrink:0}
+
+  /* ===== PROGRESS ===== */
+  .pcard{margin:0 16px 14px;border:1px solid var(--hair);border-radius:var(--r-lg);background:var(--card);box-shadow:var(--sh-sm);overflow:hidden}
+  .pcard-h{display:flex;align-items:center;padding:13px 15px 11px;border-bottom:1px solid var(--line2)}
+  .pcard-h h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2)}
+  .pcard-h .sp{flex:1}
+  .pcard-h .now{font-family:"JetBrains Mono";font-weight:600;font-size:13px}
+  .pcard-h .now .up{color:var(--present)}
+  .chartwrap{padding:14px 14px 8px}
+  .chartwrap svg{display:block;width:100%;height:auto;overflow:visible}
+  .axisrow{display:flex;justify-content:space-between;padding:6px 16px 14px;font-size:10px;color:var(--ink3);font-family:"JetBrains Mono";font-weight:500}
+  .legend{display:flex;gap:16px;padding:0 15px 13px;font-size:11px;color:var(--ink2);font-weight:500}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .legend i{width:13px;height:4px;border-radius:3px;display:block}
+
+  /* cycle rows */
+  .cyrow{display:flex;align-items:center;gap:11px;padding:12px 15px;border-bottom:1px solid var(--line2);cursor:pointer}
+  .cyrow:last-child{border-bottom:0}
+  .cyrow:hover{background:#f8fafc}
+  .cyrow .cn{font-family:"JetBrains Mono";font-weight:600;font-size:11px;color:var(--blue);background:var(--blue-soft);border-radius:7px;padding:3px 8px;flex-shrink:0}
+  .cyrow .cd{flex:1}
+  .cyrow .cd .t{font-weight:600;font-size:13.5px}
+  .cyrow .cd .s{font-size:11.5px;color:var(--ink2);margin-top:1px}
+  .cyrow .avg{font-family:"JetBrains Mono";font-weight:600;font-size:16px;letter-spacing:-.02em}
+  .cyrow .chev{color:var(--ink3)}
+  .cyrow .chev .ic{width:18px;height:18px}
+  .cyrow.open{background:var(--blue-soft);border-bottom:0}
+  .cyrow.open .chev{transform:rotate(90deg)}
+
+  /* expanded cycle detail */
+  .cydetail{margin:-2px 16px 14px;border:1px solid var(--blue-soft);border-top:0;border-radius:0 0 var(--r-lg) var(--r-lg);background:var(--card);box-shadow:var(--sh-sm);overflow:hidden}
+  .cyq{padding:13px 15px;border-bottom:1px solid var(--line2)}
+  .cyq:last-of-type{border-bottom:0}
+  .cyq .qt{font-weight:600;font-size:13.5px;line-height:1.4;display:flex;align-items:flex-start;gap:8px}
+  .cyq .qt .qv{font-family:"JetBrains Mono";font-weight:600;font-size:13px;color:#fff;background:var(--blue);border-radius:7px;min-width:30px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .cyq .miniscale{display:flex;gap:4px;margin-top:9px}
+  .cyq .miniscale i{flex:1;height:6px;border-radius:3px;background:var(--panel)}
+  .cyq .miniscale i.on{background:var(--blue)}
+  .cyq .cm{margin-top:9px;font-size:12px;color:var(--ink2);line-height:1.5;background:var(--panel);border-radius:9px;padding:8px 11px}
+  .cyq .cm .who{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);margin-right:6px}
+  .cyfoot{display:flex;align-items:center;padding:13px 15px;background:var(--panel)}
+  .cyfoot .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink2)}
+  .cyfoot .sp{flex:1}
+  .cyfoot .big{font-family:"JetBrains Mono";font-weight:600;font-size:20px;color:var(--blue);letter-spacing:-.02em}
+  .cyfoot .big small{font-size:12px;color:var(--ink3)}
+
+  /* tab bar */
+  .tabs{display:flex;border-top:1px solid var(--hair);background:var(--card);flex-shrink:0;padding:4px 0}
+  .tabs a{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 9px;font-size:10.5px;font-weight:600;color:var(--ink3);text-decoration:none}
+  .tabs a .ic{width:22px;height:22px}
+  .tabs a.on{color:var(--blue)}
+
+  .principles{max-width:1200px;margin:42px auto 0;background:var(--card);border:1px solid var(--hair);border-radius:20px;padding:24px 28px;box-shadow:var(--sh-sm)}
+  .principles h3{font-size:15px;font-weight:700;letter-spacing:-.02em}
+  .principles .gl{height:2px;width:30px;background:var(--blue);border-radius:2px;margin:9px 0 14px}
+  .principles ul{padding-left:18px;color:var(--ink2);font-size:13.5px;line-height:1.85}
+  .principles b{color:var(--ink);font-weight:600}
+
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  @media(max-width:680px){.phones{gap:26px}}
+</style>
+</head>
+<body>
+
+<!-- icon sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M18 6l-1 14H7L6 6M10 11v5M14 11v5"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></symbol>
+  <symbol id="i-grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1.3" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-comment" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12Z"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4 6v5c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24"><path d="m3 17 6-6 4 4 8-8"/><path d="M16 7h5v5"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.9 6.6 19.7l1.2-6L3.3 9.3l6.1-.7L12 3Z"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><path d="M16 2.5v4M8 2.5v4M3 9.5h18"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20c.8-3.6 4-5.5 7.5-5.5s6.7 1.9 7.5 5.5"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h4"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V4M4 20h16M8 16v-4M12 16V8M16 16v-6"/></symbol>
+</svg>
+
+<div class="head">
+  <div class="eyebrow"><span class="rule"></span> Forms engine &amp; student progress — mobile</div>
+  <h1>Configure once. Track every cycle.</h1>
+  <p class="lede">One form engine powers both <b>interviews</b> (one-time intake) and <b>evaluations</b> (recurring 4-week cycles). A city admin builds the question sets; a Murabbi reads the resulting <b>student profile</b> — every score, every comment, and the trend across cycles. Same brand language: logo gradient on headers, royal blue for the UI, <b>magenta for Save/Add</b>, mono for all numbers.</p>
+</div>
+<div class="tokens">
+  <span class="sw"><i style="background:var(--grad)"></i> Logo gradient — headers</span>
+  <span class="sw"><i style="background:var(--magenta)"></i> Magenta — Save / Add</span>
+  <span class="sw"><i style="background:var(--blue)"></i> Royal blue — UI &amp; scores</span>
+  <span class="sw"><i style="background:var(--present)"></i> Trend up</span>
+  <span class="sw"><i style="background:var(--excused)"></i> Read-only / locked</span>
+</div>
+
+<!-- ================= SCREEN A — FORMS BUILDER ================= -->
+<div class="secband"><span class="lbl">Screen A</span><span class="tt">Forms Builder — City Admin</span><span class="ds"></span></div>
+
+<div class="phones">
+
+  <!-- A1 — interview template -->
+  <div class="phone">
+    <div class="scr">
+      <div class="ghead">
+        <div class="sbar light"><span>9:41</span><span class="dots"><svg class="ic" style="width:16px;height:16px" viewBox="0 0 24 24"><path d="M12 20h.01M8.5 16.4a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 14 0"/></svg><span class="bat"><i></i></span></span></div>
+        <div class="top"><span class="logochip sm"><img src="public/logo.png" alt="" /></span><span class="hi">Islamabad · City Admin</span></div>
+        <div class="ttl">Forms</div>
+        <div class="sub">Question sets for this city</div>
+        <div class="segctl"><b class="on">Interview</b><b>Evaluation</b></div>
+      </div>
+      <div class="body">
+        <div class="seclbl">Interview template <span class="ct">4 Q</span><span class="sp"></span><span class="hint">one-time intake</span></div>
+
+        <div class="qcard">
+          <div class="qtop">
+            <span class="grip"><svg class="ic"><use href="#i-grip"/></svg></span>
+            <span class="qnum">1</span>
+            <span class="qtext">How clearly does the candidate express their reason for joining?</span>
+            <span class="qacts"><button class="qbtn"><svg class="ic"><use href="#i-edit"/></svg></button><button class="qbtn del"><svg class="ic"><use href="#i-trash"/></svg></button></span>
+          </div>
+          <div class="scalerow"><span class="scalelead">1–5</span><div class="scale"><b>1</b><b>2</b><b>3</b><b class="on">4</b><b>5</b></div></div>
+          <div class="scaletags"><span>Poor</span><span>Excellent</span></div>
+          <div class="qfoot"><svg class="ic"><use href="#i-comment"/></svg><span class="cmt">+ interviewer comment captured per question</span></div>
+        </div>
+
+        <div class="qcard">
+          <div class="qtop">
+            <span class="grip"><svg class="ic"><use href="#i-grip"/></svg></span>
+            <span class="qnum">2</span>
+            <span class="qtext">Level of commitment to weekly attendance.</span>
+            <span class="qacts"><button class="qbtn"><svg class="ic"><use href="#i-edit"/></svg></button><button class="qbtn del"><svg class="ic"><use href="#i-trash"/></svg></button></span>
+          </div>
+          <div class="scalerow"><span class="scalelead">1–5</span><div class="scale"><b>1</b><b>2</b><b class="on">3</b><b>4</b><b>5</b></div></div>
+          <div class="scaletags"><span>Poor</span><span>Excellent</span></div>
+          <div class="qfoot"><svg class="ic"><use href="#i-comment"/></svg><span class="cmt">+ interviewer comment captured per question</span></div>
+        </div>
+
+        <div class="addrow"><svg class="ic"><use href="#i-plus"/></svg> Add question</div>
+      </div>
+      <div class="savebar">
+        <div class="sum"><b>4 questions</b> · changes not yet saved</div>
+        <button class="savebtn"><svg class="ic"><use href="#i-check"/></svg> Save template</button>
+      </div>
+    </div>
+    <div class="cap"><span class="n">A1</span><b>Forms — Interview.</b> Segmented kind toggle; each question is a 1–5 Likert + a per-question comment field.</div>
+  </div>
+
+  <!-- A2 — add-question editor state -->
+  <div class="phone">
+    <div class="scr">
+      <div class="ghead">
+        <div class="sbar light"><span>9:41</span><span class="dots"><svg class="ic" style="width:16px;height:16px" viewBox="0 0 24 24"><path d="M12 20h.01M8.5 16.4a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 14 0"/></svg><span class="bat"><i></i></span></span></div>
+        <div class="top"><span class="logochip sm"><img src="public/logo.png" alt="" /></span><span class="hi">Islamabad · City Admin</span></div>
+        <div class="ttl">Forms</div>
+        <div class="sub">Question sets for this city</div>
+        <div class="segctl"><b>Interview</b><b class="on">Evaluation</b></div>
+      </div>
+      <div class="body">
+        <div class="seclbl">Evaluation template <span class="ct">6 Q</span><span class="sp"></span><span class="hint">recurring · 4-week</span></div>
+
+        <div class="qcard">
+          <div class="qtop">
+            <span class="grip"><svg class="ic"><use href="#i-grip"/></svg></span>
+            <span class="qnum">1</span>
+            <span class="qtext">Punctuality &amp; consistency this cycle.</span>
+            <span class="qacts"><button class="qbtn"><svg class="ic"><use href="#i-edit"/></svg></button><button class="qbtn del"><svg class="ic"><use href="#i-trash"/></svg></button></span>
+          </div>
+          <div class="scalerow"><span class="scalelead">1–5</span><div class="scale"><b>1</b><b>2</b><b>3</b><b class="on">4</b><b>5</b></div></div>
+          <div class="scaletags"><span>Poor</span><span>Excellent</span></div>
+          <div class="qfoot"><svg class="ic"><use href="#i-comment"/></svg><span class="cmt">+ Murabbi comment captured per question</span></div>
+        </div>
+
+        <!-- inline add editor -->
+        <div class="editor">
+          <div class="eh"><svg class="ic"><use href="#i-plus"/></svg> New question · #7</div>
+          <div class="eb">
+            <div class="fl">Question text</div>
+            <textarea rows="2">How well does the shabab support and encourage peers?</textarea>
+            <div class="snap"><svg class="ic"><use href="#i-shield"/></svg><span>Each response <b>snapshots the question text</b>, so editing or reordering it later won't alter past evaluations.</span></div>
+            <div class="ef"><button>Cancel</button><button class="go">Add question</button></div>
+          </div>
+        </div>
+
+        <div class="addrow"><svg class="ic"><use href="#i-plus"/></svg> Add question</div>
+      </div>
+      <div class="savebar">
+        <div class="sum"><b>7 questions</b> · 1 unsaved draft</div>
+        <button class="savebtn"><svg class="ic"><use href="#i-check"/></svg> Save template</button>
+      </div>
+    </div>
+    <div class="cap"><span class="n">A2</span><b>Add-question editor.</b> Evaluation kind selected; subtle note that responses snapshot the question text so history stays intact.</div>
+  </div>
+
+</div>
+
+<!-- ================= SCREEN B — STUDENT PROFILE ================= -->
+<div class="secband"><span class="lbl">Screen B</span><span class="tt">Student Profile &amp; Progress — Murabbi</span><span class="ds"></span></div>
+
+<div class="phones">
+
+  <!-- B1 — Interview tab (read-only) -->
+  <div class="phone">
+    <div class="scr">
+      <div class="phero">
+        <div class="sbar light"><span>9:41</span><span class="dots"><svg class="ic" style="width:16px;height:16px" viewBox="0 0 24 24"><path d="M12 20h.01M8.5 16.4a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 14 0"/></svg><span class="bat"><i></i></span></span></div>
+        <div class="back"><svg class="ic"><use href="#i-back"/></svg> Class A</div>
+        <div class="nmrow"><span class="ava">AR</span><div><div class="nm">Ahmad Raza</div><div class="chips"><span class="pchip">Junior</span><span class="pchip">Class A · Park 3</span></div></div></div>
+        <div class="stats">
+          <div class="pstat"><div class="v">92%</div><div class="k">Attendance</div></div>
+          <div class="pstat"><div class="v">4.4</div><div class="k">Latest avg</div></div>
+          <div class="pstat"><div class="v">+1.2</div><div class="k">Since C1</div></div>
+        </div>
+      </div>
+      <div class="ptabs"><b class="on">Interview</b><b>Evaluations</b><b>Progress</b></div>
+      <div class="body" style="padding-top:14px">
+        <div class="meta-band"><svg class="ic"><use href="#i-lock"/></svg> Intake interview · 14 May 2026 · read-only</div>
+
+        <div class="iq">
+          <div class="q">How clearly does the candidate express their reason for joining?</div>
+          <div class="sc"><span class="pip on"></span><span class="pip on"></span><span class="pip on"></span><span class="pip on"></span><span class="pip"></span><span class="val">4/5</span></div>
+          <div class="cmt"><span class="who">Interviewer · Yusuf K.</span>Very articulate — wants to follow his older brother who attended Batch 2.</div>
+        </div>
+
+        <div class="iq">
+          <div class="q">Level of commitment to weekly attendance.</div>
+          <div class="sc"><span class="pip on"></span><span class="pip on"></span><span class="pip on"></span><span class="pip"></span><span class="pip"></span><span class="val">3/5</span></div>
+          <div class="cmt"><span class="who">Interviewer · Yusuf K.</span>Plays cricket on weekends — flagged Saturdays as a possible clash.</div>
+        </div>
+
+        <div class="iq">
+          <div class="q">Confidence speaking in a group.</div>
+          <div class="sc"><span class="pip on"></span><span class="pip on"></span><span class="pip on"></span><span class="pip on"></span><span class="pip on"></span><span class="val">5/5</span></div>
+          <div class="cmt"><span class="who">Interviewer · Yusuf K.</span>Led the icebreaker without hesitation.</div>
+        </div>
+      </div>
+      <div class="tabs">
+        <a><svg class="ic"><use href="#i-user"/></svg> Roster</a>
+        <a class="on"><svg class="ic"><use href="#i-clip"/></svg> Profile</a>
+        <a><svg class="ic"><use href="#i-chart"/></svg> Reports</a>
+      </div>
+    </div>
+    <div class="cap"><span class="n">B1</span><b>Profile — Interview.</b> Read-only intake: each question with its locked 1–5 score and the interviewer's comment.</div>
+  </div>
+
+  <!-- B2 — Progress trends -->
+  <div class="phone">
+    <div class="scr">
+      <div class="phero" style="padding-bottom:16px">
+        <div class="sbar light"><span>9:41</span><span class="dots"><svg class="ic" style="width:16px;height:16px" viewBox="0 0 24 24"><path d="M12 20h.01M8.5 16.4a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 14 0"/></svg><span class="bat"><i></i></span></span></div>
+        <div class="back"><svg class="ic"><use href="#i-back"/></svg> Class A</div>
+        <div class="nmrow"><span class="ava">AR</span><div><div class="nm">Ahmad Raza</div><div class="chips"><span class="pchip">Junior</span><span class="pchip">Class A · Park 3</span></div></div></div>
+      </div>
+      <div class="ptabs"><b>Interview</b><b>Evaluations</b><b class="on">Progress</b></div>
+      <div class="body" style="padding-top:14px">
+
+        <!-- score trend -->
+        <div class="pcard">
+          <div class="pcard-h"><h3>Evaluation score</h3><span class="sp"></span><span class="now mono">4.4<span class="up"> ▲ +0.3</span></span></div>
+          <div class="chartwrap">
+            <svg viewBox="0 0 280 96" preserveAspectRatio="none" aria-hidden="true">
+              <line x1="0" y1="12" x2="280" y2="12" stroke="#eef1f8" stroke-width="1"/>
+              <line x1="0" y1="42" x2="280" y2="42" stroke="#eef1f8" stroke-width="1"/>
+              <line x1="0" y1="72" x2="280" y2="72" stroke="#eef1f8" stroke-width="1"/>
+              <polyline points="32,60 112,42 192,24 264,12" fill="none" stroke="#2f55ea" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="32" cy="60" r="4" fill="#fff" stroke="#2f55ea" stroke-width="2.4"/>
+              <circle cx="112" cy="42" r="4" fill="#fff" stroke="#2f55ea" stroke-width="2.4"/>
+              <circle cx="192" cy="24" r="4" fill="#fff" stroke="#2f55ea" stroke-width="2.4"/>
+              <circle cx="264" cy="12" r="4.6" fill="#2f55ea"/>
+            </svg>
+          </div>
+          <div class="axisrow"><span>3.2</span><span>3.8</span><span>4.1</span><span>4.4</span></div>
+          <div class="axisrow" style="padding-top:0">
+            <span>C1</span><span>C2</span><span>C3</span><span>C4</span>
+          </div>
+        </div>
+
+        <!-- attendance trend -->
+        <div class="pcard">
+          <div class="pcard-h"><h3>Attendance · same cycles</h3><span class="sp"></span><span class="now mono">94%<span class="up"> ▲</span></span></div>
+          <div class="chartwrap">
+            <svg viewBox="0 0 280 96" preserveAspectRatio="none" aria-hidden="true">
+              <line x1="0" y1="12" x2="280" y2="12" stroke="#eef1f8" stroke-width="1"/>
+              <line x1="0" y1="48" x2="280" y2="48" stroke="#eef1f8" stroke-width="1"/>
+              <line x1="0" y1="84" x2="280" y2="84" stroke="#eef1f8" stroke-width="1"/>
+              <rect x="18" y="40" width="44" height="44" rx="4" fill="#dbe3fb"/>
+              <rect x="98" y="30" width="44" height="54" rx="4" fill="#c2cffa"/>
+              <rect x="178" y="34" width="44" height="50" rx="4" fill="#a9bdf8"/>
+              <rect x="246" y="20" width="44" height="64" rx="4" fill="#2f55ea" transform="translate(-28,0)"/>
+            </svg>
+          </div>
+          <div class="axisrow"><span>78%</span><span>88%</span><span>85%</span><span>94%</span></div>
+          <div class="axisrow" style="padding-top:0"><span>C1</span><span>C2</span><span>C3</span><span>C4</span></div>
+        </div>
+
+        <div class="pcard">
+          <div class="pcard-h"><h3>Cycles</h3><span class="sp"></span><span class="pcard-h" style="padding:0;font-size:11px;color:var(--ink3);font-weight:600">tap to expand</span></div>
+          <div class="cyrow"><span class="cn">C1</span><div class="cd"><div class="t">Cycle 1</div><div class="s">May · weeks 1–4</div></div><span class="avg" style="color:var(--ink2)">3.2</span><span class="chev"><svg class="ic"><use href="#i-right"/></svg></span></div>
+          <div class="cyrow"><span class="cn">C2</span><div class="cd"><div class="t">Cycle 2</div><div class="s">Jun · weeks 1–4</div></div><span class="avg" style="color:var(--ink2)">3.8</span><span class="chev"><svg class="ic"><use href="#i-right"/></svg></span></div>
+          <div class="cyrow"><span class="cn">C3</span><div class="cd"><div class="t">Cycle 3</div><div class="s">Jun · weeks 5–8</div></div><span class="avg" style="color:var(--ink2)">4.1</span><span class="chev"><svg class="ic"><use href="#i-right"/></svg></span></div>
+          <div class="cyrow open"><span class="cn">C4</span><div class="cd"><div class="t">Cycle 4 · current</div><div class="s">Jun–Jul · in progress</div></div><span class="avg" style="color:var(--blue)">4.4</span><span class="chev"><svg class="ic"><use href="#i-right"/></svg></span></div>
+        </div>
+      </div>
+      <div class="tabs">
+        <a><svg class="ic"><use href="#i-user"/></svg> Roster</a>
+        <a class="on"><svg class="ic"><use href="#i-clip"/></svg> Profile</a>
+        <a><svg class="ic"><use href="#i-chart"/></svg> Reports</a>
+      </div>
+    </div>
+    <div class="cap"><span class="n">B2</span><b>Profile — Progress.</b> Score line + attendance bars across the 4 cycles (3.2→4.4), mono axes, with a per-cycle list.</div>
+  </div>
+
+  <!-- B3 — expanded cycle detail -->
+  <div class="phone">
+    <div class="scr">
+      <div class="phero" style="padding-bottom:16px">
+        <div class="sbar light"><span>9:41</span><span class="dots"><svg class="ic" style="width:16px;height:16px" viewBox="0 0 24 24"><path d="M12 20h.01M8.5 16.4a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 14 0"/></svg><span class="bat"><i></i></span></span></div>
+        <div class="back"><svg class="ic"><use href="#i-back"/></svg> Class A</div>
+        <div class="nmrow"><span class="ava">AR</span><div><div class="nm">Ahmad Raza</div><div class="chips"><span class="pchip">Junior</span><span class="pchip">Class A · Park 3</span></div></div></div>
+      </div>
+      <div class="ptabs"><b>Interview</b><b class="on">Evaluations</b><b>Progress</b></div>
+      <div class="body" style="padding-top:14px">
+        <div class="meta-band"><svg class="ic"><use href="#i-cal"/></svg> Cycle 4 · current · evaluated by Yusuf K.</div>
+
+        <div class="cyrow open" style="margin:0 16px;border:1px solid var(--blue-soft);border-bottom:0;border-radius:18px 18px 0 0;background:var(--blue-soft)">
+          <span class="cn">C4</span><div class="cd"><div class="t">Cycle 4 · current</div><div class="s">6 questions · in progress</div></div><span class="avg" style="color:var(--blue)">4.4</span><span class="chev" style="transform:rotate(90deg)"><svg class="ic"><use href="#i-right"/></svg></span>
+        </div>
+        <div class="cydetail">
+          <div class="cyq">
+            <div class="qt"><span class="qv">4/5</span> Punctuality &amp; consistency this cycle.</div>
+            <div class="miniscale"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+            <div class="cm"><span class="who">Murabbi</span>Only missed one session — messaged ahead. Big improvement on last cycle.</div>
+          </div>
+          <div class="cyq">
+            <div class="qt"><span class="qv">5/5</span> Engagement &amp; participation.</div>
+            <div class="miniscale"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+            <div class="cm"><span class="who">Murabbi</span>Always asks follow-up questions; helped two newer boys this month.</div>
+          </div>
+          <div class="cyq">
+            <div class="qt"><span class="qv">4/5</span> Character &amp; conduct with peers.</div>
+            <div class="miniscale"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+            <div class="cm"><span class="who">Murabbi</span>Respectful and calm. Working on patience during team games.</div>
+          </div>
+          <div class="cyfoot"><span class="lbl">Cycle average</span><span class="sp"></span><span class="big">4.4<small> / 5</small></span></div>
+        </div>
+      </div>
+      <div class="tabs">
+        <a><svg class="ic"><use href="#i-user"/></svg> Roster</a>
+        <a class="on"><svg class="ic"><use href="#i-clip"/></svg> Profile</a>
+        <a><svg class="ic"><use href="#i-chart"/></svg> Reports</a>
+      </div>
+    </div>
+    <div class="cap"><span class="n">B3</span><b>Profile — Evaluation cycle.</b> One expanded cycle: per-question 1–5 scores + Murabbi comments and the overall average in mono.</div>
+  </div>
+
+</div>
+
+<div class="principles">
+  <h3>Design notes</h3>
+  <div class="gl"></div>
+  <ul>
+    <li><b>One engine, two kinds.</b> The builder's segmented control flips a <span class="mono">FormTemplate.kind</span> between <b>interview</b> and <b>evaluation</b> — identical card model, so the team learns it once.</li>
+    <li><b>Every question = score + comment.</b> A 1–5 Likert (blue active pill) plus a per-question comment field, surfaced on the card and snapshotted into each response so editing the template never rewrites a student's history.</li>
+    <li><b>Read vs write, made obvious.</b> The admin builder uses magenta Save/Add and editable cards; the student profile is calm and read-only (lock/calendar meta-bands, locked score pips) — same tokens, different posture.</li>
+    <li><b>Numbers always mono.</b> Scores, averages, percentages, deltas and chart axes use JetBrains Mono; trend deltas read green when up — consistent with the attendance mockup.</li>
+    <li><b>Progress at a glance.</b> A blue score line over the 4 cycles (3.2 → 4.4) sits above an attendance bar trend on the same period, then a tappable per-cycle list drilling into question-level scores and comments.</li>
+  </ul>
+</div>
+
+</body>
+</html>

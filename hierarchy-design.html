@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hierarchy — City Admin · design mockup v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#eef1fb; --panel:#fff; --ink:#1f2742; --ink2:#6b7280; --ink3:#9aa1b2;
+    --line:#e7e9f4; --line2:#f1f2fa; --primary:#2f55ea; --primary-soft:#eef1fe;
+    --magenta:#c41f6a; --magenta-deep:#a51a5a; --magenta-soft:#fce8f1;
+    --warn:#f59e0b; --warn-bg:#fdf3e2; --warn-line:#f8d9a3;
+    --c-city:#64748b; --c-city-bg:#f1f4f9;
+    --c-zone:#2f55ea; --c-zone-bg:#eef1fe;
+    --c-sector:#db2777; --c-sector-bg:#fce8f1;
+    --c-park:#0ea5a4; --c-park-bg:#e6faf8;
+    --c-class:#f59e0b; --c-class-bg:#fdf3e2;
+    --ok:#16a34a; --ok-bg:#e9f7ee;
+    --d-geo:#2f55ea; --d-sports:#16a34a; --d-tarbiya:#db2777; --d-skills:#f59e0b; --d-inventory:#0891b2;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"DM Sans",-apple-system,sans-serif;background:linear-gradient(180deg,#e7ebfa,#f3f5fd);color:var(--ink);
+       font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;padding:28px;min-height:100vh}
+  .mono{font-family:"JetBrains Mono",monospace}
+  .caption{max-width:1120px;margin:0 auto 18px;color:var(--ink2);font-size:13px}
+  .caption b{color:var(--ink)}
+
+  .app{max-width:1120px;margin:0 auto;background:var(--panel);border:1px solid var(--line);
+       border-radius:16px;overflow:hidden;box-shadow:0 24px 60px -30px rgba(15,23,42,.35);position:relative}
+
+  /* top bar */
+  .ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block;flex-shrink:0}
+  .ic.fill{fill:currentColor;stroke:none}
+  .iconbtn,.kebab{display:inline-flex;align-items:center;justify-content:center}
+  .brandlogo{width:27px;height:27px;object-fit:contain;flex-shrink:0;display:block}
+  .topbar{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line);background:#fff}
+  .city{display:flex;align-items:center;gap:9px;padding:7px 12px;border:1px solid var(--line);border-radius:9px;font-weight:700;cursor:pointer}
+  .city .dot{width:8px;height:8px;border-radius:50%;background:var(--c-city)}
+  .city .chev{color:var(--ink3);font-size:12px}
+  .crumb{color:var(--ink3);font-size:13px;font-weight:600}
+  .crumb b{color:var(--ink)}
+  .spacer{flex:1}
+  .vacstat{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:20px;background:var(--warn-bg);
+           border:1px solid var(--warn-line);color:#92400e;font-weight:700;font-size:12.5px;cursor:pointer}
+  .vacstat .d{width:7px;height:7px;border-radius:50%;background:var(--warn)}
+  .btn{font:inherit;font-weight:600;border-radius:9px;padding:8px 13px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+  .btn:hover{background:#f8fafc}
+  .btn.primary{background:var(--magenta);border-color:var(--magenta);color:#fff}
+  .btn.primary:hover{background:var(--magenta-deep);border-color:var(--magenta-deep)}
+  .btn.sm{padding:6px 10px;font-size:13px}
+  .btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+  .btn.danger{color:#dc2626}
+  .btn.danger:hover{background:#fef2f2}
+
+  .work{display:grid;grid-template-columns:344px 1fr;min-height:580px}
+  .tree{border-right:1px solid var(--line);display:flex;flex-direction:column;background:#fcfdfe}
+  .tree-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line2)}
+  .search{flex:1;display:flex;align-items:center;gap:8px;padding:7px 10px;background:#fff;border:1px solid var(--line);border-radius:8px;color:var(--ink3)}
+  .search input{border:0;outline:0;font:inherit;flex:1;color:var(--ink);background:transparent}
+  .lens{font:inherit;font-weight:600;font-size:12.5px;padding:7px 10px;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;color:var(--ink2);display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .lens.on{background:var(--warn-bg);border-color:var(--warn-line);color:#92400e}
+  .lens .d{width:7px;height:7px;border-radius:50%;background:var(--warn)}
+  .iconbtn{width:33px;height:33px;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;color:var(--ink2);font-size:14px;flex-shrink:0}
+  .iconbtn:hover{background:#f8fafc}
+
+  /* focus / scope bar */
+  .scope{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--line2);font-size:12px;color:var(--ink2);background:#fafbfd}
+  .scope .pin{color:var(--primary)}
+  .scope .x{margin-left:auto;color:var(--ink3);cursor:pointer;font-weight:700}
+
+  .rows{padding:8px 8px 4px;overflow:auto;flex:1}
+  .row{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:8px;cursor:pointer;position:relative;user-select:none}
+  .row:hover{background:#f1f4f9}
+  .row.trail{background:#f7f8fc}
+  .row.trail::after{content:"";position:absolute;left:0;top:4px;bottom:4px;width:2px;border-radius:2px;background:#c7cdf5}
+  .row.sel{background:var(--primary-soft)}
+  .row.sel::after{content:"";position:absolute;left:0;top:3px;bottom:3px;width:3px;border-radius:2px;background:var(--primary)}
+  .row.sel .name{color:var(--primary);font-weight:700}
+  .caret{width:16px;height:16px;flex-shrink:0;font-size:0;display:flex;align-items:center;justify-content:center;transition:transform .14s}
+  .caret::before{content:"";width:6px;height:6px;border-right:1.7px solid var(--ink3);border-bottom:1.7px solid var(--ink3);transform:rotate(45deg);margin-top:-2px}
+  .caret.collapsed{transform:rotate(-90deg)}
+  .leaf .caret{visibility:hidden}
+  .tdot{width:7px;height:7px;border-radius:2px;flex-shrink:0}
+  .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+  .count{font-size:11px;color:var(--ink3);font-weight:500;flex-shrink:0}
+  .vac{font-size:10.5px;font-weight:800;color:#92400e;background:var(--warn-bg);border:1px solid var(--warn-line);
+       border-radius:20px;min-width:18px;height:18px;padding:0 5px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .focusbtn{opacity:0;font-size:11px;color:var(--ink3);border:1px solid var(--line);background:#fff;border-radius:6px;padding:1px 6px;cursor:pointer}
+  .row:hover .focusbtn{opacity:1}
+  .children{position:relative}
+  .children::before{content:"";position:absolute;left:15px;top:0;bottom:6px;width:1px;background:var(--line)}
+  .children.hide{display:none}
+  .addrow{display:flex;align-items:center;gap:7px;padding:6px 8px;margin:2px 0;color:var(--magenta);font-weight:600;cursor:pointer;border-radius:8px}
+  .addrow:hover{background:var(--magenta-soft)}
+  .addrow .plus{width:16px;text-align:center}
+
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:3px 8px;border-radius:6px}
+
+  /* inspector */
+  .insp{padding:22px 26px;overflow:auto}
+  .insp-head{display:flex;align-items:flex-start;gap:14px}
+  .insp-title{font-size:24px;font-weight:800;letter-spacing:-.02em}
+  .path{font-size:12px;color:var(--ink3);margin-top:6px}
+  .path b{color:var(--ink2)}
+  .insp-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .kebab{width:36px;height:36px;border:1px solid var(--line);background:#fff;border-radius:9px;cursor:pointer;color:var(--ink2);font-size:17px;font-weight:700}
+  .kebab:hover{background:#f8fafc}
+
+  .card{border:1px solid var(--line);border-radius:var(--radius);margin-top:20px;overflow:hidden}
+  .card-head{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line2);background:#fbfcfe}
+  .card-head h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2)}
+  .card-head .meta{margin-left:8px;color:var(--ink3);font-size:12px;font-weight:600}
+  .card-head .spacer{flex:1}
+  .linkbtn{font:inherit;font-weight:600;font-size:13px;color:var(--primary);background:none;border:0;cursor:pointer;padding:4px 6px;border-radius:6px}
+  .linkbtn:hover{background:var(--primary-soft)}
+
+  .listrow{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line2)}
+  .listrow:last-child{border-bottom:0}
+  .roleicon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+  .role-name{font-weight:700}
+  .role-sub{font-size:12.5px;color:var(--ink2)}
+  .vacant{background:#fffdf7}
+  .vacant .role-sub{color:#b45309}
+  .grow{flex:1}
+  .avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;background:var(--c-park-bg);color:var(--c-park)}
+  .status{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.03em}
+  .status.active{background:var(--ok-bg);color:var(--ok)}
+  .status.pending{background:#fff7ed;color:#c2410c}
+  .applink{font-size:12px;font-weight:700;color:var(--warn);cursor:pointer}
+  .countlink{font-size:12px;font-weight:600;color:var(--primary);cursor:pointer}
+  .countlink:hover{text-decoration:underline}
+  .childrow{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line2);cursor:pointer}
+  .childrow:last-child{border-bottom:0}
+  .childrow:hover{background:#f8fafc}
+
+  /* dimension switcher */
+  .dims{display:flex;align-items:center;gap:2px;padding:0 14px;border-bottom:1px solid var(--line);background:#fff;overflow-x:auto}
+  .dim-tab{display:flex;align-items:center;gap:8px;padding:11px 13px;font-weight:600;font-size:13.5px;color:var(--ink2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+  .dim-tab:hover{color:var(--ink)}
+  .dim-tab .dd{width:8px;height:8px;border-radius:50%}
+  .dim-tab.active{color:var(--ink);font-weight:800}
+  .dim-new{margin-left:auto;font-size:12.5px;font-weight:700;color:var(--primary);padding:6px 11px;border:1px dashed #c7cdf5;border-radius:8px;cursor:pointer;white-space:nowrap}
+  .dim-new:hover{background:var(--primary-soft)}
+  .field{margin-top:11px}
+  .field label{display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink3);margin-bottom:4px}
+  .field .inp{padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:13px;color:var(--ink);background:#fff}
+  .field .inp.ph{color:var(--ink3)}
+  .ownban{display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:9px;background:#f8fafc;border:1px solid var(--line2);font-size:12px;color:var(--ink2);margin-bottom:10px}
+  .ownban .badge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;padding:2px 8px;border-radius:20px}
+
+  /* mobile phone mockups */
+  .phones{display:flex;gap:30px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+  .phone{width:300px}
+  .phscreen{border:9px solid #0f172a;border-radius:34px;overflow:hidden;background:#fcfdfe;box-shadow:0 30px 60px -30px rgba(15,23,42,.5);height:604px;display:flex;flex-direction:column}
+  .phcap{text-align:center;font-size:12px;color:var(--ink2);margin-top:12px;font-weight:600;line-height:1.45;padding:0 6px}
+  .mhead{padding:12px 14px;border-bottom:1px solid var(--line2);background:#fff;flex-shrink:0}
+  .mtop{display:flex;align-items:center;gap:12px;color:var(--ink2)}
+  .mtop .ic{font-size:17px;cursor:pointer}
+  .mtop .bc{font-size:11.5px;color:var(--ink3);font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mtitle{display:flex;align-items:center;gap:9px;margin-top:9px}
+  .mtitle .t{font-size:19px;font-weight:800}
+  .mdims{display:flex;gap:6px;padding:9px 14px;border-bottom:1px solid var(--line2);overflow-x:auto;background:#fafbfd;flex-shrink:0}
+  .mchip{font-size:12px;font-weight:700;padding:5px 10px;border-radius:20px;background:#fff;border:1px solid var(--line);color:var(--ink2);white-space:nowrap;display:flex;align-items:center;gap:6px}
+  .mchip.on{background:var(--primary-soft);border-color:#c7cdf5;color:var(--primary)}
+  .mbody{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column}
+  .mcard{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:12px;background:#fff}
+  .mcard-h{padding:9px 13px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink2);background:#fbfcfe;border-bottom:1px solid var(--line2)}
+  .mlist{display:flex;align-items:center;gap:11px;padding:12px 13px;border-bottom:1px solid var(--line2);min-height:54px}
+  .mlist:last-child{border-bottom:0}
+  .mnav{display:flex;align-items:center;gap:11px;padding:14px 13px;border-bottom:1px solid var(--line2);min-height:56px;cursor:pointer}
+  .mnav:last-child{border-bottom:0}
+  .mnav .chev{color:var(--ink3);font-size:18px}
+  .mfoot{padding:11px 13px;border-top:1px solid var(--line);background:#fff;flex-shrink:0}
+  .mbtn{display:block;width:100%;text-align:center;font:inherit;font-weight:700;padding:13px;border-radius:11px;background:var(--primary);color:#fff;border:0;font-size:15px;cursor:pointer}
+  .sheet{margin-top:auto;border-top:1px solid var(--line);background:#fff;border-radius:18px 18px 0 0;box-shadow:0 -12px 30px -18px rgba(15,23,42,.3);padding:0 0 10px;flex-shrink:0}
+  .sheet .grab{width:38px;height:4px;border-radius:4px;background:var(--line);margin:9px auto 8px}
+  .sheet .sh-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3);padding:0 18px 6px}
+  .sopt{display:flex;align-items:center;gap:11px;padding:13px 18px;font-weight:600}
+  .sopt .ck{margin-left:auto;color:var(--primary);font-weight:800}
+  .notes{font-size:13px;color:var(--ink2);line-height:1.7;padding-left:18px;margin-top:8px}
+  .notes li{margin-bottom:5px}
+  .notes b{color:var(--ink)}
+
+  /* gallery */
+  .gallery{max-width:1120px;margin:40px auto 0}
+  .gallery h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);margin-bottom:4px}
+  .gallery .sub{color:var(--ink3);font-size:13px;margin-bottom:18px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+  .demo{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 12px 30px -22px rgba(15,23,42,.3)}
+  .demo .label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--primary);margin-bottom:12px}
+  .demo .label.amber{color:var(--warn)}
+  .demo .desc{font-size:12.5px;color:var(--ink2);margin-top:12px}
+  .mini{border:1px solid var(--line2);border-radius:10px;padding:8px;background:#fcfdfe}
+  .mrow{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:7px;font-size:13px}
+  .mrow .nm{font-weight:600;flex:1}
+  .dim{opacity:.34}
+
+  /* search results */
+  .results{border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:0 12px 30px -18px rgba(15,23,42,.3)}
+  .res{padding:10px 14px;border-bottom:1px solid var(--line2);cursor:pointer}
+  .res:last-child{border-bottom:0}
+  .res:hover{background:#f4f6fb}
+  .res .nm{font-weight:700}
+  .res .nm mark{background:#fef08a;color:inherit;border-radius:3px;padding:0 1px}
+  .res .pth{font-size:11px;color:var(--ink3);margin-top:2px}
+
+  /* dialog */
+  .dialog{border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 20px 50px -20px rgba(15,23,42,.45)}
+  .dlg-head{padding:16px 18px 4px;font-weight:800;font-size:16px;display:flex;align-items:center;gap:10px}
+  .dlg-head .ic{width:32px;height:32px;border-radius:9px;background:#fef2f2;color:#dc2626;display:flex;align-items:center;justify-content:center;font-size:16px}
+  .dlg-body{padding:10px 18px 16px}
+  .impact{background:#fff7f7;border:1px solid #fde0e0;border-radius:10px;padding:12px 14px;margin-top:6px}
+  .impact li{list-style:none;display:flex;align-items:center;gap:9px;padding:4px 0;font-size:13px;color:#7f1d1d}
+  .impact li b{color:#dc2626}
+  .dlg-foot{display:flex;justify-content:flex-end;gap:9px;padding:12px 18px;border-top:1px solid var(--line2);background:#fbfcfe}
+
+  /* toast */
+  .toast{display:flex;align-items:center;gap:14px;background:#0f172a;color:#fff;border-radius:11px;padding:12px 16px;box-shadow:0 16px 40px -16px rgba(0,0,0,.5)}
+  .toast .undo{font:inherit;font-weight:700;color:#a5b4fc;background:none;border:0;cursor:pointer}
+  .toast .x{color:#64748b;cursor:pointer;font-weight:700}
+
+  /* move picker */
+  .picker .mrow.cur{background:var(--primary-soft);font-weight:700}
+  .picker .blocked{opacity:.4;cursor:not-allowed}
+  .picker .blocked .tag{margin-left:auto;font-size:10px;color:#b91c1c;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+
+  /* empty */
+  .empty{text-align:center;padding:24px 18px;border:1.5px dashed var(--line);border-radius:12px}
+  .empty .ttl{font-weight:800;font-size:16px;margin-bottom:4px}
+  .empty .txt{color:var(--ink2);font-size:13px;margin-bottom:16px}
+  .empty .opts{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+  @media(max-width:780px){.work{grid-template-columns:1fr}.tree{border-right:0;border-bottom:1px solid var(--line)}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<p class="caption"><b>Hierarchy — City Admin (v2).</b> Three UX upgrades — <b>vacancy visibility</b> (rolled-up gap badges + lens + stat), <b>scale</b> (focus/zoom, ancestor trail, revealing search), <b>safe edits</b> (impact preview + Undo) — plus the <b>dimension switcher</b> below the top bar to pick which hierarchy (Geographic / Sports / …) you're editing. Static mockup — carets toggle.</p>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20.5 20.5-3.4-3.4"/></symbol>
+  <symbol id="i-levels" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+  <symbol id="i-collapse" viewBox="0 0 24 24"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.4"/><path d="M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M18 6l-1 14H7L6 6M10 11v5M14 11v5"/></symbol>
+</svg>
+
+<div class="app">
+  <div class="topbar">
+    <img class="brandlogo" src="public/logo.png" alt="Shabab" />
+    <div class="city" tabindex="0"><span class="dot"></span> Islamabad <span class="chev">▾</span></div>
+    <span class="crumb">Hierarchy · <b>23 nodes</b></span>
+    <span class="spacer"></span>
+    <span class="vacstat" title="Jump to vacancies"><span class="d"></span> 6 roles unfilled</span>
+    <button class="btn"><svg class="ic" style="width:17px;height:17px"><use href="#i-levels"/></svg> Manage levels</button>
+    <button class="btn primary">+ Add Zone</button>
+  </div>
+
+  <!-- dimension switcher -->
+  <div class="dims">
+    <div class="dim-tab active" style="border-bottom-color:var(--d-geo)"><span class="dd" style="background:var(--d-geo)"></span> Geographic</div>
+    <div class="dim-tab"><span class="dd" style="background:var(--d-sports)"></span> Sports</div>
+    <div class="dim-tab"><span class="dd" style="background:var(--d-tarbiya)"></span> Tarbiya</div>
+    <div class="dim-tab"><span class="dd" style="background:var(--d-skills)"></span> Skills</div>
+    <div class="dim-tab"><span class="dd" style="background:var(--d-inventory)"></span> Inventory</div>
+    <div class="dim-new">+ New hierarchy</div>
+  </div>
+
+  <div class="work">
+    <!-- TREE -->
+    <div class="tree">
+      <div class="tree-head">
+        <label class="search"><svg class="ic" style="width:17px;height:17px"><use href="#i-search"/></svg> <input placeholder="Find a node…" /></label>
+        <button class="lens" title="Show only nodes with gaps"><span class="d"></span> Vacancies</button>
+        <button class="iconbtn" title="Collapse all"><svg class="ic" style="width:18px;height:18px"><use href="#i-collapse"/></svg></button>
+      </div>
+      <div class="scope"><svg class="ic pin" style="width:15px;height:15px"><use href="#i-target"/></svg> Viewing <b style="color:var(--ink)">all of Islamabad</b> · hover a node to focus <span class="x">—</span></div>
+      <div class="rows">
+        <div class="row trail" style="padding-left:8px"><span class="caret">▾</span><span class="tdot" style="background:var(--c-city)"></span><span class="name">Islamabad</span><span class="vac">6</span><span class="count">8 parks</span></div>
+        <div class="children">
+          <div class="row trail" style="padding-left:22px"><span class="caret">▾</span><span class="tdot" style="background:var(--c-zone)"></span><span class="name">Zone 1</span><button class="focusbtn">focus</button><span class="vac">3</span><span class="count">3 sec.</span></div>
+          <div class="children">
+            <div class="row trail" style="padding-left:36px"><span class="caret">▾</span><span class="tdot" style="background:var(--c-sector)"></span><span class="name">Sector G-9</span><span class="vac">2</span><span class="count">2 parks</span></div>
+            <div class="children">
+              <div class="row sel" style="padding-left:50px"><span class="caret">▾</span><span class="tdot" style="background:var(--c-park)"></span><span class="name">Park 3</span><span class="vac">1</span><span class="count">21</span></div>
+              <div class="children">
+                <div class="row leaf" style="padding-left:64px"><span class="caret">▾</span><span class="tdot" style="background:var(--c-class)"></span><span class="name">Class A</span><span class="count">12</span></div>
+                <div class="row leaf" style="padding-left:64px"><span class="caret">▾</span><span class="tdot" style="background:var(--c-class)"></span><span class="name">Class B</span><span class="vac">1</span><span class="count">9</span></div>
+                <div class="addrow" style="padding-left:64px"><span class="plus">+</span> Add Class</div>
+              </div>
+              <div class="row" style="padding-left:50px"><span class="caret collapsed">▾</span><span class="tdot" style="background:var(--c-park)"></span><span class="name">Park 4</span><span class="vac">1</span><span class="count">14</span></div>
+            </div>
+            <div class="row" style="padding-left:36px"><span class="caret collapsed">▾</span><span class="tdot" style="background:var(--c-sector)"></span><span class="name">Sector G-10</span><span class="vac">1</span><span class="count">3 parks</span></div>
+          </div>
+          <div class="row" style="padding-left:22px"><span class="caret collapsed">▾</span><span class="tdot" style="background:var(--c-zone)"></span><span class="name">Zone 2</span><span class="vac">2</span><span class="count">2 sec.</span></div>
+        </div>
+        <div class="addrow" style="padding-left:8px"><span class="plus">+</span> Add Zone</div>
+      </div>
+    </div>
+
+    <!-- INSPECTOR -->
+    <div class="insp">
+      <div class="insp-head">
+        <div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="insp-title">Park 3</span>
+            <span class="chip" style="background:var(--c-park-bg);color:var(--c-park)">● Park</span>
+          </div>
+          <div class="path mono">Islamabad <b>/</b> Zone 1 <b>/</b> Sector G-9 <b>/</b> Park 3</div>
+        </div>
+        <div class="insp-actions">
+          <button class="btn primary">+ Add Class</button>
+          <button class="kebab" title="Rename · Move · Archive · Delete"><svg class="ic fill" style="width:20px;height:20px"><use href="#i-more"/></svg></button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Roles &amp; people</h3><span class="meta">2 roles · 1 vacant</span></div>
+        <div class="listrow">
+          <span class="roleicon" style="background:var(--c-park-bg);color:var(--c-park)">PA</span>
+          <div class="grow"><div class="role-name">Park Admin</div><div class="role-sub">Bilal Ahmed · <span class="mono">35201-…</span></div></div>
+          <span class="status active">active</span>
+          <span class="avatar">BA</span>
+          <button class="linkbtn">Change</button>
+        </div>
+        <div class="listrow vacant">
+          <span class="roleicon" style="background:#fff7ed;color:#c2410c">SM</span>
+          <div class="grow"><div class="role-name">Sports Murabbi</div><div class="role-sub">Vacant · <span class="applink">2 applicants waiting ›</span></div></div>
+          <button class="btn primary sm">Assign</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Children</h3><span class="meta">2 classes · 21 students</span><span class="spacer"></span><button class="linkbtn" style="color:var(--magenta)">+ Add Class</button></div>
+        <div class="childrow"><span class="tdot" style="background:var(--c-class);width:8px;height:8px"></span><span class="role-name">Class A</span><span class="role-sub">Murabbi: Yusuf K.</span><span class="grow"></span><span class="countlink">12 students ›</span></div>
+        <div class="childrow"><span class="tdot" style="background:var(--c-class);width:8px;height:8px"></span><span class="role-name">Class B</span><span class="role-sub">Murabbi: <span style="color:#b45309;font-weight:700">vacant</span></span><span class="grow"></span><span class="countlink">9 students ›</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- undo toast pinned over the app -->
+  <div style="position:absolute;left:50%;bottom:18px;transform:translateX(-50%)">
+    <div class="toast"><span><svg class="ic" style="width:15px;height:15px;display:inline-block;vertical-align:-3px"><use href="#i-trash"/></svg> <b>Park 4</b> deleted · 3 classes &amp; 14 students removed</span><button class="undo">Undo</button><span class="x">✕</span></div>
+  </div>
+</div>
+
+<!-- ---------------- STATES GALLERY ---------------- -->
+<div class="gallery">
+  <h2>The three upgrades, up close</h2>
+  <p class="sub">Vacancy visibility · scale · safe edits.</p>
+  <div class="grid">
+
+    <!-- vacancy lens -->
+    <div class="demo">
+      <div class="label amber">① Vacancy lens — only the gaps</div>
+      <div class="mini">
+        <div class="mrow"><span class="tdot" style="background:var(--c-city)"></span><span class="nm">Islamabad</span><span class="vac">6</span></div>
+        <div class="mrow" style="padding-left:18px"><span class="tdot" style="background:var(--c-zone)"></span><span class="nm">Zone 1</span><span class="vac">3</span></div>
+        <div class="mrow dim" style="padding-left:34px"><span class="tdot" style="background:var(--c-sector)"></span><span class="nm">Sector G-9 → Park 3 ✓ staffed</span></div>
+        <div class="mrow" style="padding-left:34px"><span class="tdot" style="background:var(--c-sector)"></span><span class="nm">Sector G-9 · Park 3</span><span class="vac">1</span></div>
+        <div class="mrow" style="padding-left:50px"><span class="tdot" style="background:var(--c-class)"></span><span class="nm">Class B · Murabbi</span><span class="vac">1</span></div>
+        <div class="mrow dim" style="padding-left:18px"><span class="tdot" style="background:var(--c-zone)"></span><span class="nm">Zone 3 ✓ fully staffed</span></div>
+      </div>
+      <div class="desc">A node's badge = vacancies in its <em>whole subtree</em>, so you drill straight toward the gaps. Fully-staffed branches dim out.</div>
+    </div>
+
+    <!-- revealing search -->
+    <div class="demo">
+      <div class="label">② Search reveals &amp; locates</div>
+      <div class="search" style="margin-bottom:10px;background:#fff"><span>🔍</span> <input value="park 3" readonly style="font-weight:600" /></div>
+      <div class="results">
+        <div class="res"><div class="nm">Class A — <mark>Park 3</mark></div><div class="pth mono">Zone 1 / Sector G-9 / Park 3 / Class A</div></div>
+        <div class="res"><div class="nm"><mark>Park 3</mark></div><div class="pth mono">Zone 1 / Sector G-9 / Park 3</div></div>
+      </div>
+      <div class="desc">Picking a result expands the path, scrolls to it, and selects it — no manual hunting through a 300-node tree.</div>
+    </div>
+
+    <!-- delete impact -->
+    <div class="demo">
+      <div class="label">③ Delete — see the blast radius first</div>
+      <div class="dialog">
+        <div class="dlg-head"><span class="ic">🗑</span> Delete Park 3?</div>
+        <div class="dlg-body">
+          <div style="font-size:13px;color:var(--ink2)">This can't be undone after you confirm. It will:</div>
+          <ul class="impact">
+            <li>● remove <b>2 classes</b> (Class A, Class B)</li>
+            <li>● unassign <b>1 role</b> (Park Admin — Bilal Ahmed)</li>
+            <li>● detach <b>21 students</b> (profiles kept, attendance archived)</li>
+          </ul>
+        </div>
+        <div class="dlg-foot"><button class="btn">Archive instead</button><button class="btn danger">Delete permanently</button></div>
+      </div>
+      <div class="desc">Destructive actions preview their cascade — and offer <b>Archive</b> (soft, keeps history) as the safer default.</div>
+    </div>
+
+    <!-- move picker -->
+    <div class="demo">
+      <div class="label">③ Move — destination picker, cycles blocked</div>
+      <div class="mini picker">
+        <div class="mrow"><span class="tdot" style="background:var(--c-zone)"></span><span class="nm">Zone 1</span></div>
+        <div class="mrow" style="padding-left:18px"><span class="tdot" style="background:var(--c-sector)"></span><span class="nm">Sector G-9</span></div>
+        <div class="mrow cur" style="padding-left:34px"><span class="tdot" style="background:var(--c-sector)"></span><span class="nm">Sector G-10 ← move here</span></div>
+        <div class="mrow blocked" style="padding-left:18px"><span class="tdot" style="background:var(--c-park)"></span><span class="nm">Park 3 (itself)</span><span class="tag">can't</span></div>
+        <div class="mrow blocked" style="padding-left:34px"><span class="tdot" style="background:var(--c-class)"></span><span class="nm">Class A (descendant)</span><span class="tag">cycle</span></div>
+      </div>
+      <div class="desc">A node can't move into itself or a descendant — those targets are disabled, so you can't create a cycle.</div>
+    </div>
+
+    <!-- assign w/ applicants -->
+    <div class="demo">
+      <div class="label">Assign a vacant role (→ from Approvals)</div>
+      <div class="results">
+        <div class="res" style="background:var(--warn-bg)"><div class="nm">⏳ 2 applicants waiting for this city</div><div class="pth">Hamza Raza · Saad Iqbal — review in Approvals</div></div>
+        <div class="res"><div class="nm">Hamza Raza</div><div class="pth mono">CNIC 35202-…7 · existing person</div></div>
+        <div class="res" style="color:var(--primary);font-weight:700">+ Add a new person…</div>
+      </div>
+      <div class="desc">Vacancies link to pending applicants, closing the loop between the public form, Approvals, and staffing.</div>
+    </div>
+
+    <!-- empty (fixed copy) -->
+    <div class="demo">
+      <div class="label">First run — levels vs nodes, made clear</div>
+      <div class="empty">
+        <div class="ttl">Levels are set — now add your first Zone</div>
+        <div class="txt">Template applied: <b>Zone → Sector → Park → Class</b>. The tree is still empty; start building.</div>
+        <div class="opts"><button class="btn primary">+ Add first Zone</button><button class="btn">Edit levels</button></div>
+      </div>
+      <div class="desc">Fixes the earlier ambiguity: the template seeds the <em>levels</em> (<span class="mono">NodeType</span>s), not the nodes — so the empty state guides the next real step.</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ---------------- MULTIPLE HIERARCHIES ---------------- -->
+<div class="gallery">
+  <h2>Multiple hierarchies</h2>
+  <p class="sub">The switcher swaps which dynamic tree you edit. Functional trees are national &amp; independent of the geographic one.</p>
+  <div class="grid">
+
+    <div class="demo">
+      <div class="label" style="color:var(--d-sports)">Switch to Sports — a national, dynamic tree</div>
+      <div class="dims" style="border:1px solid var(--line2);border-radius:9px 9px 0 0;padding:0 8px">
+        <div class="dim-tab"><span class="dd" style="background:var(--d-geo)"></span> Geographic</div>
+        <div class="dim-tab active" style="border-bottom-color:var(--d-sports)"><span class="dd" style="background:var(--d-sports)"></span> Sports</div>
+      </div>
+      <div class="ownban" style="border-radius:0 0 9px 9px;border-top:0"><span class="badge" style="background:#ecfdf5;color:var(--d-sports)">National</span> Owned by the National Sports Admin — you manage Islamabad's branch.</div>
+      <div class="mini">
+        <div class="mrow"><span class="tdot" style="background:var(--d-sports)"></span><span class="nm">National Sports</span><span class="count">root</span></div>
+        <div class="mrow" style="padding-left:18px"><span class="tdot" style="background:var(--d-sports)"></span><span class="nm">Islamabad — Sports Head</span><span class="count mono">↔ Islamabad</span></div>
+        <div class="mrow" style="padding-left:34px"><span class="tdot" style="background:var(--d-sports)"></span><span class="nm">Park 3 — Sports</span><span class="count mono">↔ Park 3</span></div>
+        <div class="mrow" style="padding-left:18px"><span class="tdot" style="background:var(--d-sports)"></span><span class="nm">Lahore — Sports Head</span><span class="count mono">↔ Lahore</span></div>
+      </div>
+      <div class="desc">Its own dynamic levels — city-wise heads shown here, but the National admin <em>may</em> skip them. A city node can <span class="mono">↔</span> link to its geographic counterpart.</div>
+    </div>
+
+    <div class="demo">
+      <div class="label">+ New hierarchy (superadmin)</div>
+      <div class="dialog">
+        <div class="dlg-head" style="font-size:15px"><span class="ic" style="background:var(--primary-soft);color:var(--primary)">◆</span> New hierarchy</div>
+        <div class="dlg-body">
+          <div class="field"><label>Name</label><div class="inp">Sports</div></div>
+          <div class="field"><label>Top level</label><div class="inp">National Sports</div></div>
+          <div class="field"><label>National admin</label><div class="inp ph">🔍 Search person or CNIC…</div></div>
+          <div class="field"><label>Starting levels</label><div class="inp">National → City Head → Park → <span style="color:var(--ink3)">(edit later)</span></div></div>
+        </div>
+        <div class="dlg-foot"><button class="btn">Cancel</button><button class="btn primary">Create &amp; provision admin</button></div>
+      </div>
+      <div class="desc">Superadmin names the dimension, appoints its National Admin (who gets an account), and seeds starting levels — same pattern as adding a city, one level up.</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ---------------- MOBILE ---------------- -->
+<div class="gallery">
+  <h2>Built for mobile — outdoors &amp; on the go</h2>
+  <p class="sub">Master/detail can't sit side-by-side on a phone, so it collapses into a drill-down stack: each screen is one node (detail + its children); tap to go deeper, breadcrumb/‹ to go up.</p>
+  <div class="phones">
+
+    <div class="phone">
+      <div class="phscreen">
+        <div class="mhead">
+          <div class="mtop"><span class="ic">‹</span><span class="bc mono">Zone 1 / Sector G-9</span><span class="ic">🔍</span><span class="ic">⋯</span></div>
+          <div class="mtitle"><span class="t">Park 3</span><span class="chip" style="background:var(--c-park-bg);color:var(--c-park)">● Park</span></div>
+        </div>
+        <div class="mdims">
+          <span class="mchip on"><span style="width:7px;height:7px;border-radius:50%;background:var(--d-geo);display:inline-block"></span> Geographic</span>
+          <span class="mchip"><span style="width:7px;height:7px;border-radius:50%;background:var(--d-sports);display:inline-block"></span> Sports</span>
+          <span class="mchip">Tarbiya</span>
+        </div>
+        <div class="mbody">
+          <div class="mcard">
+            <div class="mcard-h">Roles &amp; people · 1 vacant</div>
+            <div class="mlist"><span class="roleicon" style="background:var(--c-park-bg);color:var(--c-park)">PA</span><div class="grow"><div class="role-name">Park Admin</div><div class="role-sub">Bilal Ahmed</div></div><span class="status active">active</span></div>
+            <div class="mlist vacant"><span class="roleicon" style="background:#fff7ed;color:#c2410c">SM</span><div class="grow"><div class="role-name">Sports Murabbi</div><div class="role-sub" style="color:#b45309">Vacant</div></div><button class="btn primary sm">Assign</button></div>
+          </div>
+          <div class="mcard">
+            <div class="mcard-h">Children · 2 classes · 21 students</div>
+            <div class="mnav"><span class="tdot" style="background:var(--c-class)"></span><div class="grow"><div class="role-name">Class A</div><div class="role-sub">12 students</div></div><span class="chev">›</span></div>
+            <div class="mnav"><span class="tdot" style="background:var(--c-class)"></span><div class="grow"><div class="role-name">Class B</div><div class="role-sub">9 students</div></div><span class="vac">1</span><span class="chev">›</span></div>
+          </div>
+        </div>
+        <div class="mfoot"><button class="mbtn">+ Add Class</button></div>
+      </div>
+      <div class="phcap">One node = one screen. Tap a child to drill in; ‹ to go up. Primary action sits in the thumb zone.</div>
+    </div>
+
+    <div class="phone">
+      <div class="phscreen">
+        <div class="mhead">
+          <div class="mtop"><span class="ic">‹</span><span class="bc mono">Islamabad / Zone 1</span><span class="ic">🔍</span><span class="ic" style="color:var(--warn)">◍</span></div>
+          <div class="mtitle"><span class="t">Sector G-9</span><span class="chip" style="background:var(--c-sector-bg);color:var(--c-sector)">● Sector</span><span class="vac" style="margin-left:auto">2</span></div>
+        </div>
+        <div class="mbody" style="padding-bottom:0">
+          <div class="mcard">
+            <div class="mcard-h">Children · 2 parks</div>
+            <div class="mnav"><span class="tdot" style="background:var(--c-park)"></span><div class="grow"><div class="role-name">Park 3</div><div class="role-sub">2 classes · 21 students</div></div><span class="vac">1</span><span class="chev">›</span></div>
+            <div class="mnav"><span class="tdot" style="background:var(--c-park)"></span><div class="grow"><div class="role-name">Park 4</div><div class="role-sub">3 classes · 14 students</div></div><span class="vac">1</span><span class="chev">›</span></div>
+          </div>
+        </div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <div class="sh-title">Switch hierarchy</div>
+          <div class="sopt" style="color:var(--primary)"><span class="tdot" style="background:var(--d-geo)"></span> Geographic <span class="ck">✓</span></div>
+          <div class="sopt"><span class="tdot" style="background:var(--d-sports)"></span> Sports</div>
+          <div class="sopt"><span class="tdot" style="background:var(--d-tarbiya)"></span> Tarbiya</div>
+          <div class="sopt" style="color:var(--primary)">+ New hierarchy</div>
+        </div>
+      </div>
+      <div class="phcap">Drill list at each level · search &amp; vacancy-lens (◍) in the header · hierarchy switch as a bottom sheet.</div>
+    </div>
+
+  </div>
+
+  <div class="demo" style="margin-top:26px">
+    <div class="label">Designed for the field</div>
+    <ul class="notes">
+      <li><b>Mobile-first.</b> The phone layout is the primary one — master/detail collapses to a drill-down stack, so deep trees never cramp.</li>
+      <li><b>Sunlight-legible.</b> High-contrast text, larger type, solid fills over subtle grays — readable in bright outdoor light.</li>
+      <li><b>Thumb-first.</b> Primary actions (Add, Assign, Save) pinned to the bottom; tap targets ≥ 44px for use while standing or moving.</li>
+      <li><b>Works offline.</b> Spotty signal outdoors → read from cache, writes queue locally and sync when back online. Most critical for <b>attendance marking</b>, the real on-the-go task.</li>
+      <li>Same data &amp; permissions — only the layout reflows.</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.row').forEach(row=>{
+    const caret=row.querySelector('.caret');
+    if(row.classList.contains('leaf'))return;
+    const kids=row.nextElementSibling;
+    if(!kids||!kids.classList.contains('children'))return;
+    caret.addEventListener('click',e=>{e.stopPropagation();kids.classList.toggle('hide');caret.classList.toggle('collapsed');});
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Shabab Attendance — Target Architecture (Multi-City, Dynamic Hierarchy)</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f0f2f5; color: #1a1a2e; padding: 32px 24px;
+    }
+    h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 6px; }
+    .subtitle { color: #6b7280; font-size: 0.95rem; margin-bottom: 14px; }
+    .pill {
+      display:inline-block; font-size:0.72rem; font-weight:600; padding:3px 10px;
+      border-radius:20px; background:#ede9fe; color:#5b21b6; margin-bottom:32px;
+    }
+    .section {
+      background: #fff; border-radius: 12px; padding: 28px 32px; margin-bottom: 28px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+    }
+    .section h2 {
+      font-size: 1.05rem; font-weight: 600; margin-bottom: 8px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .section .lead { color:#6b7280; font-size:0.88rem; margin-bottom:20px; line-height:1.5; }
+    .section h2 .num {
+      width:26px; height:26px; border-radius:7px; background:#6366f1; color:#fff;
+      display:inline-flex; align-items:center; justify-content:center; font-size:0.8rem; flex-shrink:0;
+    }
+    .mermaid { overflow-x: auto; }
+    .note {
+      margin-top: 18px; padding: 14px 18px; background:#fffbeb; border-left:3px solid #f59e0b;
+      border-radius: 6px; font-size: 0.85rem; color:#78350f; line-height:1.55;
+    }
+    .note strong { color:#92400e; }
+    table { border-collapse: collapse; width: 100%; font-size: 0.85rem; margin-top: 4px; }
+    th { text-align: left; padding: 8px 12px; background: #f9fafb; color: #374151; font-weight: 600; border-bottom: 2px solid #e5e7eb; }
+    td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    code { background: #f3f4f6; border-radius: 4px; padding: 1px 5px; font-size: 0.82rem; font-family: "SF Mono", monospace; }
+    .tag { display:inline-block; font-size:0.68rem; font-weight:600; padding:1px 7px; border-radius:5px; }
+    .t-place { background:#dbeafe; color:#1e40af; }
+    .t-role  { background:#dcfce7; color:#166534; }
+    .t-person{ background:#fce7f3; color:#9d174d; }
+
+    pre.schema {
+      background:#0f172a; color:#e2e8f0; border-radius:10px; padding:20px 22px;
+      font-family:"SF Mono", ui-monospace, monospace; font-size:0.8rem; line-height:1.6;
+      overflow-x:auto; margin: 4px 0 4px;
+    }
+    pre.schema .grp { color:#7dd3fc; font-weight:600; }
+    pre.schema .tbl { color:#fcd34d; }
+    pre.schema .fk  { color:#86efac; }
+    pre.schema .cm  { color:#94a3b8; font-style:italic; }
+    .qx {
+      background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;
+      padding:12px 16px; margin:10px 0; font-size:0.84rem;
+    }
+    .qx .q { font-weight:600; color:#1e293b; }
+    .qx .a { color:#475569; font-family:"SF Mono",monospace; font-size:0.8rem; display:block; margin-top:4px; }
+    .decided {
+      display:inline-block; font-size:0.66rem; font-weight:700; padding:1px 7px;
+      border-radius:5px; background:#dcfce7; color:#166534; letter-spacing:0.03em; margin-left:6px;
+    }
+    .resolved-row td:first-child { white-space:nowrap; }
+  </style>
+</head>
+<body>
+
+<h1>Target Architecture</h1>
+<p class="subtitle">Multi-city org with city-defined dynamic hierarchy + members holding multiple positions</p>
+<span class="pill">PLANNING ARTIFACT · no code written</span>
+
+<!-- ── 1. THE FIVE PROGRAM TRACKS ───────────────────────────────────────── -->
+<div class="section">
+  <h2><span class="num">1</span> Program Tracks</h2>
+  <p class="lead">The five flows from the whiteboard. Each is a distinct track a Shabab moves through. Today the app only models <em>attendance</em>; the target adds registration, habit tracking, and longitudinal progression.</p>
+  <div class="mermaid">
+flowchart LR
+    R(["① Registration"]) --> MT(["② Murabbi Training<br/>(Attendance)"])
+    MT --> SB(["③ Shabab Batch<br/>(Attendance)"])
+    SB --> HT(["④ Shabab<br/>Habit Tracking"])
+    HT --> PR(["⑤ Shabab Progression<br/>over the course"])
+
+    style R  fill:#eef2ff,stroke:#6366f1,color:#1e1b4b
+    style MT fill:#eef2ff,stroke:#6366f1,color:#1e1b4b
+    style SB fill:#eef2ff,stroke:#6366f1,color:#1e1b4b
+    style HT fill:#eef2ff,stroke:#6366f1,color:#1e1b4b
+    style PR fill:#eef2ff,stroke:#6366f1,color:#1e1b4b
+  </div>
+  <div class="note">
+    <strong>Mapping to today's schema:</strong> ② &amp; ③ are the existing <code>Event</code> + <code>Attendance</code> models (distinguished by <code>type</code>/program). ① Registration, ④ Habit Tracking, and ⑤ Progression are <strong>new</strong> — none exist in the current DB.
+  </div>
+</div>
+
+<!-- ── 2. EXAMPLE HIERARCHY ─────────────────────────────────────────────── -->
+<div class="section">
+  <h2><span class="num">2</span> Example Org Hierarchy <span style="font-size:0.75rem;font-weight:500;color:#9ca3af">— Islamabad, fully expanded</span></h2>
+  <p class="lead">The whiteboard tree. Note it interleaves <span class="tag t-place">org units</span> (City, Zone, Sector, Park) with <span class="tag t-role">leadership roles</span> and ends at <span class="tag t-person">people</span> (Murabbi → Students). This single example must be expressible <em>per city</em> at variable depth.</p>
+  <div class="mermaid">
+flowchart TD
+    PK["🇵🇰 Pakistan<br/><i>country</i>"]
+    PK --> ISB["Islamabad<br/><i>city</i>"]
+    PK --> LHR["Lahore<br/><i>city</i>"]
+    PK --> CN["City N<br/><i>city</i>"]
+
+    ISB --> SR["Seniors<br/><i>division</i>"]
+    ISB --> JR["Juniors<br/><i>division</i>"]
+
+    SR --> Z1["Zone 1"]
+    SR --> Z2["Zone 2"]
+    SR --> ZN["Zone N"]
+
+    Z1 --> ZL["Zonal Lead<br/><i>role</i>"]
+    ZL --> SH9["Sector Head G-9<br/><i>role</i>"]
+    ZL --> SH10["Sector Head G-10<br/><i>role</i>"]
+    ZL --> SH11["Sector Head G-11<br/><i>role</i>"]
+
+    SH9 --> P1["Park 1"]
+    SH9 --> P2["Park 2"]
+    SH9 --> PN["Park N"]
+
+    P1 --> PH["Park Head<br/><i>role</i>"]
+    PH --> SM["Sports Murabbi<br/><i>role</i>"]
+    PH --> PA1["Park Admin 1<br/><i>role</i>"]
+    PH --> PA2["Park Admin 2<br/><i>role</i>"]
+
+    PA1 --> M1["Murabbi"]
+    PA1 --> M2["Murabbi"]
+    PA2 --> M3["Murabbi"]
+    PA2 --> M4["Murabbi"]
+
+    M1 --> S1["Student 1"]
+    M1 --> S2["Student 2"]
+    M1 --> SN["Student N"]
+
+    classDef place  fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a;
+    classDef role   fill:#dcfce7,stroke:#22c55e,color:#14532d;
+    classDef person fill:#fce7f3,stroke:#ec4899,color:#831843;
+    class PK,ISB,LHR,CN,SR,JR,Z1,Z2,ZN,P1,P2,PN place;
+    class ZL,SH9,SH10,SH11,PH,SM,PA1,PA2 role;
+    class M1,M2,M3,M4,S1,S2,SN person;
+  </div>
+</div>
+
+<!-- ── 3. WHY IT MUST BE DYNAMIC ────────────────────────────────────────── -->
+<div class="section">
+  <h2><span class="num">3</span> Dynamic Depth — the core constraint</h2>
+  <p class="lead">From your caveats: the hierarchy is <strong>not fixed</strong>. A small city may be 1 level deep; an established city may add layers. Each city head defines their own structure. So levels can't be hardcoded — the <em>shape of the tree</em> becomes data.</p>
+  <div class="mermaid">
+flowchart LR
+    subgraph A["Small / new city"]
+        A1["City"] --> A2["Park"] --> A3["Murabbi"] --> A4["Students"]
+    end
+    subgraph B["Established city (Islamabad)"]
+        B1["City"] --> B2["Division"] --> B3["Zone"] --> B4["Sector"] --> B5["Park"] --> B6["Park Admin"] --> B7["Murabbi"] --> B8["Students"]
+    end
+
+    style A fill:#f0fdf4,stroke:#22c55e
+    style B fill:#eef2ff,stroke:#6366f1
+  </div>
+  <div class="note">
+    <strong>Implication:</strong> the current schema models depth implicitly — <code>City → Park → Member-tree</code> with fixed place levels. The target needs a <strong>single self-referential node tree</strong> where each node carries a <em>type</em>, and the <em>allowed types &amp; nesting are configured per city</em>. The good news: <code>Member.parentId</code> already proves the self-ref-tree pattern works here.
+  </div>
+</div>
+
+<!-- ── 4. CONCEPTUAL MODEL ──────────────────────────────────────────────── -->
+<div class="section">
+  <h2><span class="num">4</span> Conceptual Model <span style="font-size:0.75rem;font-weight:500;color:#9ca3af">— how to make both problems data-driven</span></h2>
+  <p class="lead">Two ideas solve both hard problems: (a) one typed node tree for the org, configured per city; (b) a many-to-many between people and positions so one member can hold several roles.</p>
+  <div class="mermaid">
+flowchart TD
+    City["City<br/><i>root, owns its config</i>"]
+    NodeType["NodeType<br/><i>per-city: Zone, Sector, Park…<br/>+ allowed parent/child rules</i>"]
+    OrgNode["OrgNode (self-ref tree)<br/><i>one node per Zone/Sector/Park/role slot<br/>typed, parentId, cityId</i>"]
+    Person["Person / Member<br/><i>a human being</i>"]
+    Position["Position<br/><i>Zonal Lead, Park Admin, Murabbi, Student…</i>"]
+    Assignment["Assignment (join)<br/><i>Person ↔ Position ↔ OrgNode<br/>+ time range</i>"]
+
+    City -->|defines| NodeType
+    NodeType -.types.-> OrgNode
+    City -->|contains| OrgNode
+    OrgNode -->|parent of| OrgNode
+    Person --- Assignment
+    Position --- Assignment
+    OrgNode --- Assignment
+
+    classDef cfg fill:#fef9c3,stroke:#eab308,color:#713f12;
+    classDef core fill:#e0e7ff,stroke:#6366f1,color:#1e1b4b;
+    classDef ppl fill:#fce7f3,stroke:#ec4899,color:#831843;
+    class City,NodeType cfg;
+    class OrgNode,Position core;
+    class Person,Assignment ppl;
+  </div>
+
+  <div class="note">
+    <strong>How "one member, many positions" falls out:</strong> because <code>Assignment</code> is a join row, the same <code>Person</code> can have multiple rows — e.g. <em>Sector Head G-9</em> at one OrgNode <em>and</em> <em>Sports Murabbi</em> at another — each scoped to where and (optionally) for what time period.
+  </div>
+</div>
+
+<!-- ── 5. RESOLVED DATA MODEL ───────────────────────────────────────────── -->
+<div class="section">
+  <h2><span class="num">5</span> Resolved Data Model <span class="decided">SETTLED</span></h2>
+  <p class="lead">The full table inventory. Two different "each"es matter here: <strong>no separate table per level</strong> (Zone/Sector/Park are rows in one typed <code>OrgNode</code>, so adding a level is data, not a migration), but <strong>separate tables per concept</strong> (structure · people · positions · assignments have different lifespans). Cross-city comparison is in scope, so per-city catalogs map to a shared canonical spine.</p>
+
+  <pre class="schema"><span class="cm">── Global catalog — shared across all cities, enables cross-city comparison ──</span>
+<span class="tbl">CanonicalNodeType</span>  id, name, rank          <span class="cm">← Region/Division/Zone/Sector/Park…</span>
+<span class="tbl">CanonicalPosition</span>  id, name                <span class="cm">← Zonal Lead/Park Admin/Murabbi/Student…</span>
+<span class="tbl">Program</span>            id, name                <span class="cm">← Murabbi Training, Shabab Batch 4 (national)</span>
+<span class="tbl">Function</span>           id, name                <span class="cm">← Sports / Tarbiya / Skills / Inventory</span>
+
+<span class="cm">── Structure — ONE tree: (global root) → Country → City → Zone → Sector → Park → Class ──</span>
+<span class="tbl">NodeType</span>   id, cityId?, name<span class="cm">(local label)</span>, rank,
+           <span class="fk">canonicalTypeId → CanonicalNodeType</span>   <span class="cm">← cityId null = global level (Country, City)</span>
+<span class="tbl">OrgNode</span>    id, parentId, <span class="fk">typeId → NodeType</span>,
+           cityId?, countryId?, path, depth, name, segment?
+                                           <span class="cm">← Country &amp; City ARE node types — NO separate City/Country table;</span>
+                                           <span class="cm">  cityId/countryId = denormalized ancestor keys (from path), both nullable</span>
+<span class="cm">  deferred until needed: `dimension` (parallel functional trees) · `allowedParentTypeId` (nesting rules)</span>
+
+<span class="cm">── People + positions — separate from structure ──</span>
+<span class="tbl">Person</span>     id, cityId, cnic?<span class="cm">(unique where set; required for account-holders = username)</span>, name, phone,
+           segment<span class="cm">(junior|senior)</span>, status<span class="cm">(pending|active|rejected)</span>  <span class="cm">← stable identity</span>
+<span class="tbl">Position</span>   id, cityId?, name<span class="cm">(local)</span>,
+           <span class="fk">canonicalPositionId → CanonicalPosition</span>,
+           <span class="fk">functionId? → Function</span>          <span class="cm">← null = cross-functional; cityId null = national title</span>
+<span class="tbl">Assignment</span> id, cityId, <span class="fk">personId</span>, <span class="fk">positionId</span>,
+           <span class="fk">orgNodeId</span>, startDate, endDate?  <span class="cm">← many per person = multi-position</span>
+
+<span class="cm">── Permissions — manageable: global catalog + per-position grants ──</span>
+<span class="tbl">Permission</span>         id, key, name           <span class="cm">← capability catalog (NO scope field —</span>
+                                          <span class="cm">   breadth = where the position is anchored)</span>
+                                          <span class="cm">  (mark_attendance, create_event, manage_team,</span>
+                                          <span class="cm">   edit_structure, manage_users, evaluate_*…)</span>
+<span class="tbl">PositionPermission</span> <span class="fk">positionId</span>, <span class="fk">permissionId</span> <span class="cm">← editable grant = the "manage permissions" surface</span>
+
+<span class="cm">── Activity — every row FKs to Person; all share one shape ──</span>
+<span class="tbl">Attendance</span>   id, cityId, <span class="fk">eventId</span>, <span class="fk">personId</span>, status, markedById  <span class="cm">← v1 — BUILD NOW</span>
+<span class="tbl">Event</span>        id, cityId, <span class="fk">orgNodeId</span>, rosterDepth=1, segment?, <span class="fk">audiencePositionId?</span>,
+             <span class="fk">programId?</span>, <span class="fk">functionId?</span>, type, date, endDate?, status  <span class="cm">← v1 (roster = anchor + depth)</span>
+<span class="cm">  ── future activity, SAME pattern (cityId · personId · function? · program? · date · payload) ──</span>
+<span class="tbl">Registration</span> id, cityId, <span class="fk">personId</span>, <span class="fk">programId</span>…   <span class="cm">← flow ①</span>
+<span class="tbl">HabitLog</span>     id, cityId, <span class="fk">personId</span>, date, habit…  <span class="cm">← flow ④</span>
+<span class="tbl">Progression</span>  id, cityId, <span class="fk">personId</span>, <span class="fk">programId</span>, period… <span class="cm">← flow ⑤</span>
+<span class="tbl">Evaluation</span>   id, cityId, <span class="fk">subjectPersonId</span>, <span class="fk">evaluatorId</span>, <span class="fk">functionId?</span>, rubric, period…
+                                          <span class="cm">← murabbi &amp; student evals = ONE entity (subject + evaluator)</span>
+
+<span class="cm">── Auth — unchanged shape ──</span>
+<span class="tbl">User</span>       id, <span class="fk">personId</span>, passwordHash, mustChangePassword, email?  <span class="cm">← login; username = person.cnic</span>
+<span class="tbl">Session</span>    id, <span class="fk">userId</span>, …</pre>
+
+  <div class="note">
+    <strong>Deliberate choices:</strong> <code>segment</code> is a column not a table (small national enum, always on <code>Person</code> so "all juniors" works whether or not a city splits structurally). <code>Program</code> is global not per-city (Murabbi Training / Shabab Batch are national → program comparison is free). <code>User</code> stays separate from <code>Person</code> (most shabab never get a login, so don't pay a <code>User</code> row per person) — but when a <code>User</code> exists it always links a <code>Person</code>. <strong>Login username = <code>Person.cnic</code></strong> — nullable column with a unique index (unique where set; students may omit it, no login), <em>required at account creation</em> for account-holders. Replaces email; email now optional contact. <code>Person.status</code> drives the approval onboarding.
+  </div>
+  <div class="note">
+    <strong>v1 scope = attendance only.</strong> Build <code>Attendance</code> + <code>Event</code> now. Every other activity type — Registration, Habits, Progression, <strong>Evaluation</strong> — is the same Person-centric shape, added when its flow ships; the core model doesn't grow to accommodate them. <strong>Evaluations</strong> (of murabbi &amp; student) are <em>one</em> entity: a record with a <em>subject</em> person + an <em>evaluator</em>, <code>function</code>-scoped, gated by an <code>evaluate_*</code> permission. Murabbi-eval vs student-eval differ only by rubric + the subject's position — no structural change needed to support them.
+  </div>
+
+  <h3 style="font-size:0.85rem;color:#6366f1;margin:22px 0 10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">How cross-city comparison works</h3>
+  <p class="lead" style="margin-bottom:12px">Because each per-city <code>NodeType</code> / <code>Position</code> carries a canonical FK, comparison is just "group by the canonical id, optionally split by <code>cityId</code>." Each city keeps its own local label (one city's "Halqa" = another's "Park") but rolls up to a shared spine.</p>
+  <div class="qx"><span class="q">All Park Admins nationwide</span><span class="a">Assignment ⋈ Position  WHERE canonicalPositionId = ParkAdmin</span></div>
+  <div class="qx"><span class="q">Junior attendance, every city</span><span class="a">Attendance ⋈ Person  WHERE segment = junior  GROUP BY cityId</span></div>
+  <div class="qx"><span class="q">Compare Park-level attendance across cities</span><span class="a">OrgNode ⋈ NodeType  WHERE canonicalTypeId = Park  GROUP BY cityId</span></div>
+
+  <h3 style="font-size:0.85rem;color:#6366f1;margin:22px 0 10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">How permissions resolve</h3>
+  <p class="lead" style="margin-bottom:12px">Position implies permissions, and the grant is editable data — no deploy to change what a role can do. There is <strong>no scope field</strong>: breadth = how high the position is anchored in the tree.</p>
+  <pre class="schema">active <span class="tbl">Assignment</span> <span class="cm">(Person holds Position at OrgNode N)</span>
+  × <span class="tbl">PositionPermission</span> <span class="cm">(that Position grants Permission X)</span>
+  → Person may do X on target T  iff
+        T ∈ subtree(N)                       <span class="cm">breadth = anchor height (path prefix)</span>
+    AND (position.functionId is null  OR  T.functionId = position.functionId)
+
+  anchor at park → that park · at city → whole city · at country → whole country · at root → everything</pre>
+  <div class="note">
+    <strong>One rule, no enum.</strong> Replaces <code>User.roles</code> + <code>canManageTeam</code> entirely. "Manage permissions" = editing <code>PositionPermission</code> rows. Broad-read + narrow-write = two assignments at different heights (read at city root, write at park). Super-admins = a position at the global root.
+  </div>
+
+  <h3 style="font-size:0.85rem;color:#6366f1;margin:22px 0 10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Cross-city POC / oversight <span class="decided">SETTLED</span></h3>
+  <p class="lead" style="margin-bottom:12px">Islamabad is the center: its members act as POCs overseeing other cities. This is <strong>oversight (a scope grant), not structural membership</strong> — so it's the same Assignment mechanism, pointed across city boundaries. Identity stays single-city; reach spans cities.</p>
+  <table>
+    <tr><th>Rule</th><th>Resolution</th></tr>
+    <tr class="resolved-row"><td><strong>Identity vs. reach</strong></td><td><code>Person.cityId</code> = home (Islamabad), single &amp; unchanged. <code>Assignment.cityId</code> = the <em>target</em> node's city, so a person's assignments may span cities.</td></tr>
+    <tr class="resolved-row"><td><strong>Mechanism</strong></td><td>A <strong>"City POC"</strong> position assigned at each overseen city's <em>root</em> <code>OrgNode</code>. N cities = N assignments. Effective scope = union of home subtree ∪ each POC'd city. No DAG, no duplicated identity.</td></tr>
+    <tr class="resolved-row"><td><strong>Access level</strong> ✦</td><td><strong>Read-only.</strong> POC position's <code>PositionPermission</code> set grants <code>view_*</code> only (analytics, team, attendance) — no write in overseen cities.</td></tr>
+    <tr class="resolved-row"><td><strong>Visibility</strong> ✦</td><td><strong>Visible.</strong> POC is shown in the overseen city's Team/Users view as an <em>external POC badge</em> — attached at the city root, not a member in the chain (Person ≠ OrgNode, so no tree pollution).</td></tr>
+    <tr class="resolved-row"><td><strong>Activity &amp; scaling</strong></td><td>Read-only so no write attribution. POC queries scope as <code>WHERE cityId IN (assigned set)</code> — crosses tenants deliberately &amp; explicitly; <code>cityId</code>-everywhere principle preserved.</td></tr>
+  </table>
+  <p style="font-size:0.78rem;color:#9ca3af;margin-top:8px">✦ = decided this round.</p>
+  <div class="note">
+    Same mechanism, three anchor heights: <strong>country root</strong> → national/all-cities · <strong>specific city roots (N)</strong> → POC over exactly those cities · <strong>node inside a city</strong> → normal day-to-day role.
+  </div>
+
+  <h3 style="font-size:0.85rem;color:#6366f1;margin:22px 0 10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Functional domains — scope = structural × functional <span class="decided">SETTLED</span></h3>
+  <p class="lead" style="margin-bottom:12px">National titles ("Head of Sports") are bounded to their <strong>functional domain</strong>, not all activity at that level. So authority is a <em>two-dimensional intersection</em>: how far up the structural tree × which function.</p>
+  <pre class="schema">authority of an Assignment =
+    structural reach  <span class="cm">(subtree of assignment.orgNode — breadth = anchor height)</span>
+  ∩ functional reach  <span class="cm">(position.functionId, or ALL if null)</span>
+
+→ person may act on target T iff
+    T is within structural reach
+    AND (position is cross-functional  OR  T.functionId = position.functionId)</pre>
+  <table>
+    <tr><th>Example</th><th>Structural × Functional</th></tr>
+    <tr class="resolved-row"><td>National Sports Head</td><td><code>global</code> × <code>Sports</code> → sports activity everywhere, not curriculum</td></tr>
+    <tr class="resolved-row"><td>Same person, also Park&nbsp;3 Murabbi</td><td>Park 3 <code>subtree</code> × <code>null</code> (cross-functional) → everything in their park</td></tr>
+    <tr class="resolved-row"><td>Zone Tarbiya Lead (future)</td><td>Zone <code>subtree</code> × <code>Tarbiya</code> → tarbiya in that zone only</td></tr>
+    <tr class="resolved-row"><td>National Head of Inventory</td><td><code>global</code> × <code>Inventory</code> → all assets everywhere (governs <code>Asset</code>, not attendance)</td></tr>
+  </table>
+  <div class="note">
+    <strong>Functions:</strong> Sports · Tarbiya · Skills · Inventory. The first three are <em>activity</em> domains (govern <code>Event</code>/attendance); <strong>Inventory is an <em>asset</em> domain</strong> — it governs a future <code>Asset</code>/<code>InventoryItem</code> entity, not attendance. The structural × functional intersection is identical; only the governed entity type differs (so "governable entities carry <code>functionId</code>" generalizes beyond Events).<br><br>
+    <strong>Now:</strong> <code>Function</code> catalog + <code>Position.functionId</code> + <code>functionId</code> on governable entities (<code>Event</code>; Attendance inherits it) + the intersection above. Plus nullable <code>cityId</code> on <code>Position</code>/<code>NodeType</code> so national titles live above any city.<br>
+    <strong>Later (additive, no rework):</strong> real multi-level functional chains become <strong>parallel <code>OrgNode</code> trees</strong> keyed by the <code>dimension</code> field — each a clean single-parent tree, <em>not</em> a DAG. This retires the earlier "scope is purely structural" limitation for the functional axis.<br><br>
+    <strong>Each functional hierarchy is independent, national-rooted &amp; dynamic.</strong> A "National [Function] Admin" owns it and builds it freely — they <em>may</em> create city-wise heads or not; it is <strong>not bound to the geographic tree's shape</strong>. Superadmin creates a new dimension + provisions its National Admin (same cascade as City + City Admin, one level up). A city-wise function node may <em>optionally</em> reference the geographic city. UI: the same Hierarchy page with a <strong>dimension switcher</strong> (Geographic · Sports · Tarbiya · Skills · Inventory · + New).
+  </div>
+
+  <h3 style="font-size:0.85rem;color:#6366f1;margin:22px 0 10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Events &amp; attendance — roster resolution <span class="decided">SETTLED</span></h3>
+  <p class="lead" style="margin-bottom:12px">An event is <strong>not</strong> tied to a fixed level. The creator picks an <strong>anchor node</strong> + a <strong>roster depth</strong>; the roster is computed live from the tree. People attach at the lowest structural node — <strong>Class/Halqa</strong> — so depth is coherent at every level (this replaces today's <code>Member.classAssignment</code> string).</p>
+  <pre class="schema"><span class="tbl">Event</span> roster spec:
+  orgNodeId            <span class="cm">anchor — ANY level: Class → Park → Zone → … → national</span>
+  rosterDepth = 1      <span class="cm">levels below anchor to include; 2,3… widen; all = whole subtree</span>
+  segment?             <span class="cm">jr / sr / null(both)</span>
+  audiencePositionId?  <span class="cm">Student (class) · Murabbi (training); null = everyone assigned</span>
+  programId? functionId?  <span class="cm">cohort / domain tags (used more as those flows mature)</span>
+
+resolve:
+  roster nodes = OrgNode WHERE path LIKE anchor.path || '%'
+                           AND depth <= anchor.depth + rosterDepth
+  roster       = Persons with an ACTIVE Assignment at those nodes
+                   AND (event.segment is null  OR person.segment = event.segment)
+                   AND (event.audiencePosition is null  OR assignment matches it)</pre>
+  <table>
+    <tr><th>Event</th><th>Anchor · depth · audience → roster</th></tr>
+    <tr class="resolved-row"><td>Murabbi's class</td><td>Class · depth 0 · Student → that class's students</td></tr>
+    <tr class="resolved-row"><td>Park-wide class</td><td>Park · depth 1 · Student → all classes' students in the park</td></tr>
+    <tr class="resolved-row"><td>Zone senior camp</td><td>Zone · depth all · segment=senior → all senior shabab under the zone</td></tr>
+    <tr class="resolved-row"><td>Murabbi training</td><td>City · depth all · Murabbi → every murabbi in the city</td></tr>
+  </table>
+  <div class="note">
+    <strong>Defaults &amp; rules:</strong> depth defaults to <code>1</code> ("people directly under me"); the creator can widen. <strong>Who can mark</strong> = the single permission rule — <code>mark_attendance</code> over <code>subtree(anchor) ∩ function</code>; no separate role checks. <code>Attendance</code> = <code>(eventId, personId)</code> unique · status present/late/absent/excused · <code>markedById</code>.<br><br>
+    <strong>Deferred:</strong> roster is <em>implicit</em> (live subtree query) for v1 → switches to <em>explicit enrolled lists</em> when Registration (flow ①) lands (better above park level). <strong>Recurring</strong> deferred — one <code>Event</code> per session for now (flag only).<br>
+    <strong>Migration:</strong> current park events → anchor = the park's node, depth reproducing "whole park", audience = null → <strong>no behavior change</strong>.
+  </div>
+</div>
+
+<!-- ── 5b. SCALABILITY ──────────────────────────────────────────────────── -->
+<div class="section">
+  <h2><span class="num">6</span> Scalability Rules <span class="decided">SETTLED</span></h2>
+  <p class="lead">What keeps the model fast as it grows to N cities × years of attendance/habits/progression.</p>
+  <table>
+    <tr><th>Rule</th><th>Why</th></tr>
+    <tr class="resolved-row"><td><strong>Materialized <code>path</code> on OrgNode</strong></td><td>Subtree scoping (permissions, analytics) becomes an indexed prefix scan <code>path LIKE '/isb/z1/%'</code> instead of a recursive CTE on every check. Reorg = one bounded <code>UPDATE</code>.</td></tr>
+    <tr class="resolved-row"><td><strong>Denormalize <code>cityId</code> everywhere</strong></td><td>Every queryable table carries it, so you never walk the tree to filter by tenant. Prerequisite for partitioning/sharding by city later.</td></tr>
+    <tr class="resolved-row"><td><strong>Query by <code>typeId</code>, never raw <code>depth</code></strong></td><td>City A's depth-2 is a Zone; City B's (extra level above) is a Region. <code>path</code>/<code>depth</code> are for traversal; <code>typeId</code> is for meaning.</td></tr>
+    <tr class="resolved-row"><td><strong>Temporal <code>Assignment</code></strong></td><td><code>startDate</code> + nullable <code>endDate</code> gives multi-position <em>and</em> history in one mechanism. Partial index on <code>endDate IS NULL</code> keeps "current holders" cheap.</td></tr>
+    <tr class="resolved-row"><td><strong>Append-only activity + rollups</strong></td><td>Attendance/habits/progression grow without bound. Keep rows immutable; serve dashboards from rollup tables/materialized views, not raw scans.</td></tr>
+    <tr class="resolved-row"><td><strong>Config in reference tables, not JSON</strong></td><td><code>NodeType</code>/<code>Position</code> are joined and filtered → real tables. Reserve JSON for truly open attributes you never query (e.g. a city's custom registration fields).</td></tr>
+  </table>
+</div>
+
+<!-- ── 7. KEY DECISIONS (now settled) ───────────────────────────────────── -->
+<div class="section">
+  <h2><span class="num">7</span> Design Decisions <span class="decided">SETTLED</span></h2>
+  <p class="lead">The forks that shaped the schema, and how each was resolved.</p>
+  <table>
+    <tr><th>Decision</th><th>Resolution</th></tr>
+    <tr class="resolved-row">
+      <td><strong>Person in the tree, or separate?</strong></td>
+      <td><strong>Separate.</strong> <code>OrgNode</code> is a pure structural tree; people are <code>Person</code> rows attached via <code>Assignment</code>. A single-parent tree can't hold a multi-position person without duplicating identity — separation is what makes "one member, many positions" clean.</td>
+    </tr>
+    <tr class="resolved-row">
+      <td><strong>One table per level?</strong></td>
+      <td><strong>No.</strong> Zone/Sector/Park/Division are rows in one typed <code>OrgNode</code>, distinguished by <code>typeId</code>. "Add a level above zone" is then data, not a per-city migration.</td>
+    </tr>
+    <tr class="resolved-row">
+      <td><strong>Per-city config strength</strong></td>
+      <td><strong>Templated with a canonical spine.</strong> Each city defines its own ordered <code>NodeType</code>s/<code>Position</code>s (local labels), but each maps to a shared <code>CanonicalNodeType</code>/<code>CanonicalPosition</code> — flexibility per city <em>plus</em> cross-city comparison.</td>
+    </tr>
+    <tr class="resolved-row">
+      <td><strong>Seniors / Juniors</strong></td>
+      <td><strong>Always an attribute (<code>Person.segment</code>); structural division optional.</strong> Cities that split get a <code>Division</code> <code>OrgNode</code> too, but "all juniors" is always a <code>segment</code> query regardless — so it works whether or not a city separates them structurally.</td>
+    </tr>
+    <tr class="resolved-row">
+      <td><strong>Time / history</strong></td>
+      <td><strong>Effective-dated from day one.</strong> <code>Assignment</code> carries <code>startDate</code>/<code>endDate</code>; activity tables (habits, progression) are append-only time-series. History and multi-position fall out of the same mechanism.</td>
+    </tr>
+    <tr class="resolved-row">
+      <td><strong>Cross-city comparison</strong></td>
+      <td><strong>In scope.</strong> Canonical FKs on <code>NodeType</code>/<code>Position</code> + global <code>Program</code> + national <code>segment</code> enum let any metric group by canonical id and split by <code>cityId</code>.</td>
+    </tr>
+    <tr class="resolved-row">
+      <td><strong>Permissions</strong></td>
+      <td><strong>Position implies permissions, and permissions are manageable.</strong> A <code>Permission</code> catalog (<strong>no scope field</strong> — breadth = anchor height) + an editable <code>PositionPermission</code> grant table. One rule: act on T iff T ∈ subtree(anchor) AND function matches. Fully replaces <code>User.roles</code> + <code>canManageTeam</code>.</td>
+    </tr>
+    <tr class="resolved-row">
+      <td><strong>Cross-city POC</strong></td>
+      <td><strong>Read-only &amp; visible.</strong> Oversight = a scope grant (a "City POC" position at the overseen city's root), not structural membership. <code>Person.cityId</code> = home; <code>Assignment.cityId</code> = target city, so assignments span cities. Shown as an external POC badge in the overseen city.</td>
+    </tr>
+    <tr class="resolved-row">
+      <td><strong>Functional scope &amp; national titles</strong></td>
+      <td><strong>Authority = structural × functional.</strong> National titles bound to their <code>Function</code> (Sports/Curriculum/…), not all activity at that level. <code>Position.functionId</code> + <code>functionId</code> on activity; <code>cityId</code> nullable so national titles live above any city. Future functional <em>hierarchies</em> = parallel <code>OrgNode</code> trees via the <code>dimension</code> field (not a DAG).</td>
+    </tr>
+    <tr class="resolved-row">
+      <td><strong>Events &amp; roster</strong></td>
+      <td><strong>Anchor node + configurable depth (default 1).</strong> Roster = Persons assigned within the depth band below the anchor, filtered by <code>segment</code> + target position. People attach at a <code>Class</code>/<code>Halqa</code> node (lowest structural level). Roster implicit for v1 (→ enrolled lists with Registration); recurring deferred.</td>
+    </tr>
+  </table>
+  <div class="note">
+    <strong>All structural decisions are now settled.</strong> The remaining work is execution: a concrete Prisma schema, then a phased migration from the current <code>City/Park/Member</code> model to this one.
+  </div>
+</div>
+
+<!-- ── 6. CURRENT vs TARGET ─────────────────────────────────────────────── -->
+<div class="section">
+  <h2><span class="num">8</span> Current Schema → Target, at a glance</h2>
+  <table>
+    <tr><th>Concern</th><th>Today</th><th>Target</th></tr>
+    <tr><td>Cities</td><td><code>City</code> exists, Islamabad-only in practice</td><td>N cities, each owning its own hierarchy config</td></tr>
+    <tr><td>Hierarchy</td><td>Fixed <code>City → Park</code> + <code>Member.parentId</code> people-tree</td><td>Single typed self-ref node tree, depth defined per city</td></tr>
+    <tr><td>Positions</td><td><code>Member.positionLabel</code> — one string</td><td><code>Assignment</code> join — many positions per person, scoped to a node</td></tr>
+    <tr><td>Programs</td><td>Implicit via <code>Event.type</code></td><td>Explicit tracks; Registration, Habit Tracking, Progression are new</td></tr>
+    <tr><td>Permissions</td><td><code>User.roles</code> + <code>canManageTeam</code> flag</td><td>Editable <code>Permission</code> + <code>PositionPermission</code>; derived from active Position × OrgNode scope</td></tr>
+  </table>
+  <div class="note">
+    This is a conceptual target only — <strong>no schema or app code has been changed.</strong> The full data model (§5–§7) is now settled. Next step, when you're ready, is to turn this into a concrete Prisma schema + a phased migration plan from Islamabad-only <code>City/Park/Member</code> to N cities.
+  </div>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: "default",
+    flowchart: { curve: "basis", padding: 18, nodeSpacing: 45, rankSpacing: 55 },
+    themeVariables: {
+      primaryColor: "#e0e7ff", primaryTextColor: "#1e1b4b",
+      primaryBorderColor: "#6366f1", lineColor: "#6366f1",
+    }
+  });
+</script>
+</body>
+</html>
