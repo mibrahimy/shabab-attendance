@@ -1,0 +1,323 @@
+// v2 multi-city architecture schema.
+//
+// Coexists with the live v1 schema (../schema.prisma). This schema is bound to a
+// SEPARATE database (DATABASE_URL_V2) and generates a SEPARATE client so the v1
+// app is never disturbed. See DEVELOPMENT.md (Phase 0) and target-architecture.html
+// for the model rationale; ENGINEERING.md for the layering rules.
+//
+// Scope of this file = Phases 0–3 entities only (org spine + identity/authz +
+// Event/Attendance + Program). Outbox / Forms / Evaluation / Interview / AuditLog
+// are added in their own phases per the attendance-only-v1 decision.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/v2-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_V2")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Catalog / config tables
+//
+// Per-city NodeType/Position rows each point at a global Canonical* row: this
+// gives per-city labels AND cross-city comparison (group by canonical id, split
+// by cityId). Canonical tables are kept (not slugs) for rename-safety + FK
+// integrity (settled decision #4).
+// ─────────────────────────────────────────────────────────────────────────────
+
+model CanonicalNodeType {
+  id        String     @id @default(cuid())
+  key       String     @unique // global-root, country, city, zone, sector, park, class
+  label     String
+  rank      Int
+  nodeTypes NodeType[]
+}
+
+model NodeType {
+  id          String            @id @default(cuid())
+  cityId      String? // null = national level (above any city, e.g. country/city types)
+  canonicalId String
+  canonical   CanonicalNodeType @relation(fields: [canonicalId], references: [id])
+  label       String
+  rank        Int
+  orgNodes    OrgNode[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([cityId, canonicalId])
+  @@index([cityId])
+  @@index([canonicalId])
+}
+
+model CanonicalPosition {
+  id        String     @id @default(cuid())
+  key       String     @unique // superadmin, city_admin, park_admin, murabbi, student, city_poc, ...
+  label     String
+  rank      Int
+  positions Position[]
+}
+
+model Position {
+  id          String               @id @default(cuid())
+  cityId      String? // null = national title (above any city)
+  canonicalId String
+  canonical   CanonicalPosition    @relation(fields: [canonicalId], references: [id])
+  functionId  String? // null = cross-functional
+  function    Function?            @relation(fields: [functionId], references: [id])
+  label       String
+  rank        Int
+  permissions PositionPermission[]
+  assignments Assignment[]
+  events      Event[]              @relation("EventAudience")
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([cityId])
+  @@index([canonicalId])
+  @@index([functionId])
+}
+
+// Functional domains — Sports, Tarbiya, Skills (activity domains governing
+// Event/Attendance) and Inventory (asset domain, future). A position's authority
+// is structural reach ∩ functional reach (null functionId = cross-functional).
+model Function {
+  id        String     @id @default(cuid())
+  key       String     @unique // sports, tarbiya, skills, inventory
+  label     String
+  positions Position[]
+  events    Event[]
+}
+
+// Global permission catalog. NO `scope` field — breadth = anchor height
+// (settled decision #1). Effective access = active Assignment × position's
+// permissions, scoped from the assignment's OrgNode subtree.
+model Permission {
+  id          String               @id @default(cuid())
+  key         String               @unique // manage_hierarchy, add_member, mark_attendance, ...
+  label       String
+  description String?
+  positions   PositionPermission[]
+}
+
+// Editable grant table: which permissions a position confers.
+model PositionPermission {
+  id           String     @id @default(cuid())
+  positionId   String
+  position     Position   @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([positionId, permissionId])
+  @@index([permissionId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Structural tree (single-parent — never a DAG)
+//
+// One typed table for every level (global root → country → city → … → class):
+// adding a level is data, not a migration. Subtree scoping uses the materialized
+// `path` (trailing-delimited, prefix scan) rather than recursive CTEs.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model OrgNode {
+  id        String    @id @default(cuid())
+  parentId  String? // null = root
+  parent    OrgNode?  @relation("OrgNodeChildren", fields: [parentId], references: [id])
+  children  OrgNode[] @relation("OrgNodeChildren")
+  typeId    String
+  type      NodeType  @relation(fields: [typeId], references: [id])
+  name      String
+  // Materialized path with a TRAILING delimiter, e.g. "/{rootId}/{cityId}/{parkId}/".
+  // The trailing "/" prevents "/…/parkX/" prefix-matching "/…/parkX2/".
+  // A text_pattern_ops index is added in the migration SQL for LIKE 'prefix%' scans.
+  path      String    @unique
+  depth     Int
+  countryId String? // denormalized ancestor keys (derivable from path), null above that level
+  cityId    String?
+  legacyId  String?   @unique // carries the v1 cuid through the ETL; null for greenfield rows
+
+  assignments Assignment[]
+  events      Event[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([parentId])
+  @@index([typeId])
+  @@index([cityId])
+  @@index([path])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// People / identity — kept SEPARATE from structure; attached via Assignment.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Person {
+  id      String         @id @default(cuid())
+  name    String
+  // CNIC is the login username for account-holders: required at account
+  // creation, but nullable here because students/shabab have no login. The
+  // unique index permits multiple NULLs (Postgres treats NULLs as distinct).
+  cnic    String?        @unique
+  phone   String?
+  email   String? // optional contact (login fallback lives on User.email)
+  segment Segment? // jr/sr attribute; null until backfilled
+  status  PersonStatus   @default(pending)
+  cityId  String? // home city (single); differs from Assignment.cityId for cross-city POC
+  legacyId String?       @unique
+
+  user             User?
+  assignments      Assignment[]
+  attendances      Attendance[]  @relation("AttendanceSubject")
+  markedAttendances Attendance[] @relation("AttendanceMarker")
+  createdEvents    Event[]       @relation("EventCreator")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cityId])
+  @@index([status])
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  personId           String   @unique
+  person             Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  passwordHash       String
+  mustChangePassword Boolean  @default(true)
+  email              String? // legacy-account login fallback (login resolves by Person.cnic OR User.email)
+  tokenVersion       Int      @default(0) // bump to force re-auth (password change / deactivation)
+  isActive           Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Temporal link of a Person to a Position anchored at an OrgNode. Multi-position
+// and history both fall out of this one mechanism (endDate null = active).
+model Assignment {
+  id         String    @id @default(cuid())
+  personId   String
+  person     Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  orgNodeId  String
+  orgNode    OrgNode   @relation(fields: [orgNodeId], references: [id])
+  positionId String
+  position   Position  @relation(fields: [positionId], references: [id])
+  cityId     String? // denorm = target node's city (cross-city POC ⇒ differs from Person.cityId)
+  startDate  DateTime  @default(now())
+  endDate    DateTime? // null = active
+  legacyId   String?   @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([personId])
+  @@index([orgNodeId])
+  @@index([positionId])
+  @@index([endDate])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Programs & attendance (the v1 core)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Program {
+  id          String   @id @default(cuid())
+  name        String   @unique // Murabbi Training, Shabab Batch, ...
+  description String?
+  isActive    Boolean  @default(true)
+  legacyId    String?  @unique
+  events      Event[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// An Event carries a roster SPEC; the roster is resolved live from the
+// materialized path (anchor subtree to rosterDepth, filtered by segment +
+// audience position). Recurring sessions = one Event per session (flag only).
+model Event {
+  id                 String      @id @default(cuid())
+  title              String
+  orgNodeId          String // anchor — any level
+  orgNode            OrgNode     @relation(fields: [orgNodeId], references: [id])
+  rosterDepth        Int?        @default(1) // 1 = directly under anchor; null = whole subtree
+  segment            Segment? // jr/sr filter; null = both
+  audiencePositionId String? // e.g. Student/Murabbi; null = everyone assigned
+  audiencePosition   Position?   @relation("EventAudience", fields: [audiencePositionId], references: [id])
+  programId          String?
+  program            Program?    @relation(fields: [programId], references: [id])
+  functionId         String?
+  function           Function?   @relation(fields: [functionId], references: [id])
+  cityId             String? // denormalized scope
+  status             EventStatus @default(scheduled)
+  scheduledAt        DateTime
+  recurring          Boolean     @default(false)
+  createdById        String?
+  createdBy          Person?     @relation("EventCreator", fields: [createdById], references: [id])
+  legacyId           String?     @unique
+
+  attendances Attendance[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgNodeId])
+  @@index([cityId])
+  @@index([scheduledAt])
+  @@index([programId])
+}
+
+// One explicit row per (event, person) in a marked slice — so "taken & all
+// absent" ≠ "not taken yet". clientUpdatedAt orders offline last-write-wins.
+model Attendance {
+  id              String           @id @default(cuid())
+  eventId         String
+  event           Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  personId        String
+  person          Person           @relation("AttendanceSubject", fields: [personId], references: [id])
+  status          AttendanceStatus
+  markedById      String?
+  markedBy        Person?          @relation("AttendanceMarker", fields: [markedById], references: [id])
+  overrideReason  String?
+  clientUpdatedAt DateTime? // offline marking timestamp for last-write-wins
+  legacyId        String?          @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, personId])
+  @@index([eventId])
+  @@index([personId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum Segment {
+  junior
+  senior
+}
+
+enum PersonStatus {
+  pending
+  active
+  rejected
+}
+
+enum EventStatus {
+  scheduled
+  completed
+  cancelled
+}
+
+enum AttendanceStatus {
+  present
+  late
+  absent
+  excused
+}
