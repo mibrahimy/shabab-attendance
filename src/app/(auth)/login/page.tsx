@@ -1,84 +1,101 @@
 "use client";
 
-import { useActionState } from "react";
-import { login } from "@/actions/auth";
+// v2 login — CNIC (or legacy email) + password. Posts to /api/auth/login and
+// routes to the forced password change when the account still requires it.
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const [state, formAction, pending] = useActionState(login, {});
+  const router = useRouter();
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setPending(true);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier, password }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json?.error?.message ?? "Sign in failed");
+        return;
+      }
+      router.replace(json.data.mustChangePassword ? "/change-password" : "/");
+    } catch {
+      setError("Network error — please try again");
+    } finally {
+      setPending(false);
+    }
+  }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm animate-fade-in">
+    <div className="flex min-h-screen items-center justify-center bg-[#f4f3ff] px-4">
+      <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 text-white text-2xl font-bold shadow-lg shadow-blue-600/25">
-            A
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#2f55ea] text-2xl font-bold text-white shadow-lg shadow-[#2f55ea]/25">
+            S
           </div>
-          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">
-            Attendance Management
-          </h1>
-          <p className="mt-1.5 text-sm text-gray-500">
-            Sign in to your account
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Shabab Attendance</h1>
+          <p className="mt-1.5 text-sm text-gray-500">Sign in to your account</p>
         </div>
 
-        <form action={formAction} className="space-y-4">
-          {state.error && (
-            <div className="flex items-center gap-2.5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-200" role="alert">
-              <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              {state.error}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div
+              role="alert"
+              className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+            >
+              {error}
             </div>
           )}
 
           <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-1.5"
-            >
-              Email
+            <label htmlFor="identifier" className="mb-1.5 block text-sm font-medium text-gray-700">
+              CNIC
             </label>
             <input
-              id="email"
-              name="email"
-              type="email"
+              id="identifier"
+              name="identifier"
+              type="text"
+              autoComplete="username"
               required
-              autoComplete="email"
-              className="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-shadow duration-150"
-              placeholder="you@example.com"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="00000-0000000-0"
+              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-gray-900 outline-none transition focus:border-[#2f55ea] focus:ring-2 focus:ring-[#2f55ea]/20"
             />
           </div>
 
           <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700 mb-1.5"
-            >
+            <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-gray-700">
               Password
             </label>
             <input
               id="password"
               name="password"
               type="password"
-              required
               autoComplete="current-password"
-              className="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-shadow duration-150"
-              placeholder="Enter your password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-gray-900 outline-none transition focus:border-[#2f55ea] focus:ring-2 focus:ring-[#2f55ea]/20"
             />
           </div>
 
           <button
             type="submit"
             disabled={pending}
-            className="w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 active:scale-[0.98] shadow-sm hover:shadow flex items-center justify-center gap-2"
+            className="w-full rounded-xl bg-[#2f55ea] py-2.5 font-medium text-white transition hover:bg-[#2546c9] disabled:opacity-60"
           >
-            {pending && (
-              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-            )}
-            {pending ? "Signing in..." : "Sign in"}
+            {pending ? "Signing in…" : "Sign in"}
           </button>
         </form>
       </div>
