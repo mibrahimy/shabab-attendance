@@ -6,24 +6,21 @@
 import { cache } from "react";
 import type { AuthzContext } from "@/types/auth";
 import { UnauthorizedError } from "@/server/errors";
-import * as userRepo from "@/server/repositories/user-repo";
 import * as authzRepo from "@/server/repositories/authz-repo";
 import { requireSession } from "./session";
 
 export const getAuthzContext = cache(async (req?: Request): Promise<AuthzContext> => {
   const claims = await requireSession(req);
 
-  // Revocation + liveness check: the token's version must still match the user's,
-  // and the account must be active.
-  const user = await userRepo.findById(claims.sub);
-  if (!user || !user.isActive || user.tokenVersion !== claims.v) {
+  // One query: liveness + grants. Revocation = the token's version must still
+  // match the user's; the account must be active.
+  const loaded = await authzRepo.loadForUser(claims.sub);
+  if (!loaded || !loaded.isActive || loaded.tokenVersion !== claims.v) {
     throw new UnauthorizedError("Session no longer valid");
   }
-  if (user.person.status !== "active") {
+  if (loaded.status !== "active") {
     throw new UnauthorizedError("Account is not active");
   }
 
-  const { grants, isSuperadmin } = await authzRepo.loadAuthz(claims.pid);
-
-  return { personId: claims.pid, isSuperadmin, grants };
+  return { personId: loaded.personId, isSuperadmin: loaded.isSuperadmin, grants: loaded.grants };
 });
