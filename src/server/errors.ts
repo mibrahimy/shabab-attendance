@@ -49,6 +49,8 @@ export function toErrorResponse(err: unknown): ErrorResponse {
   if (err instanceof AppError) {
     return { status: err.status, body: { error: { code: err.code, message: err.message } } };
   }
+  // Unexpected: log server-side (never leak detail to the client).
+  console.error("[unhandled]", err);
   return {
     status: 500,
     body: { error: { code: "INTERNAL_ERROR", message: "Something went wrong" } },

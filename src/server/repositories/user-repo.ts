@@ -1,6 +1,7 @@
 // User data access (the only Prisma layer). Scoped, minimal selects.
 
 import { prisma } from "@/server/db";
+import type { Db } from "./org-node-repo";
 
 export type AuthUser = {
   id: string;
@@ -53,6 +54,26 @@ export async function findById(userId: string): Promise<UserIdentity | null> {
       tokenVersion: true,
       person: { select: { id: true, status: true, cityId: true } },
     },
+  });
+}
+
+export async function create(
+  input: {
+    personId: string;
+    passwordHash: string;
+    mustChangePassword?: boolean;
+    email?: string | null;
+  },
+  db: Db = prisma,
+): Promise<{ id: string }> {
+  return db.user.create({
+    data: {
+      personId: input.personId,
+      passwordHash: input.passwordHash,
+      mustChangePassword: input.mustChangePassword ?? true,
+      email: input.email ?? null,
+    },
+    select: { id: true },
   });
 }
 
