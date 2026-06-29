@@ -8,9 +8,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import EmptyState from "@/components/ui/EmptyState";
+import { CredentialsDialog, type Credentials } from "@/components/ui/CredentialsDialog";
 import { CreateCountryModal } from "./CreateCountryModal";
 import { CreateCityModal } from "./CreateCityModal";
-import { TempPasswordDialog, type ProvisionedAdmin } from "./TempPasswordDialog";
 
 export type CityNode = { id: string; name: string };
 export type CountryNode = { id: string; name: string; cities: CityNode[] };
@@ -19,7 +19,7 @@ export function CitiesManager({ countries }: { countries: CountryNode[] }) {
   const router = useRouter();
   const [countryModal, setCountryModal] = useState(false);
   const [cityForCountry, setCityForCountry] = useState<CountryNode | null>(null);
-  const [provisioned, setProvisioned] = useState<ProvisionedAdmin | null>(null);
+  const [provisioned, setProvisioned] = useState<Credentials | null>(null);
 
   function refresh() {
     router.refresh();
@@ -91,7 +91,7 @@ export function CitiesManager({ countries }: { countries: CountryNode[] }) {
           refresh();
         }}
       />
-      <TempPasswordDialog admin={provisioned} onClose={() => setProvisioned(null)} />
+      <CredentialsDialog creds={provisioned} onClose={() => setProvisioned(null)} />
     </div>
   );
 }

@@ -4,16 +4,27 @@
 // the city's level template, builds the tree client-side, and supports
 // add-child / rename / guarded-delete. Reads well on desktop (centered column).
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import type { BadgeColor } from "@/types";
 import EmptyState from "@/components/ui/EmptyState";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { CredentialsDialog, type Credentials } from "@/components/ui/CredentialsDialog";
 import { useToast } from "@/components/ui/Toast";
 import { nextLevel, type Level } from "@/lib/org-levels";
+import type { RoleDef } from "@/lib/default-roles";
+import { AddMemberModal } from "@/components/members/AddMemberModal";
 import { NodeNameModal } from "./NodeNameModal";
+
+type NodeMember = {
+  assignmentId: string;
+  name: string;
+  segment: "junior" | "senior" | null;
+  roleLabel: string;
+  hasLogin: boolean;
+};
 
 export type BuilderNode = {
   id: string;
@@ -34,10 +45,12 @@ export function HierarchyBuilder({
   city,
   levels,
   nodes,
+  roles,
 }: {
   city: { id: string; name: string };
   levels: Level[];
   nodes: BuilderNode[];
+  roles: RoleDef[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -63,6 +76,29 @@ export function HierarchyBuilder({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Members of the current node — loaded lazily when the selected node changes.
+  const [members, setMembers] = useState<NodeMember[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [addMemberOpen, setAddMemberOpen] = useState(false);
+  const [creds, setCreds] = useState<Credentials | null>(null);
+
+  const loadMembers = useCallback(async (nodeId: string) => {
+    setMembersLoading(true);
+    try {
+      const res = await fetch(`/api/org-nodes/${nodeId}/members`);
+      const json = await res.json().catch(() => ({}));
+      setMembers(res.ok ? json.data.members : []);
+    } catch {
+      setMembers([]);
+    } finally {
+      setMembersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadMembers(currentId);
+  }, [currentId, loadMembers]);
+
   // Breadcrumb: walk up to the city root (parents above the city aren't loaded).
   const trail: BuilderNode[] = [];
   for (let n: BuilderNode | undefined = current; n; n = n.parentId ? byId.get(n.parentId) : undefined) {
@@ -72,6 +108,7 @@ export function HierarchyBuilder({
   const children = childrenOf.get(current.id) ?? [];
   const childLevel = nextLevel(levels, current.level.rank);
   const isCityRoot = current.id === city.id;
+  const rolesHere = roles.filter((r) => r.attachLevelKey === current.level.key);
 
   async function call(url: string, method: string, body?: unknown): Promise<boolean> {
     setSaving(true);
@@ -170,6 +207,40 @@ export function HierarchyBuilder({
         )}
       </div>
 
+      {/* People at this node */}
+      {rolesHere.length > 0 && (
+        <div className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900">People here</h2>
+            <Button size="sm" variant="secondary" onClick={() => setAddMemberOpen(true)}>
+              Add member
+            </Button>
+          </div>
+          {membersLoading ? (
+            <p className="mt-3 text-sm text-gray-400">Loading…</p>
+          ) : members.length === 0 ? (
+            <p className="mt-3 text-sm text-gray-400">No one assigned here yet.</p>
+          ) : (
+            <ul className="mt-3 divide-y divide-gray-100">
+              {members.map((m) => (
+                <li key={m.assignmentId} className="flex items-center justify-between gap-3 py-2">
+                  <span className="flex items-center gap-2">
+                    <Badge color="slate">{m.roleLabel}</Badge>
+                    <span className="text-sm font-medium text-gray-900">{m.name}</span>
+                    {m.segment && <span className="text-xs text-gray-400">{m.segment}</span>}
+                  </span>
+                  {m.hasLogin && (
+                    <span className="text-xs text-gray-400" title="Has a login account">
+                      login
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {/* Children */}
       {children.length === 0 ? (
         <EmptyState
@@ -236,6 +307,19 @@ export function HierarchyBuilder({
         onConfirm={remove}
         onCancel={() => setConfirmDelete(false)}
       />
+
+      <AddMemberModal
+        key={current.id}
+        nodeId={addMemberOpen ? current.id : null}
+        roles={rolesHere}
+        onClose={() => setAddMemberOpen(false)}
+        onAdded={(c) => {
+          setAddMemberOpen(false);
+          if (c) setCreds(c);
+          void loadMembers(current.id);
+        }}
+      />
+      <CredentialsDialog creds={creds} onClose={() => setCreds(null)} />
     </div>
   );
 }

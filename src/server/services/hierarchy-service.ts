@@ -7,6 +7,7 @@ import type { AuthzContext } from "@/types/auth";
 import { NotFoundError, ValidationError } from "@/server/errors";
 import { requirePermission } from "@/server/auth/can-act-on";
 import { nextLevel, type Level } from "@/lib/org-levels";
+import { DEFAULT_ROLES, type RoleDef } from "@/lib/default-roles";
 import * as orgNodeRepo from "@/server/repositories/org-node-repo";
 import * as nodeTypeRepo from "@/server/repositories/node-type-repo";
 import * as auditRepo from "@/server/repositories/audit-repo";
@@ -21,6 +22,7 @@ export type CityTree = {
   city: orgNodeRepo.OrgNodeRow;
   levels: Level[];
   nodes: orgNodeRepo.SubtreeNode[];
+  roles: RoleDef[]; // static catalog so the client knows what's addable per level
 };
 
 export async function getCityTree(ctx: AuthzContext, cityId: string): Promise<CityTree> {
@@ -34,7 +36,7 @@ export async function getCityTree(ctx: AuthzContext, cityId: string): Promise<Ci
     nodeTypeRepo.listCityLevels(cityId),
     orgNodeRepo.listSubtree(city.path),
   ]);
-  return { city, levels, nodes };
+  return { city, levels, nodes, roles: DEFAULT_ROLES };
 }
 
 export async function addNode(

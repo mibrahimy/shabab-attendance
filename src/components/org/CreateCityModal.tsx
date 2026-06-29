@@ -5,8 +5,8 @@ import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { formatCnic } from "@/lib/cnic";
+import type { Credentials } from "@/components/ui/CredentialsDialog";
 import type { CountryNode } from "./CitiesManager";
-import type { ProvisionedAdmin } from "./TempPasswordDialog";
 
 const inputClass =
   "w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-gray-900 outline-none transition focus:border-[#2f55ea] focus:ring-2 focus:ring-[#2f55ea]/20";
@@ -20,7 +20,7 @@ export function CreateCityModal({
 }: {
   country: CountryNode | null;
   onClose: () => void;
-  onCreated: (admin: ProvisionedAdmin) => void;
+  onCreated: (creds: Credentials) => void;
 }) {
   const { toast } = useToast();
   const [name, setName] = useState("");
@@ -57,10 +57,10 @@ export function CreateCityModal({
       toast(`Created ${name}`);
       reset();
       onCreated({
-        cityName: name,
-        adminName,
+        name: adminName,
         cnic: json.data.admin.cnic,
         tempPassword: json.data.admin.tempPassword,
+        context: `${name} City Admin`,
       });
     } catch {
       toast("Network error", "error");

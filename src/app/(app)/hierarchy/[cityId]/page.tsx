@@ -36,6 +36,7 @@ export default async function HierarchyPage({
         city={{ id: tree.city.id, name: tree.city.name }}
         levels={tree.levels}
         nodes={tree.nodes}
+        roles={tree.roles}
       />
     </div>
   );
