@@ -4,6 +4,7 @@ import { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
+import { formatCnic } from "@/lib/cnic";
 import type { CountryNode } from "./CitiesManager";
 import type { ProvisionedAdmin } from "./TempPasswordDialog";
 
@@ -103,7 +104,7 @@ export function CreateCityModal({
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">CNIC (login username)</label>
-              <input value={cnic} onChange={(e) => setCnic(e.target.value)} placeholder="00000-0000000-0" className={inputClass} />
+              <input value={cnic} onChange={(e) => setCnic(formatCnic(e.target.value))} inputMode="numeric" maxLength={15} placeholder="00000-0000000-0" className={inputClass} />
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">Phone (optional)</label>
