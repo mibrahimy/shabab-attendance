@@ -15,7 +15,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // A city admin manages one city — link straight to its hierarchy. Derive it from
   // the grant that carries a (non-global) cityId.
   const managedCityId = ctx.isSuperadmin ? null : ctx.grants.find((g) => g.cityId)?.cityId;
-  if (managedCityId) nav.push({ href: `/hierarchy/${managedCityId}`, label: "Hierarchy" });
+  if (managedCityId) {
+    nav.push({ href: `/hierarchy/${managedCityId}`, label: "Hierarchy" });
+    // Editing the role catalog needs manage_city (city admins hold it).
+    if (ctx.grants.some((g) => g.permission === "manage_city")) {
+      nav.push({ href: `/roles/${managedCityId}`, label: "Roles" });
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#f4f3ff]">

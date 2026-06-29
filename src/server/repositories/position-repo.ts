@@ -4,6 +4,7 @@
 // is the same wherever the role is used.
 
 import { prisma } from "@/server/db";
+import { diffSets } from "@/lib/diff-sets";
 import type { Db } from "./org-node-repo";
 
 const CITY_ADMIN_CANONICAL_KEY = "city_admin";
@@ -62,4 +63,74 @@ export function findOrCreateCityAdminPosition(
   db: Db = prisma,
 ): Promise<{ id: string }> {
   return findOrCreateRolePosition(cityId, CITY_ADMIN_CANONICAL_KEY, CITY_ADMIN_PERMISSION_KEYS, db);
+}
+
+// City-level canonical roles a city admin may edit (everything except the
+// national superadmin and the admin's own city_admin role).
+export async function listEditableCanonicals(): Promise<{ key: string; label: string }[]> {
+  return prisma.canonicalPosition.findMany({
+    where: { key: { notIn: ["superadmin", "city_admin"] } },
+    orderBy: { rank: "asc" },
+    select: { key: true, label: true },
+  });
+}
+
+export type CityPosition = {
+  id: string;
+  canonicalKey: string;
+  label: string;
+  permissionKeys: string[];
+};
+
+// All instantiated positions for a city, with their current permission grants.
+export async function listCityPositions(cityId: string): Promise<CityPosition[]> {
+  const rows = await prisma.position.findMany({
+    where: { cityId },
+    select: {
+      id: true,
+      label: true,
+      canonical: { select: { key: true } },
+      permissions: { select: { permission: { select: { key: true } } } },
+    },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    canonicalKey: r.canonical.key,
+    label: r.label,
+    permissionKeys: r.permissions.map((p) => p.permission.key),
+  }));
+}
+
+// Replace a position's permission grants with exactly `permissionKeys` (add the
+// missing, remove the extras).
+export async function setPermissions(
+  positionId: string,
+  permissionKeys: string[],
+  db: Db = prisma,
+): Promise<void> {
+  const [current, target] = await Promise.all([
+    db.positionPermission.findMany({
+      where: { positionId },
+      select: { permissionId: true },
+    }),
+    db.permission.findMany({
+      where: { key: { in: permissionKeys } },
+      select: { id: true },
+    }),
+  ]);
+  const { add: toAdd, remove: toRemove } = diffSets(
+    current.map((c) => c.permissionId),
+    target.map((p) => p.id),
+  );
+
+  if (toRemove.length) {
+    await db.positionPermission.deleteMany({
+      where: { positionId, permissionId: { in: toRemove } },
+    });
+  }
+  if (toAdd.length) {
+    await db.positionPermission.createMany({
+      data: toAdd.map((permissionId) => ({ positionId, permissionId })),
+    });
+  }
 }
