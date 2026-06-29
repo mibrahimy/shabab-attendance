@@ -52,3 +52,12 @@ export function rolesForLevel(levelKey: string): RoleDef[] {
 export function findRole(roleKey: string): RoleDef | undefined {
   return DEFAULT_ROLES.find((r) => r.canonicalKey === roleKey);
 }
+
+// Nodes a given role can attach to (those at the role's level). Used by the Move
+// modal to offer valid target nodes.
+export function nodesForRole<T extends { level: { key: string } }>(
+  nodes: T[],
+  role: Pick<RoleDef, "attachLevelKey">,
+): T[] {
+  return nodes.filter((n) => n.level.key === role.attachLevelKey);
+}

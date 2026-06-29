@@ -16,6 +16,7 @@ import { useToast } from "@/components/ui/Toast";
 import { nextLevel, type Level } from "@/lib/org-levels";
 import type { RoleDef } from "@/lib/default-roles";
 import { AddMemberModal } from "@/components/members/AddMemberModal";
+import { MoveMemberModal } from "@/components/members/MoveMemberModal";
 import { NodeNameModal } from "./NodeNameModal";
 
 type NodeMember = {
@@ -81,6 +82,9 @@ export function HierarchyBuilder({
   const [membersLoading, setMembersLoading] = useState(false);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [creds, setCreds] = useState<Credentials | null>(null);
+  const [moveTarget, setMoveTarget] = useState<{ assignmentId: string; name: string } | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<{ assignmentId: string; name: string } | null>(null);
+  const [removing, setRemoving] = useState(false);
 
   const loadMembers = useCallback(async (nodeId: string) => {
     setMembersLoading(true);
@@ -98,6 +102,26 @@ export function HierarchyBuilder({
   useEffect(() => {
     void loadMembers(currentId);
   }, [currentId, loadMembers]);
+
+  async function removeMember() {
+    if (!removeTarget) return;
+    setRemoving(true);
+    try {
+      const res = await fetch(`/api/assignments/${removeTarget.assignmentId}`, { method: "DELETE" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast(json?.error?.message ?? "Could not remove member", "error");
+        return;
+      }
+      toast(`Removed ${removeTarget.name}`);
+      setRemoveTarget(null);
+      void loadMembers(current.id);
+    } catch {
+      toast("Network error", "error");
+    } finally {
+      setRemoving(false);
+    }
+  }
 
   // Breadcrumb: walk up to the city root (parents above the city aren't loaded).
   const trail: BuilderNode[] = [];
@@ -224,16 +248,30 @@ export function HierarchyBuilder({
             <ul className="mt-3 divide-y divide-gray-100">
               {members.map((m) => (
                 <li key={m.assignmentId} className="flex items-center justify-between gap-3 py-2">
-                  <span className="flex items-center gap-2">
+                  <span className="flex min-w-0 items-center gap-2">
                     <Badge color="slate">{m.roleLabel}</Badge>
-                    <span className="text-sm font-medium text-gray-900">{m.name}</span>
+                    <span className="truncate text-sm font-medium text-gray-900">{m.name}</span>
                     {m.segment && <span className="text-xs text-gray-400">{m.segment}</span>}
+                    {m.hasLogin && (
+                      <span className="text-xs text-gray-400" title="Has a login account">
+                        login
+                      </span>
+                    )}
                   </span>
-                  {m.hasLogin && (
-                    <span className="text-xs text-gray-400" title="Has a login account">
-                      login
-                    </span>
-                  )}
+                  <span className="flex shrink-0 items-center gap-1">
+                    <button
+                      onClick={() => setMoveTarget({ assignmentId: m.assignmentId, name: m.name })}
+                      className="rounded-lg px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                    >
+                      Move
+                    </button>
+                    <button
+                      onClick={() => setRemoveTarget({ assignmentId: m.assignmentId, name: m.name })}
+                      className="rounded-lg px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
+                    >
+                      Remove
+                    </button>
+                  </span>
                 </li>
               ))}
             </ul>
@@ -320,6 +358,27 @@ export function HierarchyBuilder({
         }}
       />
       <CredentialsDialog creds={creds} onClose={() => setCreds(null)} />
+
+      <MoveMemberModal
+        member={moveTarget}
+        roles={roles}
+        nodes={nodes}
+        onClose={() => setMoveTarget(null)}
+        onMoved={() => {
+          setMoveTarget(null);
+          void loadMembers(current.id);
+        }}
+      />
+      <ConfirmDialog
+        open={!!removeTarget}
+        title={removeTarget ? `Remove ${removeTarget.name}?` : "Remove member"}
+        message="This ends their assignment at this node. Their profile and history are kept."
+        confirmLabel="Remove"
+        variant="danger"
+        loading={removing}
+        onConfirm={removeMember}
+        onCancel={() => setRemoveTarget(null)}
+      />
     </div>
   );
 }

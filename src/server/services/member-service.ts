@@ -48,13 +48,7 @@ export async function addMember(
 
   const role = findRole(input.roleKey);
   if (!role) throw new ValidationError("Unknown role");
-
-  // The role must be valid for this node's level (e.g. Student/Murabbi at a Class).
-  const levels = await nodeTypeRepo.listCityLevels(node.cityId);
-  const nodeLevel = levels.find((l) => l.id === node.typeId);
-  if (!nodeLevel || nodeLevel.key !== role.attachLevelKey) {
-    throw new ValidationError(`${role.label} can't be added at this level`);
-  }
+  await assertRoleAtLevel(node, role);
 
   const name = input.person.name.trim();
   if (!name) throw new ValidationError("Name is required");
@@ -118,6 +112,77 @@ export async function addMember(
   return { personId, tempPassword };
 }
 
+// Soft-remove: end the assignment, keep the Person + history. Gated by add_member
+// at the assignment's node.
+export async function removeMember(ctx: AuthzContext, assignmentId: string): Promise<void> {
+  const a = await assignmentRepo.findActiveById(assignmentId);
+  if (!a) throw new NotFoundError("Assignment not found");
+  const node = await orgNodeRepo.findById(a.orgNodeId);
+  if (!node) throw new NotFoundError("Node not found");
+  requirePermission(ctx, ADD_MEMBER, { path: node.path, functionId: null });
+
+  await assignmentRepo.endAssignment(assignmentId);
+  await auditRepo.record({
+    actorPersonId: ctx.personId,
+    action: "remove_member",
+    targetType: "Person",
+    targetId: a.personId,
+    cityId: a.cityId,
+    metadata: { assignmentId, nodeId: node.id },
+  });
+}
+
+// Move a member to another node/role: end the old assignment + create a new one,
+// preserving history. Requires add_member on BOTH the source and target subtrees.
+export async function moveMember(
+  ctx: AuthzContext,
+  assignmentId: string,
+  input: { targetNodeId: string; roleKey: string },
+): Promise<{ personId: string }> {
+  const a = await assignmentRepo.findActiveById(assignmentId);
+  if (!a) throw new NotFoundError("Assignment not found");
+
+  const [source, target] = await Promise.all([
+    orgNodeRepo.findById(a.orgNodeId),
+    orgNodeRepo.findById(input.targetNodeId),
+  ]);
+  if (!source || !target) throw new NotFoundError("Node not found");
+  requirePermission(ctx, ADD_MEMBER, { path: source.path, functionId: null });
+  requirePermission(ctx, ADD_MEMBER, { path: target.path, functionId: null });
+  if (!target.cityId) throw new ValidationError("Members attach below the city level");
+
+  const role = findRole(input.roleKey);
+  if (!role) throw new ValidationError("Unknown role");
+  await assertRoleAtLevel(target, role);
+
+  await prisma.$transaction(
+    async (tx) => {
+      await assignmentRepo.endAssignment(assignmentId, tx);
+      const position = await positionRepo.findOrCreateRolePosition(
+        target.cityId!,
+        role.canonicalKey,
+        role.permissionKeys,
+        tx,
+      );
+      await assignmentRepo.create(
+        { personId: a.personId, positionId: position.id, orgNodeId: target.id, cityId: target.cityId },
+        tx,
+      );
+    },
+    { maxWait: 10_000, timeout: 20_000 },
+  );
+
+  await auditRepo.record({
+    actorPersonId: ctx.personId,
+    action: "move_member",
+    targetType: "Person",
+    targetId: a.personId,
+    cityId: target.cityId,
+    metadata: { assignmentId, from: source.id, to: target.id, roleKey: role.canonicalKey },
+  });
+  return { personId: a.personId };
+}
+
 async function loadAuthorizedNode(
   ctx: AuthzContext,
   nodeId: string,
@@ -126,6 +191,20 @@ async function loadAuthorizedNode(
   if (!node) throw new NotFoundError("Node not found");
   requirePermission(ctx, ADD_MEMBER, { path: node.path, functionId: null });
   return node;
+}
+
+// A role attaches at exactly one level (Student/Murabbi at a Class, Park Admin at a
+// Park). Validates the target node is that level.
+async function assertRoleAtLevel(
+  node: orgNodeRepo.OrgNodeRow,
+  role: { label: string; attachLevelKey: string },
+): Promise<void> {
+  if (!node.cityId) throw new ValidationError("Members attach below the city level");
+  const levels = await nodeTypeRepo.listCityLevels(node.cityId);
+  const nodeLevel = levels.find((l) => l.id === node.typeId);
+  if (!nodeLevel || nodeLevel.key !== role.attachLevelKey) {
+    throw new ValidationError(`${role.label} can't be placed at this level`);
+  }
 }
 
 function recordAudit(

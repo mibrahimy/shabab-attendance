@@ -23,6 +23,19 @@ export async function create(
   });
 }
 
+export async function findActiveById(
+  id: string,
+): Promise<{ id: string; personId: string; orgNodeId: string; cityId: string | null } | null> {
+  return prisma.assignment.findFirst({
+    where: { id, endDate: null },
+    select: { id: true, personId: true, orgNodeId: true, cityId: true },
+  });
+}
+
+export async function endAssignment(id: string, db: Db = prisma): Promise<void> {
+  await db.assignment.update({ where: { id }, data: { endDate: new Date() } });
+}
+
 export async function existsActive(
   personId: string,
   positionId: string,
