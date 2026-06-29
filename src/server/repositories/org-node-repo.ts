@@ -95,3 +95,42 @@ export async function listCountriesWithCities(): Promise<CountryWithCities[]> {
   });
   return countries.map(({ children, ...c }) => ({ ...c, cities: children }));
 }
+
+// A node enriched with its level (for the hierarchy builder's chips + child-type
+// resolution).
+export type SubtreeNode = OrgNodeRow & {
+  level: { key: string; label: string; rank: number };
+};
+
+// Every node at or below `path` (one indexed prefix scan). Bounded per city.
+export async function listSubtree(path: string): Promise<SubtreeNode[]> {
+  const rows = await prisma.orgNode.findMany({
+    where: { path: { startsWith: path } },
+    orderBy: [{ depth: "asc" }, { name: "asc" }],
+    select: {
+      ...baseSelect,
+      type: { select: { label: true, rank: true, canonical: { select: { key: true } } } },
+    },
+  });
+  return rows.map(({ type, ...n }) => ({
+    ...n,
+    level: { key: type.canonical.key, label: type.label, rank: type.rank },
+  }));
+}
+
+export async function hasChildren(nodeId: string): Promise<boolean> {
+  const count = await prisma.orgNode.count({ where: { parentId: nodeId } });
+  return count > 0;
+}
+
+export async function countAssignments(nodeId: string): Promise<number> {
+  return prisma.assignment.count({ where: { orgNodeId: nodeId } });
+}
+
+export async function rename(nodeId: string, name: string): Promise<OrgNodeRow> {
+  return prisma.orgNode.update({ where: { id: nodeId }, data: { name }, select: baseSelect });
+}
+
+export async function remove(nodeId: string): Promise<void> {
+  await prisma.orgNode.delete({ where: { id: nodeId } });
+}

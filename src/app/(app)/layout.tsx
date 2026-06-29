@@ -12,6 +12,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const nav: NavItem[] = [{ href: "/", label: "Home" }];
   if (ctx.isSuperadmin) nav.push({ href: "/cities", label: "Cities" });
+  // A city admin manages one city — link straight to its hierarchy. Derive it from
+  // the grant that carries a (non-global) cityId.
+  const managedCityId = ctx.isSuperadmin ? null : ctx.grants.find((g) => g.cityId)?.cityId;
+  if (managedCityId) nav.push({ href: `/hierarchy/${managedCityId}`, label: "Hierarchy" });
 
   return (
     <div className="min-h-screen bg-[#f4f3ff]">

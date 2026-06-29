@@ -104,6 +104,9 @@ export async function createCity(
       { parent: country, typeId: cityType.id, name, asCity: true },
       tx,
     );
+    // Seed the city's default level template (Zone→Sector→Park→Class) so it's
+    // born ready for the hierarchy builder.
+    await nodeTypeRepo.ensureCityTemplate(city.id, tx);
     const position = await positionRepo.findOrCreateCityAdminPosition(city.id, tx);
     const person = await personRepo.create(
       { name: adminName, cnic, phone: input.admin.phone ?? null, status: "active", cityId: city.id },

@@ -4,6 +4,7 @@
 // a prop; after a mutation we router.refresh() to re-pull it.
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import EmptyState from "@/components/ui/EmptyState";
@@ -57,8 +58,16 @@ export function CitiesManager({ countries }: { countries: CountryNode[] }) {
               ) : (
                 <ul className="mt-3 divide-y divide-gray-100">
                   {country.cities.map((city) => (
-                    <li key={city.id} className="py-2 text-sm text-gray-700">
-                      {city.name}
+                    <li key={city.id}>
+                      <Link
+                        href={`/hierarchy/${city.id}`}
+                        className="flex items-center justify-between py-2 text-sm text-gray-700 hover:text-[#2f55ea]"
+                      >
+                        <span>{city.name}</span>
+                        <span className="text-gray-400" aria-hidden>
+                          Hierarchy ›
+                        </span>
+                      </Link>
                     </li>
                   ))}
                 </ul>
