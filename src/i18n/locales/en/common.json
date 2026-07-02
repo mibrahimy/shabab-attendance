@@ -1,0 +1,27 @@
+{
+  "app": {
+    "name": "Shabab"
+  },
+  "nav": {
+    "home": "Home",
+    "cities": "Cities",
+    "hierarchy": "Hierarchy",
+    "roles": "Roles"
+  },
+  "actions": {
+    "signOut": "Sign out",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "confirm": "Confirm"
+  },
+  "locale": {
+    "label": "Language",
+    "en": "English",
+    "ur": "اردو"
+  },
+  "empty": {
+    "title": "Nothing here yet",
+    "description": "There's nothing to show."
+  }
+}

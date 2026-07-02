@@ -17,6 +17,15 @@ body {
   background: var(--background);
   color: var(--foreground);
   -webkit-tap-highlight-color: transparent;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Urdu uses the Nastaliq script face; its natural letter-spacing must not be
+   tightened, and the taller line-height keeps the calligraphic script legible. */
+:lang(ur) {
+  font-family: var(--font-urdu), var(--font-sans), system-ui, sans-serif;
+  letter-spacing: normal;
+  line-height: 2;
 }
 
 /* ── Modal ── */

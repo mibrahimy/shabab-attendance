@@ -6,12 +6,16 @@ import { getAuthzContext } from "@/server/auth/authz-context";
 import { ToastProvider } from "@/components/ui/Toast";
 import { AppNav, type NavItem } from "@/components/app/AppNav";
 import { SignOutButton } from "@/components/auth/SignOutButton";
+import { LocaleToggle } from "@/components/app/LocaleToggle";
+import { getLocale } from "@/i18n/get-locale";
+import { getServerI18n } from "@/i18n/server";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const ctx = await getAuthzContext();
+  const { t } = await getServerI18n(await getLocale(), "common");
 
-  const nav: NavItem[] = [{ href: "/", label: "Home" }];
-  if (ctx.isSuperadmin) nav.push({ href: "/cities", label: "Cities" });
+  const nav: NavItem[] = [{ href: "/", label: t("nav.home") }];
+  if (ctx.isSuperadmin) nav.push({ href: "/cities", label: t("nav.cities") });
   // The city-wide Hierarchy and Roles views are for a city admin. Gate on a
   // manage_city grant (only city admins hold it) rather than any cityId-bearing
   // grant — a park admin also carries a cityId but is anchored deeper, so the
@@ -20,8 +24,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ? null
     : ctx.grants.find((g) => g.permission === "manage_city" && g.cityId)?.cityId;
   if (managedCityId) {
-    nav.push({ href: `/hierarchy/${managedCityId}`, label: "Hierarchy" });
-    nav.push({ href: `/roles/${managedCityId}`, label: "Roles" });
+    nav.push({ href: `/hierarchy/${managedCityId}`, label: t("nav.hierarchy") });
+    nav.push({ href: `/roles/${managedCityId}`, label: t("nav.roles") });
   }
 
   return (
@@ -33,11 +37,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2f55ea] text-sm font-bold text-white">
                 S
               </span>
-              Shabab
+              {t("app.name")}
             </span>
             <AppNav items={nav} />
           </div>
-          <SignOutButton />
+          <div className="flex items-center gap-3">
+            <LocaleToggle />
+            <SignOutButton />
+          </div>
         </div>
       </header>
       <ToastProvider>

@@ -5,10 +5,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import { formatCnic } from "@/lib/cnic";
+import { LocaleToggle } from "@/components/app/LocaleToggle";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useTranslation(["auth", "common"]);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -26,12 +29,12 @@ export default function LoginPage() {
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json?.error?.message ?? "Sign in failed");
+        setError(json?.error?.message ?? t("login.error"));
         return;
       }
       router.replace(json.data.mustChangePassword ? "/change-password" : "/");
     } catch {
-      setError("Network error — please try again");
+      setError(t("login.error"));
     } finally {
       setPending(false);
     }
@@ -40,12 +43,15 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#f4f3ff] px-4">
       <div className="w-full max-w-sm">
+        <div className="mb-4 flex justify-end">
+          <LocaleToggle />
+        </div>
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#2f55ea] text-2xl font-bold text-white shadow-lg shadow-[#2f55ea]/25">
             S
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Shabab Attendance</h1>
-          <p className="mt-1.5 text-sm text-gray-500">Sign in to your account</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{t("login.title")}</h1>
+          <p className="mt-1.5 text-sm text-gray-500">{t("login.subtitle")}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -60,7 +66,7 @@ export default function LoginPage() {
 
           <div>
             <label htmlFor="identifier" className="mb-1.5 block text-sm font-medium text-gray-700">
-              CNIC
+              {t("login.identifier")}
             </label>
             <input
               id="identifier"
@@ -78,7 +84,7 @@ export default function LoginPage() {
 
           <div>
             <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-gray-700">
-              Password
+              {t("login.password")}
             </label>
             <input
               id="password"
@@ -97,7 +103,7 @@ export default function LoginPage() {
             disabled={pending}
             className="w-full rounded-xl bg-[#2f55ea] py-2.5 font-medium text-white transition hover:bg-[#2546c9] disabled:opacity-60"
           >
-            {pending ? "Signing in…" : "Sign in"}
+            {pending ? `${t("login.submit")}…` : t("login.submit")}
           </button>
         </form>
       </div>

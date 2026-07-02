@@ -16,7 +16,7 @@ export default function SearchInput({
   return (
     <div className={`relative ${className}`}>
       <svg
-        className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+        className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -33,12 +33,12 @@ export default function SearchInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-md border border-gray-300 pl-9 pr-10 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200 transition-colors duration-100"
+        className="w-full rounded-md border border-gray-300 ps-9 pe-10 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200 transition-colors duration-100"
       />
       {value && (
         <button
           onClick={() => onChange("")}
-          className="absolute right-1.5 top-1/2 -translate-y-1/2 min-w-[32px] min-h-[32px] flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors active:scale-90"
+          className="absolute end-1.5 top-1/2 -translate-y-1/2 min-w-[32px] min-h-[32px] flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors active:scale-90"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

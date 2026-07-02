@@ -28,7 +28,7 @@ export function PasswordStrength({ password }: { password: string }) {
           />
         </div>
         {password.length > 0 && (
-          <span className="w-16 shrink-0 text-right text-xs font-medium text-gray-500">
+          <span className="w-16 shrink-0 text-end text-xs font-medium text-gray-500">
             {STRENGTH_LABELS[passed]}
           </span>
         )}

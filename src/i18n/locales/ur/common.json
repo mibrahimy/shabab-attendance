@@ -1,0 +1,27 @@
+{
+  "app": {
+    "name": "شباب"
+  },
+  "nav": {
+    "home": "ہوم",
+    "cities": "شہر",
+    "hierarchy": "درجہ بندی",
+    "roles": "کردار"
+  },
+  "actions": {
+    "signOut": "سائن آؤٹ",
+    "cancel": "منسوخ کریں",
+    "save": "محفوظ کریں",
+    "delete": "حذف کریں",
+    "confirm": "تصدیق کریں"
+  },
+  "locale": {
+    "label": "زبان",
+    "en": "English",
+    "ur": "اردو"
+  },
+  "empty": {
+    "title": "ابھی یہاں کچھ نہیں",
+    "description": "دکھانے کے لیے کچھ نہیں ہے۔"
+  }
+}

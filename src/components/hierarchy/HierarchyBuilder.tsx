@@ -297,7 +297,7 @@ export function HierarchyBuilder({
               <li key={child.id}>
                 <button
                   onClick={() => setCurrentId(child.id)}
-                  className="flex w-full items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-left transition hover:border-gray-300 hover:bg-gray-50"
+                  className="flex w-full items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-start transition hover:border-gray-300 hover:bg-gray-50"
                 >
                   <span className="flex items-center gap-2">
                     <Badge color={LEVEL_COLORS[child.level.key] ?? "gray"}>{child.level.label}</Badge>

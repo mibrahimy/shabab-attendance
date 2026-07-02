@@ -37,7 +37,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast: addToast }}>
       {children}
-      <div className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-[60] space-y-2 safe-bottom">
+      <div className="fixed bottom-20 lg:bottom-6 end-4 lg:end-6 z-[60] space-y-2 safe-bottom">
         {toasts.map((t) => (
           <ToastItem key={t.id} toast={t} onDone={() => removeToast(t.id)} />
         ))}
@@ -90,7 +90,7 @@ function ToastItem({ toast, onDone }: { toast: Toast; onDone: () => void }) {
   return (
     <div
       role="alert"
-      className={`${styles[toast.type]} flex items-center gap-2.5 pl-4 pr-2 py-3 rounded-xl shadow-lg text-sm font-medium min-w-[240px] max-w-[360px] ${
+      className={`${styles[toast.type]} flex items-center gap-2.5 ps-4 pe-2 py-3 rounded-xl shadow-lg text-sm font-medium min-w-[240px] max-w-[360px] ${
         exiting
           ? "animate-[toastOut_0.2s_ease-in_forwards]"
           : "animate-[toastIn_0.25s_ease-out]"
