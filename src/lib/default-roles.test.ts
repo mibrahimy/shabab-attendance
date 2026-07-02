@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rolesForLevel, findRole, nodesForRole } from "./default-roles";
+import { rolesForLevel, findRole, nodesForRole, isProtectedRole } from "./default-roles";
 
 describe("rolesForLevel", () => {
   it("a Class offers Student + Murabbi", () => {
@@ -38,5 +38,17 @@ describe("nodesForRole", () => {
 
   it("offers only Park nodes for a Park Admin", () => {
     expect(nodesForRole(nodes, { attachLevelKey: "park" }).map((n) => n.id)).toEqual(["p1"]);
+  });
+});
+
+describe("isProtectedRole", () => {
+  it("protects the system-managed roles", () => {
+    expect(isProtectedRole("superadmin")).toBe(true);
+    expect(isProtectedRole("city_admin")).toBe(true);
+  });
+  it("leaves editable/placeable roles unprotected", () => {
+    expect(isProtectedRole("park_admin")).toBe(false);
+    expect(isProtectedRole("murabbi")).toBe(false);
+    expect(isProtectedRole("student")).toBe(false);
   });
 });

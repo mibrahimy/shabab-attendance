@@ -23,28 +23,35 @@ export async function create(
   });
 }
 
-export async function findActiveById(
-  id: string,
-): Promise<{ id: string; personId: string; orgNodeId: string; cityId: string | null } | null> {
-  return prisma.assignment.findFirst({
+export async function findActiveById(id: string): Promise<{
+  id: string;
+  personId: string;
+  orgNodeId: string;
+  cityId: string | null;
+  roleKey: string;
+} | null> {
+  const row = await prisma.assignment.findFirst({
     where: { id, endDate: null },
-    select: { id: true, personId: true, orgNodeId: true, cityId: true },
+    select: {
+      id: true,
+      personId: true,
+      orgNodeId: true,
+      cityId: true,
+      position: { select: { canonical: { select: { key: true } } } },
+    },
   });
+  if (!row) return null;
+  return {
+    id: row.id,
+    personId: row.personId,
+    orgNodeId: row.orgNodeId,
+    cityId: row.cityId,
+    roleKey: row.position.canonical.key,
+  };
 }
 
 export async function endAssignment(id: string, db: Db = prisma): Promise<void> {
   await db.assignment.update({ where: { id }, data: { endDate: new Date() } });
-}
-
-export async function existsActive(
-  personId: string,
-  positionId: string,
-  orgNodeId: string,
-): Promise<boolean> {
-  const count = await prisma.assignment.count({
-    where: { personId, positionId, orgNodeId, endDate: null },
-  });
-  return count > 0;
 }
 
 export type NodeMember = {

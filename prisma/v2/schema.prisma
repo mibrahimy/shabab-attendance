@@ -75,7 +75,10 @@ model Position {
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
 
-  @@index([cityId])
+  // One Position per (city, canonical) role — makes findOrCreateRolePosition
+  // race-safe (a concurrent duplicate insert is rejected, not silently created).
+  // National positions (cityId = null) are exempt: NULLs compare as distinct.
+  @@unique([cityId, canonicalId])
   @@index([canonicalId])
   @@index([functionId])
 }

@@ -9,6 +9,7 @@
 
 import { PrismaClient } from "../generated/v2-client";
 import bcrypt from "bcryptjs";
+import { formatCnic } from "../../src/lib/cnic";
 
 const prisma = new PrismaClient();
 
@@ -63,7 +64,7 @@ const GLOBAL_ROOT_NODE_ID = "org-global-root";
 const SUPERADMIN_POSITION_ID = "pos-superadmin";
 
 async function main() {
-  const cnic = requireEnv("SEED_SUPERADMIN_CNIC");
+  const cnic = formatCnic(requireEnv("SEED_SUPERADMIN_CNIC"));
   const password = requireEnv("SEED_SUPERADMIN_PASSWORD");
   const name = process.env.SEED_SUPERADMIN_NAME?.trim() || "Super Admin";
 

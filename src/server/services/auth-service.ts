@@ -4,6 +4,7 @@
 
 import type { SessionClaims } from "@/types/auth";
 import { checkPassword } from "@/lib/password-policy";
+import { formatCnic } from "@/lib/cnic";
 import { UnauthorizedError, ValidationError, NotFoundError } from "@/server/errors";
 import * as userRepo from "@/server/repositories/user-repo";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
@@ -17,7 +18,9 @@ export async function login(input: {
   identifier: string;
   password: string;
 }): Promise<LoginResult> {
-  const user = await userRepo.findByLoginIdentifier(input.identifier.trim());
+  // Canonicalize a CNIC identifier the same way it's stored (formatCnic leaves a
+  // legacy email untouched), so login matches regardless of how the user typed it.
+  const user = await userRepo.findByLoginIdentifier(formatCnic(input.identifier.trim()));
 
   // Uniform failure for "no such user" and "wrong password" so we don't reveal
   // which identifiers exist.

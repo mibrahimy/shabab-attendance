@@ -5,6 +5,7 @@
 
 import { prisma } from "@/server/db";
 import { diffSets } from "@/lib/diff-sets";
+import { PROTECTED_CANONICAL_KEYS } from "@/lib/default-roles";
 import type { Db } from "./org-node-repo";
 
 const CITY_ADMIN_CANONICAL_KEY = "city_admin";
@@ -45,17 +46,30 @@ export async function findOrCreateRolePosition(
     ? await db.permission.findMany({ where: { key: { in: permissionKeys } }, select: { id: true } })
     : [];
 
-  return db.position.create({
-    data: {
-      cityId,
-      canonicalId: canonical.id,
-      label: canonical.label,
-      rank: canonical.rank,
-      functionId: null,
-      permissions: { create: permissions.map((p) => ({ permissionId: p.id })) },
-    },
-    select: { id: true },
-  });
+  try {
+    return await db.position.create({
+      data: {
+        cityId,
+        canonicalId: canonical.id,
+        label: canonical.label,
+        rank: canonical.rank,
+        functionId: null,
+        permissions: { create: permissions.map((p) => ({ permissionId: p.id })) },
+      },
+      select: { id: true },
+    });
+  } catch (err) {
+    // Lost the create race against a concurrent caller — the @@unique([cityId,
+    // canonicalId]) rejects the duplicate; the row the winner made is what we want.
+    if (typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002") {
+      const winner = await db.position.findFirst({
+        where: { cityId, canonicalId: canonical.id },
+        select: { id: true },
+      });
+      if (winner) return winner;
+    }
+    throw err;
+  }
 }
 
 export function findOrCreateCityAdminPosition(
@@ -69,7 +83,7 @@ export function findOrCreateCityAdminPosition(
 // national superadmin and the admin's own city_admin role).
 export async function listEditableCanonicals(): Promise<{ key: string; label: string }[]> {
   return prisma.canonicalPosition.findMany({
-    where: { key: { notIn: ["superadmin", "city_admin"] } },
+    where: { key: { notIn: [...PROTECTED_CANONICAL_KEYS] } },
     orderBy: { rank: "asc" },
     select: { key: true, label: true },
   });

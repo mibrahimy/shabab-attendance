@@ -123,8 +123,10 @@ export async function hasChildren(nodeId: string): Promise<boolean> {
   return count > 0;
 }
 
+// Only ACTIVE assignments block deletion — members are soft-removed (endDate set)
+// but the rows stay for history, so an ended assignment must not keep a node alive.
 export async function countAssignments(nodeId: string): Promise<number> {
-  return prisma.assignment.count({ where: { orgNodeId: nodeId } });
+  return prisma.assignment.count({ where: { orgNodeId: nodeId, endDate: null } });
 }
 
 export async function rename(nodeId: string, name: string): Promise<OrgNodeRow> {

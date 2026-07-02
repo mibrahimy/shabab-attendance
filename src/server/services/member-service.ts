@@ -8,7 +8,7 @@ import { NotFoundError, ValidationError } from "@/server/errors";
 import { requirePermission } from "@/server/auth/can-act-on";
 import { hashPassword } from "@/server/auth/password";
 import { generateTempPassword } from "@/lib/password-generate";
-import { findRole } from "@/lib/default-roles";
+import { findRole, isProtectedRole } from "@/lib/default-roles";
 import * as orgNodeRepo from "@/server/repositories/org-node-repo";
 import * as nodeTypeRepo from "@/server/repositories/node-type-repo";
 import * as positionRepo from "@/server/repositories/position-repo";
@@ -53,27 +53,28 @@ export async function addMember(
   const name = input.person.name.trim();
   if (!name) throw new ValidationError("Name is required");
 
-  // Profile-only student: no User, CNIC optional.
+  // Profile-only student: no User, CNIC optional. One transaction so a mid-way
+  // failure can't leave an orphan Person with no assignment.
   if (role.isStudent) {
-    const person = await personRepo.create({
-      name,
-      segment: input.person.segment ?? null,
-      status: "active",
-      cityId: node.cityId,
+    const personId = await prisma.$transaction(async (tx) => {
+      const person = await personRepo.create(
+        { name, segment: input.person.segment ?? null, status: "active", cityId: node.cityId },
+        tx,
+      );
+      const position = await positionRepo.findOrCreateRolePosition(
+        node.cityId!,
+        role.canonicalKey,
+        role.permissionKeys,
+        tx,
+      );
+      await assignmentRepo.create(
+        { personId: person.id, positionId: position.id, orgNodeId: node.id, cityId: node.cityId },
+        tx,
+      );
+      return person.id;
     });
-    const position = await positionRepo.findOrCreateRolePosition(
-      node.cityId,
-      role.canonicalKey,
-      role.permissionKeys,
-    );
-    await assignmentRepo.create({
-      personId: person.id,
-      positionId: position.id,
-      orgNodeId: node.id,
-      cityId: node.cityId,
-    });
-    await recordAudit(ctx, node, person.id, role.canonicalKey, false);
-    return { personId: person.id };
+    await recordAudit(ctx, node, personId, role.canonicalKey, false);
+    return { personId };
   }
 
   // Staff: needs a CNIC (login username) and a temp-password account.
@@ -86,30 +87,54 @@ export async function addMember(
   const tempPassword = generateTempPassword();
   const passwordHash = await hashPassword(tempPassword);
 
-  const personId = await prisma.$transaction(
-    async (tx) => {
-      const person = await personRepo.create(
-        { name, cnic, phone: input.person.phone ?? null, segment: input.person.segment ?? null, status: "active", cityId: node.cityId },
-        tx,
-      );
-      await userRepo.create({ personId: person.id, passwordHash, mustChangePassword: true }, tx);
-      const position = await positionRepo.findOrCreateRolePosition(
-        node.cityId!,
-        role.canonicalKey,
-        role.permissionKeys,
-        tx,
-      );
-      await assignmentRepo.create(
-        { personId: person.id, positionId: position.id, orgNodeId: node.id, cityId: node.cityId },
-        tx,
-      );
-      return person.id;
-    },
-    { maxWait: 10_000, timeout: 20_000 },
-  );
+  let personId: string;
+  try {
+    personId = await prisma.$transaction(
+      async (tx) => {
+        const person = await personRepo.create(
+          { name, cnic, phone: input.person.phone ?? null, segment: input.person.segment ?? null, status: "active", cityId: node.cityId },
+          tx,
+        );
+        await userRepo.create({ personId: person.id, passwordHash, mustChangePassword: true }, tx);
+        const position = await positionRepo.findOrCreateRolePosition(
+          node.cityId!,
+          role.canonicalKey,
+          role.permissionKeys,
+          tx,
+        );
+        await assignmentRepo.create(
+          { personId: person.id, positionId: position.id, orgNodeId: node.id, cityId: node.cityId },
+          tx,
+        );
+        return person.id;
+      },
+      { maxWait: 10_000, timeout: 20_000 },
+    );
+  } catch (err) {
+    // A concurrent add with the same CNIC loses the unique-constraint race — the
+    // pre-check above can't catch it. Surface the same friendly error.
+    if (isUniqueViolation(err)) {
+      throw new ValidationError("A person with this CNIC already exists", "CNIC_TAKEN");
+    }
+    throw err;
+  }
 
   await recordAudit(ctx, node, personId, role.canonicalKey, true);
   return { personId, tempPassword };
+}
+
+// Prisma unique-constraint violation, duck-typed so the service stays Prisma-free.
+function isUniqueViolation(err: unknown): boolean {
+  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002";
+}
+
+// System-managed roles (superadmin, city_admin) aren't removable/movable through
+// the member endpoints — guards against locking a city out of its own management.
+// They're provisioned by the seed / onboarding cascade, not these flows.
+function assertNotProtected(roleKey: string): void {
+  if (isProtectedRole(roleKey)) {
+    throw new ValidationError("This role can't be removed or moved here");
+  }
 }
 
 // Soft-remove: end the assignment, keep the Person + history. Gated by add_member
@@ -117,6 +142,7 @@ export async function addMember(
 export async function removeMember(ctx: AuthzContext, assignmentId: string): Promise<void> {
   const a = await assignmentRepo.findActiveById(assignmentId);
   if (!a) throw new NotFoundError("Assignment not found");
+  assertNotProtected(a.roleKey);
   const node = await orgNodeRepo.findById(a.orgNodeId);
   if (!node) throw new NotFoundError("Node not found");
   requirePermission(ctx, ADD_MEMBER, { path: node.path, functionId: null });
@@ -141,6 +167,7 @@ export async function moveMember(
 ): Promise<{ personId: string }> {
   const a = await assignmentRepo.findActiveById(assignmentId);
   if (!a) throw new NotFoundError("Assignment not found");
+  assertNotProtected(a.roleKey);
 
   const [source, target] = await Promise.all([
     orgNodeRepo.findById(a.orgNodeId),

@@ -360,6 +360,7 @@ export function HierarchyBuilder({
       <CredentialsDialog creds={creds} onClose={() => setCreds(null)} />
 
       <MoveMemberModal
+        key={moveTarget?.assignmentId ?? "none"}
         member={moveTarget}
         roles={roles}
         nodes={nodes}

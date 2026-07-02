@@ -34,7 +34,11 @@ export async function ensureCityTemplate(cityId: string, db: Db = prisma): Promi
     select: { id: true, label: true, rank: true },
   });
   await db.nodeType.createMany({
+    // skipDuplicates: idempotent under a concurrent first load (two requests can
+    // both compute the same `missing` set; the unique [cityId, canonicalId] would
+    // otherwise make the second insert throw).
     data: canonicals.map((c) => ({ cityId, canonicalId: c.id, label: c.label, rank: c.rank })),
+    skipDuplicates: true,
   });
 }
 

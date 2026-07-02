@@ -53,6 +53,16 @@ export function findRole(roleKey: string): RoleDef | undefined {
   return DEFAULT_ROLES.find((r) => r.canonicalKey === roleKey);
 }
 
+// System-managed roles: never editable in the city roles catalog and never
+// removable/movable via the member endpoints (the national superadmin, and the
+// city_admin which is provisioned by the onboarding cascade). Single source of
+// truth for both the editor's filter and the member-endpoint guard.
+export const PROTECTED_CANONICAL_KEYS = ["superadmin", "city_admin"] as const;
+
+export function isProtectedRole(canonicalKey: string): boolean {
+  return (PROTECTED_CANONICAL_KEYS as readonly string[]).includes(canonicalKey);
+}
+
 // Nodes a given role can attach to (those at the role's level). Used by the Move
 // modal to offer valid target nodes.
 export function nodesForRole<T extends { level: { key: string } }>(

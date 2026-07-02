@@ -8,14 +8,13 @@
 import type { AuthzContext } from "@/types/auth";
 import { NotFoundError, ValidationError } from "@/server/errors";
 import { requirePermission } from "@/server/auth/can-act-on";
-import { findRole } from "@/lib/default-roles";
+import { findRole, isProtectedRole } from "@/lib/default-roles";
 import * as orgNodeRepo from "@/server/repositories/org-node-repo";
 import * as positionRepo from "@/server/repositories/position-repo";
 import * as permissionRepo from "@/server/repositories/permission-repo";
 import * as auditRepo from "@/server/repositories/audit-repo";
 
 const MANAGE_CITY = "manage_city";
-const PROTECTED = new Set(["superadmin", "city_admin"]);
 
 export type RoleView = {
   canonicalKey: string;
@@ -57,7 +56,7 @@ export async function setRolePermissions(
   permissionKeys: string[],
 ): Promise<void> {
   const city = await loadAuthorizedCity(ctx, cityId);
-  if (PROTECTED.has(canonicalKey)) {
+  if (isProtectedRole(canonicalKey)) {
     throw new ValidationError("This role can't be edited here");
   }
 
