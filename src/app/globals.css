@@ -1,6 +1,10 @@
 @import "tailwindcss";
 
 :root {
+  /* Force light rendering of native controls (e.g. <select> option lists) so
+     they stay legible on Android/in-app browsers set to dark mode, where an
+     undeclared color-scheme renders dark option text on a dark picker. */
+  color-scheme: light;
   --background: #ffffff;
   --foreground: #111111;
   --accent: #4f46e5;
