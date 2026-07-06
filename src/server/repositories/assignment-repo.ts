@@ -23,6 +23,14 @@ export async function create(
   });
 }
 
+// Count active assignments anywhere in a subtree (by the anchor's materialized
+// path) — the "people in this city" number for the dashboard. One indexed scan.
+export async function countActiveInSubtree(path: string): Promise<number> {
+  return prisma.assignment.count({
+    where: { endDate: null, orgNode: { path: { startsWith: path } } },
+  });
+}
+
 export async function findActiveById(id: string): Promise<{
   id: string;
   personId: string;

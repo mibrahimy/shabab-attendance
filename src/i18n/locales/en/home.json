@@ -1,0 +1,14 @@
+{
+  "greeting": "Signed in",
+  "people": "people",
+  "cards": {
+    "hierarchy": "Build hierarchy",
+    "hierarchyDesc": "View and edit your city’s structure",
+    "roles": "Manage roles",
+    "rolesDesc": "Choose what each role can do",
+    "attendance": "Attendance",
+    "attendanceDesc": "Mark today’s events",
+    "cities": "Countries & cities",
+    "citiesDesc": "Create the org tree and onboard cities"
+  }
+}

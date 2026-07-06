@@ -1,0 +1,13 @@
+{
+  "view": {
+    "overview": "Overview",
+    "focus": "Focus"
+  },
+  "overview": {
+    "search": "Search locations…",
+    "noMatches": "No locations match “{{query}}”",
+    "empty": "No locations yet — add one to start building.",
+    "children_one": "{{count}} inside",
+    "children_other": "{{count}} inside"
+  }
+}

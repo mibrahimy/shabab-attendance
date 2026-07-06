@@ -8,8 +8,10 @@ import { NotFoundError, ValidationError } from "@/server/errors";
 import { requirePermission } from "@/server/auth/can-act-on";
 import { nextLevel, type Level } from "@/lib/org-levels";
 import { DEFAULT_ROLES, type RoleDef } from "@/lib/default-roles";
+import { summarizeLevels, type LevelCount } from "@/lib/city-summary";
 import * as orgNodeRepo from "@/server/repositories/org-node-repo";
 import * as nodeTypeRepo from "@/server/repositories/node-type-repo";
+import * as assignmentRepo from "@/server/repositories/assignment-repo";
 import * as auditRepo from "@/server/repositories/audit-repo";
 
 const MANAGE = "manage_hierarchy";
@@ -37,6 +39,32 @@ export async function getCityTree(ctx: AuthzContext, cityId: string): Promise<Ci
     orgNodeRepo.listSubtree(city.path),
   ]);
   return { city, levels, nodes, roles: DEFAULT_ROLES };
+}
+
+export type CitySummary = {
+  city: { id: string; name: string };
+  levels: LevelCount[];
+  peopleCount: number;
+};
+
+// Lightweight overview for the city admin's home: node counts per level + total
+// active people (assignments) in the city. Same scope guard as the tree.
+export async function getCitySummary(ctx: AuthzContext, cityId: string): Promise<CitySummary> {
+  const city = await orgNodeRepo.findById(cityId);
+  if (!city) throw new NotFoundError("City not found");
+  canManage(ctx, city);
+
+  await nodeTypeRepo.ensureCityTemplate(cityId);
+  const [levels, nodes, peopleCount] = await Promise.all([
+    nodeTypeRepo.listCityLevels(cityId),
+    orgNodeRepo.listSubtree(city.path),
+    assignmentRepo.countActiveInSubtree(city.path),
+  ]);
+  return {
+    city: { id: city.id, name: city.name },
+    levels: summarizeLevels(nodes, levels),
+    peopleCount,
+  };
 }
 
 export async function addNode(

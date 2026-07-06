@@ -6,17 +6,19 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
-import type { BadgeColor } from "@/types";
 import EmptyState from "@/components/ui/EmptyState";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { CredentialsDialog, type Credentials } from "@/components/ui/CredentialsDialog";
 import { useToast } from "@/components/ui/Toast";
 import { nextLevel, type Level } from "@/lib/org-levels";
+import { LEVEL_COLORS } from "@/lib/level-colors";
 import type { RoleDef } from "@/lib/default-roles";
 import { AddMemberModal } from "@/components/members/AddMemberModal";
 import { MoveMemberModal } from "@/components/members/MoveMemberModal";
+import { TreeOverview } from "./TreeOverview";
 import { NodeNameModal } from "./NodeNameModal";
 
 type NodeMember = {
@@ -34,14 +36,6 @@ export type BuilderNode = {
   level: { key: string; label: string; rank: number };
 };
 
-const LEVEL_COLORS: Record<string, BadgeColor> = {
-  city: "slate",
-  zone: "blue",
-  sector: "pink",
-  park: "green",
-  class: "amber",
-};
-
 export function HierarchyBuilder({
   city,
   levels,
@@ -55,6 +49,11 @@ export function HierarchyBuilder({
 }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useTranslation("hierarchy");
+
+  // Overview = the whole-tree outline (default, so a built tree shows its shape);
+  // Focus = the drill-down builder for one node.
+  const [view, setView] = useState<"overview" | "focus">("overview");
 
   const { byId, childrenOf } = useMemo(() => {
     const byId = new Map<string, BuilderNode>();
@@ -185,8 +184,39 @@ export function HierarchyBuilder({
 
   return (
     <div>
-      {/* Breadcrumb */}
-      <nav className="mb-4 flex flex-wrap items-center gap-1 text-sm text-gray-500">
+      {/* View toggle: whole-tree overview vs focused drill-down */}
+      <div className="mb-4 inline-flex rounded-xl border border-gray-200 bg-white p-0.5 text-sm">
+        {(["overview", "focus"] as const).map((v) => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            aria-pressed={view === v}
+            className={`rounded-lg px-3 py-1.5 font-medium transition ${
+              view === v ? "bg-[#2f55ea] text-white" : "text-gray-500 hover:text-gray-800"
+            }`}
+          >
+            {t(`view.${v}`)}
+          </button>
+        ))}
+      </div>
+
+      {view === "overview" && (
+        <TreeOverview
+          nodes={nodes}
+          byId={byId}
+          childrenOf={childrenOf}
+          rootId={city.id}
+          onJump={(id) => {
+            setCurrentId(id);
+            setView("focus");
+          }}
+        />
+      )}
+
+      {view === "focus" && (
+        <>
+          {/* Breadcrumb */}
+          <nav className="mb-4 flex flex-wrap items-center gap-1 text-sm text-gray-500">
         {trail.map((n, i) => (
           <span key={n.id} className="flex items-center gap-1">
             {i > 0 && <span className="text-gray-300">/</span>}
@@ -312,6 +342,8 @@ export function HierarchyBuilder({
             );
           })}
         </ul>
+      )}
+        </>
       )}
 
       {modal === "add" && childLevel && (
