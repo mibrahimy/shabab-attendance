@@ -7,7 +7,8 @@
     "cities": "شہر",
     "hierarchy": "درجہ بندی",
     "roles": "کردار",
-    "attendance": "حاضری"
+    "attendance": "حاضری",
+    "profile": "پروفائل"
   },
   "actions": {
     "signOut": "سائن آؤٹ",

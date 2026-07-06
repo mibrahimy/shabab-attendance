@@ -7,7 +7,8 @@
     "cities": "Cities",
     "hierarchy": "Hierarchy",
     "roles": "Roles",
-    "attendance": "Attendance"
+    "attendance": "Attendance",
+    "profile": "Profile"
   },
   "actions": {
     "signOut": "Sign out",

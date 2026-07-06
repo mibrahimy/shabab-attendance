@@ -5,6 +5,7 @@
 import { getAuthzContext } from "@/server/auth/authz-context";
 import { ToastProvider } from "@/components/ui/Toast";
 import { AppNav, type NavItem } from "@/components/app/AppNav";
+import { BottomTabBar } from "@/components/app/BottomTabBar";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { LocaleToggle } from "@/components/app/LocaleToggle";
 import { getLocale } from "@/i18n/get-locale";
@@ -14,14 +15,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const ctx = await getAuthzContext();
   const { t } = await getServerI18n(await getLocale(), "common");
 
-  const nav: NavItem[] = [{ href: "/", label: t("nav.home") }];
-  if (ctx.isSuperadmin) nav.push({ href: "/cities", label: t("nav.cities") });
+  const nav: NavItem[] = [{ href: "/", label: t("nav.home"), icon: "home" }];
+  if (ctx.isSuperadmin) nav.push({ href: "/cities", label: t("nav.cities"), icon: "cities" });
   // Attendance is for anyone who can mark or view it (or a superadmin).
   if (
     ctx.isSuperadmin ||
     ctx.grants.some((g) => g.permission === "mark_attendance" || g.permission === "view_attendance")
   ) {
-    nav.push({ href: "/mark", label: t("nav.attendance") });
+    nav.push({ href: "/mark", label: t("nav.attendance"), icon: "attendance" });
   }
   // The city-wide Hierarchy and Roles views are for a city admin. Gate on a
   // manage_city grant (only city admins hold it) rather than any cityId-bearing
@@ -31,9 +32,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ? null
     : ctx.grants.find((g) => g.permission === "manage_city" && g.cityId)?.cityId;
   if (managedCityId) {
-    nav.push({ href: `/hierarchy/${managedCityId}`, label: t("nav.hierarchy") });
-    nav.push({ href: `/roles/${managedCityId}`, label: t("nav.roles") });
+    nav.push({ href: `/hierarchy/${managedCityId}`, label: t("nav.hierarchy"), icon: "hierarchy" });
+    nav.push({ href: `/roles/${managedCityId}`, label: t("nav.roles"), icon: "roles" });
   }
+
+  // Profile is a mobile-only tab (its actions live in the top bar on desktop).
+  const tabs: NavItem[] = [...nav, { href: "/profile", label: t("nav.profile"), icon: "profile" }];
 
   return (
     <div className="min-h-screen bg-[#f4f3ff]">
@@ -46,17 +50,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               </span>
               {t("app.name")}
             </span>
-            <AppNav items={nav} />
+            {/* Desktop nav; on mobile the bottom tab bar takes over. */}
+            <div className="hidden lg:block">
+              <AppNav items={nav} />
+            </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="hidden items-center gap-3 lg:flex">
             <LocaleToggle />
             <SignOutButton />
           </div>
         </div>
       </header>
       <ToastProvider>
-        <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
+        <main className="mx-auto max-w-5xl px-4 py-6 pb-24 lg:pb-6">{children}</main>
       </ToastProvider>
+      <BottomTabBar items={tabs} />
     </div>
   );
 }
