@@ -3,7 +3,13 @@
     "title": "Today",
     "empty": "No events today.",
     "roster": "{{marked}} of {{total}} marked",
-    "newEvent": "New event"
+    "people_one": "{{count}} person",
+    "people_other": "{{count}} people",
+    "newEvent": "New event",
+    "toMark": "To mark",
+    "done": "Done",
+    "notMarked": "Not marked",
+    "marked": "Marked"
   },
   "create": {
     "title": "New event",
@@ -38,5 +44,13 @@
     "banner": "No signal — saved on this device, will sync",
     "pending": "{{count}} pending",
     "synced": "All synced"
+  },
+  "report": {
+    "title": "Attendance saved",
+    "rate": "{{attended}} of {{total}} · {{percent}}%",
+    "attended": "attended",
+    "done": "Done",
+    "closed": "This event is closed — attendance is read-only.",
+    "view": "View report"
   }
 }
