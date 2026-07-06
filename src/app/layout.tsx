@@ -29,7 +29,7 @@ const nastaliq = Noto_Nastaliq_Urdu({
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#111111",
+  themeColor: "#2f55ea",
 };
 
 export const metadata: Metadata = {

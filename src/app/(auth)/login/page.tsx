@@ -4,6 +4,7 @@
 // routes to the forced password change when the account still requires it.
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { formatCnic } from "@/lib/cnic";
@@ -47,8 +48,8 @@ export default function LoginPage() {
           <LocaleToggle />
         </div>
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#2f55ea] text-2xl font-bold text-white shadow-lg shadow-[#2f55ea]/25">
-            S
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-lg shadow-[#2f55ea]/15">
+            <Image src="/logo.png" alt="Shabab" width={40} height={40} priority unoptimized />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{t("login.title")}</h1>
           <p className="mt-1.5 text-sm text-gray-500">{t("login.subtitle")}</p>

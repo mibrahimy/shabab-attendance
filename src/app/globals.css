@@ -3,14 +3,33 @@
 :root {
   --background: #ffffff;
   --foreground: #111111;
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
-  --accent-light: #eef2ff;
-  --accent-text: #4338ca;
+  /* Brand royal blue (was indigo #4f46e5 — that drifted from the app's #2f55ea and
+     made every shared <Button> a different blue than the hand-rolled CTAs). */
+  --accent: #2f55ea;
+  --accent-hover: #2444cf;
+  --accent-light: #eef1fe;
+  --accent-text: #2444cf;
+
+  /* Ink neutrals (blue-black, warmer than plain gray on the lavender ground) and
+     depth tokens — from the design mockups. Rolled out incrementally. */
+  --ink: #1b2440;
+  --ink2: #697089;
+  --ink3: #a3a9bd;
+  --sh-sm: 0 1px 2px rgba(27, 36, 64, 0.05);
+  --sh-md: 0 4px 14px -6px rgba(27, 36, 64, 0.16);
+  --sh-lg: 0 22px 44px -20px rgba(27, 36, 64, 0.4);
 }
 
 * {
   letter-spacing: -0.01em;
+}
+
+/* Consistent keyboard focus ring for all interactive elements (many buttons were
+   hand-rolled without one). Brand-soft halo; not shown for mouse users. */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-light);
+  border-radius: 0.5rem;
 }
 
 body {

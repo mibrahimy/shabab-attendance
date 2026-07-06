@@ -271,7 +271,14 @@ export function HierarchyBuilder({
             </Button>
           </div>
           {membersLoading ? (
-            <p className="mt-3 text-sm text-gray-400">Loading…</p>
+            <div className="mt-3 space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-2 py-1">
+                  <div className="h-5 w-16 animate-pulse rounded-full bg-gray-100" />
+                  <div className="h-4 w-32 animate-pulse rounded bg-gray-200" />
+                </div>
+              ))}
+            </div>
           ) : members.length === 0 ? (
             <p className="mt-3 text-sm text-gray-400">No one assigned here yet.</p>
           ) : (
@@ -317,6 +324,13 @@ export function HierarchyBuilder({
             childLevel
               ? `Add the first ${childLevel.label.toLowerCase()} to keep building.`
               : "This is the deepest level."
+          }
+          action={
+            childLevel ? (
+              <Button size="sm" onClick={() => setModal("add")}>
+                + Add {childLevel.label}
+              </Button>
+            ) : undefined
           }
         />
       ) : (

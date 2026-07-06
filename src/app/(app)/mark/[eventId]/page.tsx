@@ -9,7 +9,6 @@ import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/components/ui/Toast";
-import Spinner from "@/components/ui/Spinner";
 import { ATTENDANCE_STATUSES, type AttendanceStatus } from "@/lib/attendance-status";
 import { initials } from "@/lib/initials";
 import { queueMark, pending } from "@/lib/offline/outbox";
@@ -121,7 +120,31 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
     ? new Date(scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : "";
 
-  if (loading) return <Spinner />;
+  if (loading) {
+    // Skeleton in the roster's own shape — avoids layout shift, feels faster on a
+    // slow phone connection.
+    return (
+      <div className="pb-28">
+        <div className="mb-4 space-y-2">
+          <div className="h-6 w-40 animate-pulse rounded bg-gray-200" />
+          <div className="h-4 w-28 animate-pulse rounded bg-gray-100" />
+        </div>
+        <ul className="divide-y divide-gray-100">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <li key={i} className="flex items-center gap-3 py-2.5">
+              <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-gray-200" />
+              <div className="h-4 flex-1 animate-pulse rounded bg-gray-200" />
+              <div className="flex gap-1">
+                {Array.from({ length: 4 }).map((_, k) => (
+                  <div key={k} className="h-11 w-11 animate-pulse rounded-lg bg-gray-100" />
+                ))}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
 
   const progress = roster.length ? Math.round((touched.size / roster.length) * 100) : 0;
 

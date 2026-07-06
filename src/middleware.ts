@@ -101,5 +101,8 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.json).*)"],
+  // Skip Next internals and any static file (a path with an extension, e.g.
+  // /logo.png, /icons/*.png, sw.js, manifest.json) — otherwise the auth redirect
+  // hijacks public assets and they fail to load.
+  matcher: ["/((?!_next/static|_next/image|.*\\.[^/]+$).*)"],
 };
