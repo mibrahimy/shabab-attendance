@@ -16,7 +16,8 @@
     "seed:v2": "npx tsx --tsconfig tsconfig.json prisma/v2/seed.ts",
     "prisma:v2:generate": "prisma generate --schema prisma/v2/schema.prisma",
     "prisma:v2:migrate": "prisma migrate dev --schema prisma/v2/schema.prisma",
-    "postinstall": "prisma generate && prisma generate --schema prisma/v2/schema.prisma"
+    "postinstall": "prisma generate && prisma generate --schema prisma/v2/schema.prisma",
+    "e2e": "playwright test"
   },
   "prisma": {
     "seed": "npx tsx --tsconfig tsconfig.json prisma/seed.ts"

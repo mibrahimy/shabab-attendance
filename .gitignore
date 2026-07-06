@@ -45,3 +45,9 @@ next-env.d.ts
 
 # prisma — generated v2 client (regenerated via postinstall)
 /prisma/generated
+
+# Playwright e2e artifacts
+/test-results
+/playwright-report
+/e2e/screens
+/e2e/.fixtures.json

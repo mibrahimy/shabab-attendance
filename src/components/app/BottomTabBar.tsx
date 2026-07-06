@@ -28,6 +28,9 @@ function Icon({ name }: { name: string }) {
 
 export function BottomTabBar({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
+  // Hide on focused attendance sub-screens (a specific event's Mark/Report) so the
+  // sticky Save bar isn't obscured — these are focused flows, not top-level nav.
+  if (/^\/mark\/[^/]+/.test(pathname)) return null;
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
       <ul className="mx-auto flex max-w-md items-stretch justify-around">
