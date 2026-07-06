@@ -46,3 +46,8 @@ export function setLastSyncedAt(lastSyncedAt: number): void {
 export function addFailed(n: number): void {
   if (n > 0) set({ failed: snapshot.failed + n });
 }
+
+// Dismiss the failed indicator (terminally-dropped marks aren't recoverable).
+export function clearFailed(): void {
+  if (snapshot.failed !== 0) set({ failed: 0 });
+}

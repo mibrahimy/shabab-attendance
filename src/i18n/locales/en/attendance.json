@@ -27,7 +27,8 @@
     "save": "Save attendance",
     "saveOffline": "Save offline",
     "saved": "Attendance saved",
-    "saveError": "Some marks couldn't be saved — please try again",
+    "savedOnDevice": "Saved on this device — will sync when you’re back online",
+    "saveError": "Some marks couldn’t be saved — please try again",
     "summary": "{{present}} present · {{late}} late · {{excused}} excused · {{absent}} absent",
     "empty": "No one in your roster for this event."
   },
@@ -45,8 +46,12 @@
     "banner": "No signal — saved on this device, will sync",
     "pending": "{{count}} pending",
     "synced": "All synced",
+    "syncNow": "Sync now",
+    "justSynced": "Just synced",
+    "lastSynced": "Synced {{mins}}m ago",
     "failed_one": "{{count}} mark couldn’t be saved",
-    "failed_other": "{{count}} marks couldn’t be saved"
+    "failed_other": "{{count}} marks couldn’t be saved",
+    "dismiss": "Dismiss"
   },
   "report": {
     "title": "Attendance saved",

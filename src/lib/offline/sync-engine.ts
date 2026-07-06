@@ -42,6 +42,31 @@ export function classifyResponse(status: number): "ack" | "retry" | "drop" {
   return "drop";
 }
 
+// Exponential backoff for transient-failure retries: 2s, 4s, 8s, 16s, capped ~30s.
+export function backoffDelay(attempt: number): number {
+  return Math.min(30_000, 2_000 * 2 ** Math.max(0, attempt));
+}
+
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+let retryAttempt = 0;
+
+function clearRetry(): void {
+  if (retryTimer) clearTimeout(retryTimer);
+  retryTimer = null;
+}
+
+// Schedule a self-healing retry when marks are still queued while online (a
+// transient failure). One timer at a time; backs off; resets on drain/online.
+function scheduleRetry(): void {
+  clearRetry();
+  const delay = backoffDelay(retryAttempt);
+  retryAttempt += 1;
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    void flush();
+  }, delay);
+}
+
 // Returns true if the outbox is now empty (nothing left pending).
 export async function flush(): Promise<boolean> {
   if (flushing || isOffline()) return (await pending()).length === 0;
@@ -95,7 +120,16 @@ export async function flush(): Promise<boolean> {
     }
 
     setLastSyncedAt(Date.now());
-    return (await pending()).length === 0;
+    const drained = (await pending()).length === 0;
+    // Self-heal transient failures: if anything is still queued while online, it's
+    // a transient error — retry with backoff (no reload/online event needed).
+    if (drained) {
+      retryAttempt = 0;
+      clearRetry();
+    } else if (!isOffline()) {
+      scheduleRetry();
+    }
+    return drained;
   } finally {
     flushing = false;
   }
@@ -105,7 +139,11 @@ let started = false;
 export function startSyncEngine(): void {
   if (started || typeof window === "undefined") return;
   started = true;
-  window.addEventListener("online", () => void flush());
+  window.addEventListener("online", () => {
+    retryAttempt = 0; // fresh connectivity — retry immediately, reset backoff
+    clearRetry();
+    void flush();
+  });
   void refreshPending(); // seed the pending badge
   void flush();
 }

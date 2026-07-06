@@ -5,8 +5,8 @@
 // effect — so online status and outbox counters come from their sources directly.
 
 import { useEffect, useSyncExternalStore } from "react";
-import { startSyncEngine } from "./sync-engine";
-import { subscribe as subscribeStore, getSnapshot, SERVER_SNAPSHOT } from "./store";
+import { startSyncEngine, flush } from "./sync-engine";
+import { subscribe as subscribeStore, getSnapshot, SERVER_SNAPSHOT, clearFailed } from "./store";
 
 function subscribeOnline(cb: () => void): () => void {
   window.addEventListener("online", cb);
@@ -22,6 +22,8 @@ export function useOnline(): {
   pending: number;
   lastSyncedAt: number | null;
   failed: number;
+  syncNow: () => void;
+  dismissFailed: () => void;
 } {
   const online = useSyncExternalStore(
     subscribeOnline,
@@ -35,5 +37,12 @@ export function useOnline(): {
     startSyncEngine();
   }, []);
 
-  return { online, pending: snap.pending, lastSyncedAt: snap.lastSyncedAt, failed: snap.failed };
+  return {
+    online,
+    pending: snap.pending,
+    lastSyncedAt: snap.lastSyncedAt,
+    failed: snap.failed,
+    syncNow: () => void flush(),
+    dismissFailed: clearFailed,
+  };
 }

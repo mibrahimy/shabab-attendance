@@ -35,7 +35,7 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
   const { eventId } = use(params);
   const { t } = useTranslation("attendance");
   const { toast } = useToast();
-  const { online, failed } = useOnline();
+  const { online, failed, dismissFailed } = useOnline();
   const router = useRouter();
 
   const [title, setTitle] = useState("");
@@ -102,10 +102,14 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
     setSaving(true);
     try {
       const drained = await flush();
-      if (drained || !online) {
-        router.push(`/mark/${eventId}/report`);
+      if (drained) {
+        router.push(`/mark/${eventId}/report`); // synced → show the report
+      } else if (!online) {
+        // Offline: marks are queued and will sync. Stay put — the report route
+        // can't be fetched offline; confirm inline instead.
+        toast(t("mark.savedOnDevice"));
       } else {
-        toast(t("mark.saveError"), "error");
+        toast(t("mark.saveError"), "error"); // online but a submit failed
       }
     } finally {
       setSaving(false);
@@ -165,8 +169,11 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
         </div>
       )}
       {failed > 0 && (
-        <div className="mb-3 rounded-xl bg-[#fdecec] px-4 py-2 text-xs font-semibold text-[#dc2626]">
-          {t("offline.failed", { count: failed })}
+        <div className="mb-3 flex items-center justify-between rounded-xl bg-[#fdecec] px-4 py-2 text-xs font-semibold text-[#dc2626]">
+          <span>{t("offline.failed", { count: failed })}</span>
+          <button onClick={dismissFailed} className="ms-3 shrink-0 underline" aria-label={t("offline.dismiss")}>
+            {t("offline.dismiss")}
+          </button>
         </div>
       )}
 

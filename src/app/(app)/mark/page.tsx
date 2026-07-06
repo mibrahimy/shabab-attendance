@@ -54,7 +54,7 @@ function EventCard({ e, done }: { e: TodayEvent; done: boolean }) {
 export default function AttendanceTodayPage() {
   const { t } = useTranslation("attendance");
   const { toast } = useToast();
-  const { online, pending, failed } = useOnline();
+  const { online, pending, failed, lastSyncedAt, syncNow, dismissFailed } = useOnline();
   const [events, setEvents] = useState<TodayEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -83,13 +83,21 @@ export default function AttendanceTodayPage() {
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold tracking-tight text-gray-900">{t("today.title")}</h1>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-400">
-            {!online
-              ? t("offline.banner")
-              : pending > 0
-                ? t("offline.pending", { count: pending })
-                : t("offline.synced")}
-          </span>
+          {!online ? (
+            <span className="text-xs font-semibold text-[#9a5a17]">{t("offline.banner")}</span>
+          ) : pending > 0 ? (
+            <button onClick={syncNow} className="text-xs font-medium text-[#2f55ea] hover:underline">
+              {t("offline.pending", { count: pending })} · {t("offline.syncNow")}
+            </button>
+          ) : (
+            <span className="text-xs text-gray-400">
+              {lastSyncedAt == null
+                ? t("offline.synced")
+                : Date.now() - lastSyncedAt < 60_000
+                  ? t("offline.justSynced")
+                  : t("offline.lastSynced", { mins: Math.floor((Date.now() - lastSyncedAt) / 60_000) })}
+            </span>
+          )}
           <Button size="sm" onClick={() => setCreating((v) => !v)}>
             {t("today.newEvent")}
           </Button>
@@ -97,8 +105,11 @@ export default function AttendanceTodayPage() {
       </div>
 
       {failed > 0 && (
-        <div className="mb-4 rounded-xl bg-[#fdecec] px-4 py-2 text-xs font-semibold text-[#dc2626]">
-          {t("offline.failed", { count: failed })}
+        <div className="mb-4 flex items-center justify-between rounded-xl bg-[#fdecec] px-4 py-2 text-xs font-semibold text-[#dc2626]">
+          <span>{t("offline.failed", { count: failed })}</span>
+          <button onClick={dismissFailed} className="ms-3 shrink-0 underline" aria-label={t("offline.dismiss")}>
+            {t("offline.dismiss")}
+          </button>
         </div>
       )}
 
