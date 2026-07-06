@@ -5,7 +5,7 @@
 // (local-first), and flushes on Save. Works offline: the roster GET is SW-cached and
 // marks queue locally until sync.
 
-import { use, useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import Button from "@/components/ui/Button";
@@ -36,6 +36,14 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
   const [roster, setRoster] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Mirror of `roster` for the queue side-effects, so bulk/queue actions never read
+  // a stale render closure (e.g. a click racing a re-load).
+  const rosterRef = useRef<Entry[]>([]);
+
+  function applyRoster(next: Entry[]) {
+    rosterRef.current = next;
+    setRoster(next);
+  }
 
   const load = useCallback(async () => {
     try {
@@ -43,6 +51,7 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
       const json = await res.json().catch(() => ({}));
       if (res.ok) {
         setTitle(json.data.event.title);
+        rosterRef.current = json.data.roster;
         setRoster(json.data.roster);
       }
     } finally {
@@ -55,14 +64,15 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
   }, [load]);
 
   async function setStatus(personId: string, status: AttendanceStatus) {
-    setRoster((prev) => prev.map((e) => (e.personId === personId ? { ...e, status } : e)));
+    applyRoster(rosterRef.current.map((e) => (e.personId === personId ? { ...e, status } : e)));
     await queueMark({ eventId, personId, status });
   }
 
   async function markAllPresent() {
-    setRoster((prev) => prev.map((e) => ({ ...e, status: "present" })));
+    const next = rosterRef.current.map((e) => ({ ...e, status: "present" as AttendanceStatus }));
+    applyRoster(next);
     await Promise.all(
-      roster.map((e) => queueMark({ eventId, personId: e.personId, status: "present" })),
+      next.map((e) => queueMark({ eventId, personId: e.personId, status: "present" })),
     );
   }
 
@@ -70,8 +80,16 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
     setSaving(true);
     try {
       const drained = await flush();
-      toast(drained || online ? t("mark.saved") : t("offline.banner"));
-      router.push("/mark");
+      if (drained) {
+        toast(t("mark.saved"));
+        router.push("/mark");
+      } else if (!online) {
+        toast(t("offline.banner")); // safely queued on this device
+        router.push("/mark");
+      } else {
+        // online but the outbox didn't drain — a submit failed; stay so they can retry.
+        toast(t("mark.saveError"), "error");
+      }
     } finally {
       setSaving(false);
     }

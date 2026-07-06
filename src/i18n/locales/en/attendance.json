@@ -20,6 +20,7 @@
     "save": "Save attendance",
     "saveOffline": "Save offline",
     "saved": "Attendance saved",
+    "saveError": "Some marks couldn't be saved — please try again",
     "summary": "{{present}} present · {{late}} late · {{excused}} excused · {{absent}} absent",
     "empty": "No one in your roster for this event."
   },

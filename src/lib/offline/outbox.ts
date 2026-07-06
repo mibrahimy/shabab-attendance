@@ -82,3 +82,21 @@ export async function remove(keys: string[]): Promise<void> {
   await tx.done;
   await refreshPending();
 }
+
+// Delete each key ONLY if its stored clientUpdatedAt still matches what was synced.
+// Guards the lost-update race: if the user re-marked the same person while a flush
+// was in flight, the outbox now holds a newer entry that must survive to sync next.
+export async function removeIfUnchanged(
+  entries: { key: string; clientUpdatedAt: string }[],
+): Promise<void> {
+  const database = await db();
+  const tx = database.transaction(STORE, "readwrite");
+  await Promise.all(
+    entries.map(async ({ key, clientUpdatedAt }) => {
+      const cur = await tx.store.get(key);
+      if (cur && cur.clientUpdatedAt === clientUpdatedAt) await tx.store.delete(key);
+    }),
+  );
+  await tx.done;
+  await refreshPending();
+}

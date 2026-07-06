@@ -64,7 +64,9 @@ export async function upsertMany(
             status: m.status,
             markedById,
             clientUpdatedAt: m.clientUpdatedAt,
-            overrideReason: m.overrideReason ?? null,
+            // Only touch the reason when the caller supplied one (undefined = leave
+            // the stored reason intact; null = explicitly clear it).
+            ...(m.overrideReason !== undefined ? { overrideReason: m.overrideReason } : {}),
           },
           select: { personId: true },
         });

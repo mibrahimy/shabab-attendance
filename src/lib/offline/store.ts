@@ -4,11 +4,11 @@
 // read via useSyncExternalStore. The outbox and sync engine push updates here; the
 // snapshot reference only changes when a value changes (stable for React).
 
-export type OfflineSnapshot = { pending: number; lastSyncedAt: number | null };
+export type OfflineSnapshot = { pending: number; lastSyncedAt: number | null; failed: number };
 
-export const SERVER_SNAPSHOT: OfflineSnapshot = { pending: 0, lastSyncedAt: null };
+export const SERVER_SNAPSHOT: OfflineSnapshot = { pending: 0, lastSyncedAt: null, failed: 0 };
 
-let snapshot: OfflineSnapshot = { pending: 0, lastSyncedAt: null };
+let snapshot: OfflineSnapshot = { pending: 0, lastSyncedAt: null, failed: 0 };
 const subscribers = new Set<() => void>();
 
 export function subscribe(cb: () => void): () => void {
@@ -22,7 +22,13 @@ export function getSnapshot(): OfflineSnapshot {
 
 function set(next: Partial<OfflineSnapshot>): void {
   const merged = { ...snapshot, ...next };
-  if (merged.pending === snapshot.pending && merged.lastSyncedAt === snapshot.lastSyncedAt) return;
+  if (
+    merged.pending === snapshot.pending &&
+    merged.lastSyncedAt === snapshot.lastSyncedAt &&
+    merged.failed === snapshot.failed
+  ) {
+    return;
+  }
   snapshot = merged;
   for (const cb of subscribers) cb();
 }
@@ -33,4 +39,10 @@ export function setPending(pending: number): void {
 
 export function setLastSyncedAt(lastSyncedAt: number): void {
   set({ lastSyncedAt });
+}
+
+// Count of marks the server terminally rejected (dropped from the outbox so they
+// don't retry forever). Surfaced in the UI; reset when acknowledged.
+export function addFailed(n: number): void {
+  if (n > 0) set({ failed: snapshot.failed + n });
 }

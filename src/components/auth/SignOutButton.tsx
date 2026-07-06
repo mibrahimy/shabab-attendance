@@ -12,6 +12,18 @@ export function SignOutButton() {
   async function signOut() {
     setPending(true);
     await fetch("/api/auth/logout", { method: "POST" });
+    // Purge this device of the user's data: the SW runtime cache (rosters aren't
+    // user-partitioned) and any IndexedDB the app opened. Prevents the next user
+    // on a shared device from reading the previous user's cached roster.
+    try {
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      indexedDB.deleteDatabase("shabab-attendance");
+    } catch {
+      // best-effort — never block sign-out
+    }
     router.replace("/login");
   }
 

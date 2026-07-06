@@ -3,7 +3,7 @@
 // only submit marks for people inside that slice.
 
 import type { AuthzContext } from "@/types/auth";
-import { NotFoundError, ForbiddenError, ValidationError } from "@/server/errors";
+import { NotFoundError, ValidationError } from "@/server/errors";
 import { canActOn, requirePermission } from "@/server/auth/can-act-on";
 import { DEFAULT_STATUS, isAttendanceStatus, type AttendanceStatus } from "@/lib/attendance-status";
 import * as eventRepo from "@/server/repositories/event-repo";
@@ -63,29 +63,44 @@ export type SubmitMark = {
   overrideReason?: string | null;
 };
 
+export type SubmitResult = {
+  syncedPersonIds: string[];
+  skippedPersonIds: string[];
+  rejectedPersonIds: string[]; // outside the marker's slice — not written, told to the client
+};
+
 export async function submitMarks(
   ctx: AuthzContext,
   eventId: string,
   marks: SubmitMark[],
-): Promise<{ syncedPersonIds: string[]; skippedPersonIds: string[] }> {
+): Promise<SubmitResult> {
   const event = await eventRepo.findById(eventId);
   if (!event) throw new NotFoundError("Event not found");
   requirePermission(ctx, MARK_ATTENDANCE, { path: event.orgNodePath, functionId: event.functionId });
+  // Only an open event may be marked — covers the offline outbox replaying after a
+  // cancel/close. Terminal for the batch (the client drops it), unlike a transient error.
+  if (event.status !== "scheduled") {
+    throw new ValidationError("This event is closed for attendance", "EVENT_NOT_OPEN");
+  }
 
-  if (marks.length === 0) return { syncedPersonIds: [], skippedPersonIds: [] };
+  if (marks.length === 0) {
+    return { syncedPersonIds: [], skippedPersonIds: [], rejectedPersonIds: [] };
+  }
   for (const m of marks) {
     if (!isAttendanceStatus(m.status)) throw new ValidationError(`Invalid status: ${m.status}`);
   }
 
-  // Every submitted person must be inside the marker's slice — no marking outside scope.
+  // Partition against the marker's live slice rather than 403-ing the whole batch:
+  // a person who left the slice (e.g. reassigned since the offline mark) is rejected
+  // individually so the rest still save and the client can drop just that key.
   const roster = await eventRepo.resolveRoster(event);
   const sliceIds = new Set(
     roster.filter((p) => inMarkerSlice(ctx, p, event.functionId)).map((p) => p.personId),
   );
-  const outside = marks.find((m) => !sliceIds.has(m.personId));
-  if (outside) throw new ForbiddenError();
+  const accepted = marks.filter((m) => sliceIds.has(m.personId));
+  const rejectedPersonIds = marks.filter((m) => !sliceIds.has(m.personId)).map((m) => m.personId);
 
-  const result = await attendanceRepo.upsertMany(eventId, marks, ctx.personId);
+  const written = await attendanceRepo.upsertMany(eventId, accepted, ctx.personId);
 
   await auditRepo.record({
     actorPersonId: ctx.personId,
@@ -93,7 +108,11 @@ export async function submitMarks(
     targetType: "Event",
     targetId: eventId,
     cityId: event.cityId,
-    metadata: { marked: result.syncedPersonIds.length, skipped: result.skippedPersonIds.length },
+    metadata: {
+      marked: written.syncedPersonIds.length,
+      skipped: written.skippedPersonIds.length,
+      rejected: rejectedPersonIds.length,
+    },
   });
-  return result;
+  return { ...written, rejectedPersonIds };
 }

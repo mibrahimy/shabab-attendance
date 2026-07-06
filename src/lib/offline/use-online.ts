@@ -17,7 +17,12 @@ function subscribeOnline(cb: () => void): () => void {
   };
 }
 
-export function useOnline(): { online: boolean; pending: number; lastSyncedAt: number | null } {
+export function useOnline(): {
+  online: boolean;
+  pending: number;
+  lastSyncedAt: number | null;
+  failed: number;
+} {
   const online = useSyncExternalStore(
     subscribeOnline,
     () => navigator.onLine,
@@ -30,5 +35,5 @@ export function useOnline(): { online: boolean; pending: number; lastSyncedAt: n
     startSyncEngine();
   }, []);
 
-  return { online, pending: snap.pending, lastSyncedAt: snap.lastSyncedAt };
+  return { online, pending: snap.pending, lastSyncedAt: snap.lastSyncedAt, failed: snap.failed };
 }
