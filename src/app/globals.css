@@ -28,6 +28,12 @@ body {
   line-height: 2;
 }
 
+/* Numbers + status letters (attendance counts, rate) — JetBrains Mono, tabular. */
+.font-num {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Modal ── */
 @keyframes modalBackdropIn {
   from { opacity: 0; }
