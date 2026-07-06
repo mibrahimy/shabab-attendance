@@ -8,6 +8,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import Button from "@/components/ui/Button";
+import Spinner from "@/components/ui/Spinner";
+import EmptyState from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
 import { useOnline } from "@/lib/offline/use-online";
 import { CreateEventForm } from "@/components/attendance/CreateEventForm";
@@ -52,7 +54,7 @@ function EventCard({ e, done }: { e: TodayEvent; done: boolean }) {
 export default function AttendanceTodayPage() {
   const { t } = useTranslation("attendance");
   const { toast } = useToast();
-  const { online, pending } = useOnline();
+  const { online, pending, failed } = useOnline();
   const [events, setEvents] = useState<TodayEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -94,6 +96,12 @@ export default function AttendanceTodayPage() {
         </div>
       </div>
 
+      {failed > 0 && (
+        <div className="mb-4 rounded-xl bg-[#fdecec] px-4 py-2 text-xs font-semibold text-[#dc2626]">
+          {t("offline.failed", { count: failed })}
+        </div>
+      )}
+
       {creating && (
         <div className="mb-4">
           <CreateEventForm
@@ -107,9 +115,16 @@ export default function AttendanceTodayPage() {
       )}
 
       {loading ? (
-        <p className="text-sm text-gray-400">…</p>
+        <Spinner />
       ) : events.length === 0 ? (
-        <p className="text-sm text-gray-400">{t("today.empty")}</p>
+        <EmptyState
+          icon={
+            <svg className="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3M4 11h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" />
+            </svg>
+          }
+          title={t("today.empty")}
+        />
       ) : (
         <div className="space-y-6">
           {toMark.length > 0 && (

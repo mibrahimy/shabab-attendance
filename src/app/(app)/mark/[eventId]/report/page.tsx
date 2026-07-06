@@ -8,6 +8,7 @@ import { use, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { ATTENDANCE_STATUSES, type AttendanceStatus } from "@/lib/attendance-status";
+import Spinner from "@/components/ui/Spinner";
 import { pending } from "@/lib/offline/outbox";
 import { overlayPending, tally, attendanceRate } from "@/lib/offline/overlay";
 import { STATUS_SOFT } from "@/components/attendance/status-styles";
@@ -43,7 +44,7 @@ export default function ReportPage({ params }: { params: Promise<{ eventId: stri
     void load();
   }, [load]);
 
-  if (loading) return <p className="text-sm text-gray-400">…</p>;
+  if (loading) return <Spinner />;
 
   const counts = tally(roster);
   const rate = attendanceRate(counts);
@@ -53,7 +54,15 @@ export default function ReportPage({ params }: { params: Promise<{ eventId: stri
       {/* Gradient hero */}
       <div className="rounded-3xl bg-[linear-gradient(135deg,#2b27c2_0%,#6f1f9e_50%,#c41f6a_100%)] p-6 text-center text-white shadow-[0_22px_44px_-20px_rgba(27,36,64,0.4)]">
         <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/20">
-          ✓
+          <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+              d="M5 13l4 4L19 7"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </div>
         <p className="text-sm text-white/80">{title}</p>
         <p className="mt-1 font-num text-3xl font-semibold">{rate.percent}%</p>

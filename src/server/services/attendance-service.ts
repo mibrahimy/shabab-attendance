@@ -17,6 +17,7 @@ export type RosterEntry = {
   name: string;
   segment: "junior" | "senior" | null;
   status: AttendanceStatus;
+  marked: boolean; // whether an explicit attendance record already exists
 };
 
 export type MarkerRoster = {
@@ -48,6 +49,7 @@ export async function getMarkerRoster(ctx: AuthzContext, eventId: string): Promi
       name: p.name,
       segment: p.segment,
       status: byPerson.get(p.personId) ?? DEFAULT_STATUS,
+      marked: byPerson.has(p.personId),
     }));
 
   return {

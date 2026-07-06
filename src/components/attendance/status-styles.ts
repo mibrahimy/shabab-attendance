@@ -26,6 +26,14 @@ export const STATUS_SOFT: Record<AttendanceStatus, string> = {
   excused: "bg-[#eef1f6] text-[#5b6b8c]",
 };
 
+// Text-only status color (for color-coded counts in the live summary).
+export const STATUS_TEXT: Record<AttendanceStatus, string> = {
+  present: "text-[#15a34a]",
+  late: "text-[#ef8a23]",
+  absent: "text-[#dc2626]",
+  excused: "text-[#5b6b8c]",
+};
+
 // The soft box-shadow "glow" under a selected status button (mockup detail).
 export const STATUS_GLOW: Record<AttendanceStatus, string> = {
   present: "shadow-[0_2px_6px_-2px_#15a34a]",
