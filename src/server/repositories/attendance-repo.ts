@@ -13,6 +13,18 @@ export type MarkRow = {
   clientUpdatedAt: Date | null;
 };
 
+// Number of attendance rows per event, for a set of events — one grouped query
+// instead of one listByEvent per event (avoids the N+1 in the "today" list).
+export async function countByEvents(eventIds: string[]): Promise<Map<string, number>> {
+  if (eventIds.length === 0) return new Map();
+  const rows = await prisma.attendance.groupBy({
+    by: ["eventId"],
+    where: { eventId: { in: eventIds } },
+    _count: { _all: true },
+  });
+  return new Map(rows.map((r) => [r.eventId, r._count._all]));
+}
+
 export async function listByEvent(eventId: string): Promise<MarkRow[]> {
   const rows = await prisma.attendance.findMany({
     where: { eventId },

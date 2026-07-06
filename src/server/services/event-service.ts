@@ -84,21 +84,21 @@ export async function listToday(ctx: AuthzContext): Promise<TodayEvent[]> {
       ];
 
   const events = await eventRepo.listToday(anchorPaths, pktDayRange());
+  if (events.length === 0) return [];
 
-  return Promise.all(
-    events.map(async (e) => {
-      const [roster, marks] = await Promise.all([
-        eventRepo.resolveRoster(e),
-        attendanceRepo.listByEvent(e.id),
-      ]);
-      return {
-        id: e.id,
-        title: e.title,
-        scheduledAt: e.scheduledAt,
-        orgNodeId: e.orgNodeId,
-        rosterCount: roster.length,
-        markedCount: marks.length,
-      };
-    }),
-  );
+  // Rosters per event (concurrent) + ONE grouped marked-count query for all
+  // events — N+1 instead of the previous 2N.
+  const [rosters, markedByEvent] = await Promise.all([
+    Promise.all(events.map((e) => eventRepo.resolveRoster(e))),
+    attendanceRepo.countByEvents(events.map((e) => e.id)),
+  ]);
+
+  return events.map((e, i) => ({
+    id: e.id,
+    title: e.title,
+    scheduledAt: e.scheduledAt,
+    orgNodeId: e.orgNodeId,
+    rosterCount: rosters[i].length,
+    markedCount: markedByEvent.get(e.id) ?? 0,
+  }));
 }

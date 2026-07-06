@@ -21,13 +21,19 @@ const ADD_MEMBER = "add_member";
 
 type Segment = "junior" | "senior";
 
-export function listNodeMembers(
+export async function listNodeMembers(
   ctx: AuthzContext,
   nodeId: string,
 ): Promise<assignmentRepo.NodeMember[]> {
-  return loadAuthorizedNode(ctx, nodeId).then((node) =>
-    assignmentRepo.listActiveByNode(node.id),
-  );
+  // Overlap the node load with the members query (two round trips → one wait);
+  // authorize once both resolve, before returning anything.
+  const [node, members] = await Promise.all([
+    orgNodeRepo.findById(nodeId),
+    assignmentRepo.listActiveByNode(nodeId),
+  ]);
+  if (!node) throw new NotFoundError("Node not found");
+  requirePermission(ctx, ADD_MEMBER, { path: node.path, functionId: null });
+  return members;
 }
 
 export type AddMemberResult = {

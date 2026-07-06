@@ -32,8 +32,8 @@ export async function getCityTree(ctx: AuthzContext, cityId: string): Promise<Ci
   if (!city) throw new NotFoundError("City not found");
   canManage(ctx, city);
 
-  await nodeTypeRepo.ensureCityTemplate(cityId);
-  // Independent reads — run them together to save a round trip.
+  // The level template is seeded at city creation (createCity), so we don't
+  // re-ensure it on every read — that was a wasted round trip on a hot path.
   const [levels, nodes] = await Promise.all([
     nodeTypeRepo.listCityLevels(cityId),
     orgNodeRepo.listSubtree(city.path),
@@ -54,7 +54,7 @@ export async function getCitySummary(ctx: AuthzContext, cityId: string): Promise
   if (!city) throw new NotFoundError("City not found");
   canManage(ctx, city);
 
-  await nodeTypeRepo.ensureCityTemplate(cityId);
+  // Template is seeded at creation — no re-ensure on this read path.
   const [levels, nodes, peopleCount] = await Promise.all([
     nodeTypeRepo.listCityLevels(cityId),
     orgNodeRepo.listSubtree(city.path),
