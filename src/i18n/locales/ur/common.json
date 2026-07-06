@@ -6,7 +6,8 @@
     "home": "ہوم",
     "cities": "شہر",
     "hierarchy": "درجہ بندی",
-    "roles": "کردار"
+    "roles": "کردار",
+    "attendance": "حاضری"
   },
   "actions": {
     "signOut": "سائن آؤٹ",

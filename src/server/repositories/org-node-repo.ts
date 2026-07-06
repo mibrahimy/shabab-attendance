@@ -37,6 +37,18 @@ export async function findById(id: string): Promise<OrgNodeRow | null> {
   return prisma.orgNode.findUnique({ where: { id }, select: baseSelect });
 }
 
+// Resolve nodes by their materialized paths (e.g. a caller's grant anchor paths).
+export async function findByPaths(
+  paths: string[],
+): Promise<{ id: string; name: string; path: string }[]> {
+  if (paths.length === 0) return [];
+  return prisma.orgNode.findMany({
+    where: { path: { in: paths } },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, path: true },
+  });
+}
+
 // Create a child node, computing path/depth and denormalized ancestor keys from
 // the parent. `isCity`/`isCountry` set the denorm keys to this node's own id at
 // the city/country level (since the keys point at the ancestor of that type).

@@ -6,7 +6,8 @@
     "home": "Home",
     "cities": "Cities",
     "hierarchy": "Hierarchy",
-    "roles": "Roles"
+    "roles": "Roles",
+    "attendance": "Attendance"
   },
   "actions": {
     "signOut": "Sign out",

@@ -10,7 +10,7 @@ export const LOCALE_COOKIE = "NEXT_LOCALE";
 
 // The namespaces (one JSON file per locale per namespace). Add a surface's
 // namespace here as its strings are extracted.
-export const NAMESPACES = ["common", "auth"] as const;
+export const NAMESPACES = ["common", "auth", "attendance"] as const;
 export type Namespace = (typeof NAMESPACES)[number];
 export const DEFAULT_NAMESPACE: Namespace = "common";
 

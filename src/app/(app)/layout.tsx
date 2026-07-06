@@ -16,6 +16,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const nav: NavItem[] = [{ href: "/", label: t("nav.home") }];
   if (ctx.isSuperadmin) nav.push({ href: "/cities", label: t("nav.cities") });
+  // Attendance is for anyone who can mark or view it (or a superadmin).
+  if (
+    ctx.isSuperadmin ||
+    ctx.grants.some((g) => g.permission === "mark_attendance" || g.permission === "view_attendance")
+  ) {
+    nav.push({ href: "/mark", label: t("nav.attendance") });
+  }
   // The city-wide Hierarchy and Roles views are for a city admin. Gate on a
   // manage_city grant (only city admins hold it) rather than any cityId-bearing
   // grant — a park admin also carries a cityId but is anchored deeper, so the
