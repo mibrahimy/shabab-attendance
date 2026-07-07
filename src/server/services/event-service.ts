@@ -5,6 +5,7 @@ import type { AuthzContext } from "@/types/auth";
 import { NotFoundError, ValidationError } from "@/server/errors";
 import { requirePermission, isSuperadmin } from "@/server/auth/can-act-on";
 import { pktDayRange } from "@/lib/pkt-day";
+import { PATH_DELIMITER } from "@/lib/org-path";
 import * as orgNodeRepo from "@/server/repositories/org-node-repo";
 import * as eventRepo from "@/server/repositories/event-repo";
 import * as attendanceRepo from "@/server/repositories/attendance-repo";
@@ -49,16 +50,55 @@ export async function createEvent(
   return event;
 }
 
-// Nodes where the caller may create an event (their create_event grant anchors) —
-// for a murabbi this is their class, so the create form offers the right options.
-export async function listCreatableNodes(
-  ctx: AuthzContext,
-): Promise<{ id: string; name: string }[]> {
-  const paths = [
+export type CreatableNode = {
+  id: string;
+  name: string;
+  path: string;
+  label: string; // readable ancestor chain, e.g. "Islamabad / Zone 1 / Class A"
+  levelKey: string;
+  levelLabel: string;
+  depth: number;
+};
+
+// Nodes where the caller may create an event. A create_event grant covers the
+// whole subtree under its anchor, so we EXPAND each anchor into every real org
+// node beneath it — not just the anchor. Otherwise an admin whose grant sits at a
+// high node (e.g. the superadmin at the global root) would only ever be offered
+// that one node and could never target an actual class. The synthetic global root
+// (depth 0) is excluded — it hosts no audience. Each node carries a readable path
+// label so same-named classes stay distinguishable.
+export async function listCreatableNodes(ctx: AuthzContext): Promise<CreatableNode[]> {
+  const anchorPaths = [
     ...new Set(ctx.grants.filter((g) => g.permission === CREATE_EVENT).map((g) => g.anchorPath)),
   ];
-  const nodes = await orgNodeRepo.findByPaths(paths);
-  return nodes.map((n) => ({ id: n.id, name: n.name }));
+  if (anchorPaths.length === 0) return [];
+
+  // Expand each anchor into its subtree (nested anchors overlap → dedupe by id).
+  const subtrees = await Promise.all(anchorPaths.map((p) => orgNodeRepo.listSubtree(p)));
+  const byId = new Map<string, orgNodeRepo.SubtreeNode>();
+  for (const nodes of subtrees) for (const n of nodes) byId.set(n.id, n);
+
+  const realNodes = [...byId.values()].filter((n) => n.depth > 0); // drop synthetic root
+  const nameById = new Map(realNodes.map((n) => [n.id, n.name] as const));
+  const labelFor = (n: orgNodeRepo.SubtreeNode): string =>
+    n.path
+      .split(PATH_DELIMITER)
+      .filter(Boolean)
+      .map((id) => nameById.get(id))
+      .filter((name): name is string => Boolean(name))
+      .join(" / ");
+
+  return realNodes
+    .sort((a, b) => a.path.localeCompare(b.path)) // tree order
+    .map((n) => ({
+      id: n.id,
+      name: n.name,
+      path: n.path,
+      label: labelFor(n),
+      levelKey: n.level.key,
+      levelLabel: n.level.label,
+      depth: n.depth,
+    }));
 }
 
 export type TodayEvent = {

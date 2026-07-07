@@ -14,10 +14,12 @@
   "create": {
     "title": "New event",
     "name": "Event title",
-    "node": "Class",
+    "node": "Where",
     "when": "Date & time",
     "submit": "Create event",
-    "nodePlaceholder": "Select a class"
+    "nodePlaceholder": "Select where",
+    "search": "Search…",
+    "noMatch": "No matching places"
   },
   "mark": {
     "title": "Mark attendance",
