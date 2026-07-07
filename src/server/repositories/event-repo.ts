@@ -105,6 +105,20 @@ export async function listToday(
   return rows.map((r) => toRow(r as Raw));
 }
 
+// Dashboard signal: how many events are scheduled in a city today, and how many
+// have any attendance recorded ("started"). Two cheap counts.
+export async function todayStatsInCity(
+  cityId: string,
+  range: { start: Date; end: Date },
+): Promise<{ events: number; started: number }> {
+  const where = { cityId, scheduledAt: { gte: range.start, lt: range.end } };
+  const [events, started] = await Promise.all([
+    prisma.event.count({ where }),
+    prisma.event.count({ where: { ...where, attendances: { some: {} } } }),
+  ]);
+  return { events, started };
+}
+
 export type RosterPerson = {
   personId: string;
   name: string;

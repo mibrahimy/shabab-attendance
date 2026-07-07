@@ -10,7 +10,12 @@ import Badge from "@/components/ui/Badge";
 import { levelColor } from "@/lib/level-colors";
 import type { LevelCount } from "@/lib/city-summary";
 
-type Summary = { city: { id: string; name: string }; levels: LevelCount[]; peopleCount: number };
+type Summary = {
+  city: { id: string; name: string };
+  levels: LevelCount[];
+  peopleCount: number;
+  today: { events: number; started: number };
+};
 
 function QuickCard({ href, title, desc }: { href: string; title: string; desc: string }) {
   return (
@@ -53,18 +58,46 @@ export function HomeDashboard({
             </h1>
           </div>
 
-          {/* City shape: node counts per level + people */}
+          {/* Today's attendance signal */}
+          {summary.today.events > 0 && (
+            <Link
+              href="/mark"
+              className="flex items-center justify-between rounded-2xl border border-[#2f55ea]/20 bg-[#eef1fe] p-4 transition hover:bg-[#e4eafe]"
+            >
+              <span>
+                <span className="block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#2f55ea]">
+                  {t("today.title")}
+                </span>
+                <span className="mt-0.5 block text-sm text-gray-700">
+                  <span className="font-num font-semibold text-gray-900">
+                    {summary.today.started}
+                  </span>
+                  {" / "}
+                  <span className="font-num">{summary.today.events}</span> {t("today.marked")}
+                </span>
+              </span>
+              <span className="text-[#2f55ea]" aria-hidden>
+                ›
+              </span>
+            </Link>
+          )}
+
+          {/* City shape: node counts per level + people (tap a level to browse) */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {summary.levels.map((l) => (
-              <div key={l.key} className="rounded-2xl border border-gray-200 bg-white p-4">
-                <div className="font-mono text-2xl font-semibold text-gray-900">{l.count}</div>
+              <Link
+                key={l.key}
+                href={`/hierarchy/${cityId}`}
+                className="rounded-2xl border border-gray-200 bg-white p-4 shadow-[var(--sh-sm)] transition hover:border-gray-300"
+              >
+                <div className="font-num text-2xl font-semibold text-gray-900">{l.count}</div>
                 <div className="mt-1">
                   <Badge color={levelColor(l.key)}>{l.label}</Badge>
                 </div>
-              </div>
+              </Link>
             ))}
-            <div className="rounded-2xl border border-gray-200 bg-white p-4">
-              <div className="font-mono text-2xl font-semibold text-gray-900">
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-[var(--sh-sm)]">
+              <div className="font-num text-2xl font-semibold text-gray-900">
                 {summary.peopleCount}
               </div>
               <div className="mt-1 text-xs font-medium text-gray-500">{t("people")}</div>

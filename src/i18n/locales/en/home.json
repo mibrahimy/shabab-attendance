@@ -1,6 +1,10 @@
 {
   "greeting": "Signed in",
   "people": "people",
+  "today": {
+    "title": "Today",
+    "marked": "sessions marked"
+  },
   "cards": {
     "hierarchy": "Build hierarchy",
     "hierarchyDesc": "View and edit your city’s structure",

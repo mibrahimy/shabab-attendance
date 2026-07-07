@@ -9,9 +9,11 @@ import { requirePermission } from "@/server/auth/can-act-on";
 import { nextLevel, type Level } from "@/lib/org-levels";
 import { DEFAULT_ROLES, type RoleDef } from "@/lib/default-roles";
 import { summarizeLevels, type LevelCount } from "@/lib/city-summary";
+import { pktDayRange } from "@/lib/pkt-day";
 import * as orgNodeRepo from "@/server/repositories/org-node-repo";
 import * as nodeTypeRepo from "@/server/repositories/node-type-repo";
 import * as assignmentRepo from "@/server/repositories/assignment-repo";
+import * as eventRepo from "@/server/repositories/event-repo";
 import * as auditRepo from "@/server/repositories/audit-repo";
 
 const MANAGE = "manage_hierarchy";
@@ -45,25 +47,28 @@ export type CitySummary = {
   city: { id: string; name: string };
   levels: LevelCount[];
   peopleCount: number;
+  today: { events: number; started: number };
 };
 
-// Lightweight overview for the city admin's home: node counts per level + total
-// active people (assignments) in the city. Same scope guard as the tree.
+// Lightweight overview for the city admin's home: node counts per level, total
+// active people, and today's attendance signal. Same scope guard as the tree.
 export async function getCitySummary(ctx: AuthzContext, cityId: string): Promise<CitySummary> {
   const city = await orgNodeRepo.findById(cityId);
   if (!city) throw new NotFoundError("City not found");
   canManage(ctx, city);
 
   // Template is seeded at creation — no re-ensure on this read path.
-  const [levels, nodes, peopleCount] = await Promise.all([
+  const [levels, nodes, peopleCount, today] = await Promise.all([
     nodeTypeRepo.listCityLevels(cityId),
     orgNodeRepo.listSubtree(city.path),
     assignmentRepo.countActiveInSubtree(city.path),
+    eventRepo.todayStatsInCity(cityId, pktDayRange()),
   ]);
   return {
     city: { id: city.id, name: city.name },
     levels: summarizeLevels(nodes, levels),
     peopleCount,
+    today,
   };
 }
 
