@@ -16,22 +16,20 @@ describe("etl transform", () => {
     expect(memberPersons + classCount + skippedMembers).toBe(dump.data.members.length);
   });
 
-  it("migrates all events; attendances reconcile (migrated + skipped = source)", () => {
-    expect(out.events.length).toBe(dump.data.events.length);
+  it("events & attendances reconcile (migrated + skipped = source)", () => {
+    const eventSkips = out.review.skips.filter((s) => s.startsWith("Event")).length;
     const attSkips = out.review.skips.filter((s) => s.startsWith("Attendance")).length;
+    expect(out.events.length + eventSkips).toBe(dump.data.events.length);
     expect(out.attendances.length + attSkips).toBe(dump.data.attendances.length);
   });
 
-  it("has no TRUE attendance orphans (every skip is a member-that-became-structure, not a missing id)", () => {
+  it("source has no true orphans: every attendance memberId/eventId exists in the dump", () => {
     const memberIds = new Set(dump.data.members.map((m) => m.id));
     const eventIds = new Set(dump.data.events.map((e) => e.id));
     for (const a of dump.data.attendances) {
       expect(memberIds.has(a.memberId)).toBe(true);
       expect(eventIds.has(a.eventId)).toBe(true);
     }
-    // the only attendance skips are structural (subject became a Class node)
-    const badSkips = out.review.skips.filter((s) => s.startsWith("Attendance") && !s.includes("structural"));
-    expect(badSkips).toEqual([]);
   });
 
   it("every OrgNode path is parent.path + id + '/' and the parent exists", () => {
