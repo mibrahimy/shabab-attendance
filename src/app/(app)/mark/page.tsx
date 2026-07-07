@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import Button from "@/components/ui/Button";
 import Spinner from "@/components/ui/Spinner";
 import EmptyState from "@/components/ui/EmptyState";
+import Eyebrow from "@/components/ui/Eyebrow";
 import { useToast } from "@/components/ui/Toast";
 import { useOnline } from "@/lib/offline/use-online";
 import { CreateEventForm } from "@/components/attendance/CreateEventForm";
@@ -140,9 +141,7 @@ export default function AttendanceTodayPage() {
         <div className="space-y-6">
           {toMark.length > 0 && (
             <section>
-              <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                {t("today.toMark")}
-              </h2>
+              <Eyebrow>{t("today.toMark")}</Eyebrow>
               <ul className="space-y-2">
                 {toMark.map((e) => (
                   <li key={e.id}>
@@ -154,9 +153,7 @@ export default function AttendanceTodayPage() {
           )}
           {done.length > 0 && (
             <section>
-              <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                {t("today.done")}
-              </h2>
+              <Eyebrow>{t("today.done")}</Eyebrow>
               <ul className="space-y-2">
                 {done.map((e) => (
                   <li key={e.id}>

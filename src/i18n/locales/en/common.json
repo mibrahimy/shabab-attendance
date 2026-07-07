@@ -15,7 +15,8 @@
     "cancel": "Cancel",
     "save": "Save",
     "delete": "Delete",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "processing": "Processing…"
   },
   "locale": {
     "label": "Language",

@@ -235,7 +235,8 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
                 {initials(e.name)}
               </span>
               <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-900">{e.name}</span>
-              <span className="flex shrink-0 gap-1">
+              {/* Segmented control — one grouped track, four choices (mockup). */}
+              <span className="flex shrink-0 gap-0.5 rounded-2xl bg-[#edeff5] p-0.5">
                 {ATTENDANCE_STATUSES.map((s) => {
                   // A button colors only once the row is touched — an untouched
                   // (default-absent) row shows all-neutral, not a red "A".
@@ -247,10 +248,10 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
                       disabled={readOnly}
                       aria-pressed={on}
                       aria-label={t(`status.${s}`)}
-                      className={`flex h-11 min-w-[44px] items-center justify-center rounded-lg font-num text-sm font-semibold transition ${
+                      className={`flex h-10 min-w-[42px] items-center justify-center rounded-xl font-num text-sm font-semibold transition ${
                         on
                           ? `${STATUS_SOLID[s]} ${STATUS_GLOW[s]}`
-                          : "bg-[#edeff5] text-gray-500 hover:bg-gray-200"
+                          : "text-gray-500 hover:bg-white/70"
                       } ${readOnly ? "opacity-60" : ""}`}
                     >
                       {STATUS_LETTER[s]}

@@ -71,10 +71,16 @@ export default function ReportPage({ params }: { params: Promise<{ eventId: stri
         </p>
       </div>
 
-      {/* Per-status breakdown */}
+      {/* Per-status breakdown — zero-count statuses are muted so the ones that
+          matter stand out. */}
       <div className="mt-4 grid grid-cols-2 gap-3">
         {ATTENDANCE_STATUSES.map((s) => (
-          <div key={s} className={`flex items-center justify-between rounded-2xl px-4 py-3 ${STATUS_SOFT[s]}`}>
+          <div
+            key={s}
+            className={`flex items-center justify-between rounded-2xl px-4 py-3 ${
+              counts[s] === 0 ? "bg-gray-50 text-gray-300" : STATUS_SOFT[s]
+            }`}
+          >
             <span className="text-sm font-medium">{t(`status.${s}`)}</span>
             <span className="font-num text-lg font-semibold">{counts[s]}</span>
           </div>
