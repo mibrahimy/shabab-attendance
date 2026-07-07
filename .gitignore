@@ -51,3 +51,6 @@ next-env.d.ts
 /playwright-report
 /e2e/screens
 /e2e/.fixtures.json
+
+# ETL local artifacts
+prisma/etl/credentials.local.json
