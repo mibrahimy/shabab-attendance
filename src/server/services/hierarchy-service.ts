@@ -4,6 +4,7 @@
 // covers all. No special-case role checks.
 
 import type { AuthzContext } from "@/types/auth";
+import { prisma } from "@/server/db";
 import { NotFoundError, ValidationError } from "@/server/errors";
 import { requirePermission } from "@/server/auth/can-act-on";
 import { nextLevel, type Level } from "@/lib/org-levels";
@@ -17,6 +18,11 @@ import * as eventRepo from "@/server/repositories/event-repo";
 import * as auditRepo from "@/server/repositories/audit-repo";
 
 const MANAGE = "manage_hierarchy";
+
+// Prisma foreign-key constraint violation (e.g. a RESTRICT FK rejecting a delete).
+function isForeignKeyViolation(err: unknown): boolean {
+  return typeof err === "object" && err !== null && "code" in err && (err as { code?: string }).code === "P2003";
+}
 
 function canManage(ctx: AuthzContext, node: { path: string }): void {
   requirePermission(ctx, MANAGE, { path: node.path, functionId: null });
@@ -131,15 +137,27 @@ export async function deleteNode(ctx: AuthzContext, nodeId: string): Promise<voi
   if (!node) throw new NotFoundError("Node not found");
   canManage(ctx, node);
 
-  // Guard: refuse to delete a node that still has structure or people under it.
-  if (await orgNodeRepo.hasChildren(node.id)) {
-    throw new ValidationError("Remove or move its child nodes first", "NODE_NOT_EMPTY");
-  }
-  if ((await orgNodeRepo.countAssignments(node.id)) > 0) {
-    throw new ValidationError("Reassign the people here first", "NODE_HAS_PEOPLE");
+  // Guard + delete atomically. The checks and the delete run in one transaction so
+  // a concurrent addNode/addMember can't slip between them; and the parentId FK is
+  // ON DELETE RESTRICT, so even if one does, the delete FAILS at the DB (P2003)
+  // rather than orphaning children — caught below and surfaced as the friendly error.
+  try {
+    await prisma.$transaction(async (tx) => {
+      if (await orgNodeRepo.hasChildren(node.id, tx)) {
+        throw new ValidationError("Remove or move its child nodes first", "NODE_NOT_EMPTY");
+      }
+      if ((await orgNodeRepo.countAssignments(node.id, tx)) > 0) {
+        throw new ValidationError("Reassign the people here first", "NODE_HAS_PEOPLE");
+      }
+      await orgNodeRepo.remove(node.id, tx);
+    });
+  } catch (err) {
+    if (isForeignKeyViolation(err)) {
+      throw new ValidationError("Remove or move its child nodes or people first", "NODE_NOT_EMPTY");
+    }
+    throw err;
   }
 
-  await orgNodeRepo.remove(node.id);
   await auditRepo.record({
     actorPersonId: ctx.personId,
     action: "delete_node",

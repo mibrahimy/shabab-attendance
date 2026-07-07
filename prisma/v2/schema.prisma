@@ -128,7 +128,11 @@ model PositionPermission {
 model OrgNode {
   id        String    @id @default(cuid())
   parentId  String? // null = root
-  parent    OrgNode?  @relation("OrgNodeChildren", fields: [parentId], references: [id])
+  // RESTRICT (not the optional-relation default SET NULL): deleting a node with
+  // children must FAIL, never silently orphan them to root with stale paths that
+  // still prefix-match the old ancestor's grants (an authz hole). The service
+  // pre-checks for a friendly error; this is the DB-level guarantee.
+  parent    OrgNode?  @relation("OrgNodeChildren", fields: [parentId], references: [id], onDelete: Restrict)
   children  OrgNode[] @relation("OrgNodeChildren")
   typeId    String
   type      NodeType  @relation(fields: [typeId], references: [id])

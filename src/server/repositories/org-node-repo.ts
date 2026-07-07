@@ -130,21 +130,21 @@ export async function listSubtree(path: string): Promise<SubtreeNode[]> {
   }));
 }
 
-export async function hasChildren(nodeId: string): Promise<boolean> {
-  const count = await prisma.orgNode.count({ where: { parentId: nodeId } });
+export async function hasChildren(nodeId: string, db: Db = prisma): Promise<boolean> {
+  const count = await db.orgNode.count({ where: { parentId: nodeId } });
   return count > 0;
 }
 
 // Only ACTIVE assignments block deletion — members are soft-removed (endDate set)
 // but the rows stay for history, so an ended assignment must not keep a node alive.
-export async function countAssignments(nodeId: string): Promise<number> {
-  return prisma.assignment.count({ where: { orgNodeId: nodeId, endDate: null } });
+export async function countAssignments(nodeId: string, db: Db = prisma): Promise<number> {
+  return db.assignment.count({ where: { orgNodeId: nodeId, endDate: null } });
 }
 
 export async function rename(nodeId: string, name: string): Promise<OrgNodeRow> {
   return prisma.orgNode.update({ where: { id: nodeId }, data: { name }, select: baseSelect });
 }
 
-export async function remove(nodeId: string): Promise<void> {
-  await prisma.orgNode.delete({ where: { id: nodeId } });
+export async function remove(nodeId: string, db: Db = prisma): Promise<void> {
+  await db.orgNode.delete({ where: { id: nodeId } });
 }
