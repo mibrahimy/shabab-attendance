@@ -184,8 +184,8 @@ export function HierarchyBuilder({
 
   return (
     <div>
-      {/* View toggle: whole-tree overview vs focused drill-down */}
-      <div className="mb-4 inline-flex rounded-xl border border-gray-200 bg-white p-0.5 text-sm">
+      {/* View toggle: overview vs focus — mobile only; on lg both panes show side by side */}
+      <div className="mb-4 inline-flex rounded-xl border border-gray-200 bg-white p-0.5 text-sm lg:hidden">
         {(["overview", "focus"] as const).map((v) => (
           <button
             key={v}
@@ -200,7 +200,11 @@ export function HierarchyBuilder({
         ))}
       </div>
 
-      {view === "overview" && (
+      <div className="lg:grid lg:grid-cols-[340px_1fr] lg:items-start lg:gap-6">
+      {/* Overview pane: left column on lg (sticky), full-width on mobile when selected */}
+      <div
+        className={`${view === "overview" ? "block" : "hidden"} lg:sticky lg:top-6 lg:block lg:max-h-[calc(100vh-3rem)] lg:overflow-auto`}
+      >
         <TreeOverview
           nodes={nodes}
           byId={byId}
@@ -211,10 +215,10 @@ export function HierarchyBuilder({
             setView("focus");
           }}
         />
-      )}
+      </div>
 
-      {view === "focus" && (
-        <>
+      {/* Focus pane: right column on lg, full-width on mobile when selected */}
+      <div className={`${view === "focus" ? "block" : "hidden"} lg:block`}>
           {/* Breadcrumb */}
           <nav className="mb-4 flex flex-wrap items-center gap-1 text-sm text-gray-500">
         {trail.map((n, i) => (
@@ -363,8 +367,8 @@ export function HierarchyBuilder({
           })}
         </ul>
       )}
-        </>
-      )}
+      </div>
+      </div>
 
       {modal === "add" && childLevel && (
         <NodeNameModal
