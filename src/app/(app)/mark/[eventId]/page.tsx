@@ -100,15 +100,19 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
   async function save() {
     setSaving(true);
     try {
-      const drained = await flush();
-      if (drained) {
-        router.push(`/mark/${eventId}/report`); // synced → show the report
+      const { drained, failedCount } = await flush();
+      if (failedCount > 0) {
+        // The server rejected some marks (moved to the failed store). Do NOT treat
+        // the now-empty outbox as success — stay put and surface the failure.
+        toast(t("mark.saveError"), "error");
+      } else if (drained) {
+        router.push(`/mark/${eventId}/report`); // fully synced → show the report
       } else if (!online) {
         // Offline: marks are queued and will sync. Stay put — the report route
         // can't be fetched offline; confirm inline instead.
         toast(t("mark.savedOnDevice"));
       } else {
-        toast(t("mark.saveError"), "error"); // online but a submit failed
+        toast(t("mark.saveError"), "error"); // online but a transient submit failure
       }
     } finally {
       setSaving(false);

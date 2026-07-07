@@ -24,18 +24,30 @@ interface OutboxDB extends DBSchema {
     value: PendingMark;
     indexes: { "by-event": string };
   };
+  // Marks the server terminally rejected (4xx that isn't re-auth/rate-limit). Kept
+  // here — not deleted — so nothing silently vanishes; recoverable/inspectable.
+  failed: {
+    key: string;
+    value: PendingMark;
+  };
 }
 
 const DB_NAME = "shabab-attendance";
 const STORE = "marks";
+const FAILED = "failed";
 
 let dbPromise: Promise<IDBPDatabase<OutboxDB>> | null = null;
 
 function db(): Promise<IDBPDatabase<OutboxDB>> {
-  dbPromise ??= openDB<OutboxDB>(DB_NAME, 1, {
-    upgrade(database) {
-      const store = database.createObjectStore(STORE, { keyPath: "key" });
-      store.createIndex("by-event", "eventId");
+  dbPromise ??= openDB<OutboxDB>(DB_NAME, 2, {
+    upgrade(database, oldVersion) {
+      if (oldVersion < 1) {
+        const store = database.createObjectStore(STORE, { keyPath: "key" });
+        store.createIndex("by-event", "eventId");
+      }
+      if (oldVersion < 2) {
+        database.createObjectStore(FAILED, { keyPath: "key" });
+      }
     },
   });
   return dbPromise;
@@ -81,6 +93,28 @@ export async function remove(keys: string[]): Promise<void> {
   await Promise.all(keys.map((k) => tx.store.delete(k)));
   await tx.done;
   await refreshPending();
+}
+
+// Move terminally-rejected marks OUT of the retry path into the durable `failed`
+// store (preserve the data — never silently delete) so they can't loop forever
+// and can be surfaced/recovered. One transaction across both stores.
+export async function moveToFailed(marks: PendingMark[]): Promise<void> {
+  if (marks.length === 0) return;
+  const database = await db();
+  const tx = database.transaction([STORE, FAILED], "readwrite");
+  await Promise.all(
+    marks.flatMap((m) => [tx.objectStore(FAILED).put(m), tx.objectStore(STORE).delete(m.key)]),
+  );
+  await tx.done;
+  await refreshPending();
+}
+
+export async function failedCount(): Promise<number> {
+  return (await db()).count(FAILED);
+}
+
+export async function clearFailedMarks(): Promise<void> {
+  await (await db()).clear(FAILED);
 }
 
 // Delete each key ONLY if its stored clientUpdatedAt still matches what was synced.

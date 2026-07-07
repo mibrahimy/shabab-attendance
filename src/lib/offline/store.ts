@@ -41,13 +41,13 @@ export function setLastSyncedAt(lastSyncedAt: number): void {
   set({ lastSyncedAt });
 }
 
-// Count of marks the server terminally rejected (dropped from the outbox so they
-// don't retry forever). Surfaced in the UI; reset when acknowledged.
-export function addFailed(n: number): void {
-  if (n > 0) set({ failed: snapshot.failed + n });
+// Count of marks the server terminally rejected — preserved in the durable `failed`
+// store (not lost). Set absolutely from that store so it stays in sync.
+export function setFailed(failed: number): void {
+  set({ failed });
 }
 
-// Dismiss the failed indicator (terminally-dropped marks aren't recoverable).
+// Dismiss the failed indicator (after clearing the durable failed store).
 export function clearFailed(): void {
   if (snapshot.failed !== 0) set({ failed: 0 });
 }

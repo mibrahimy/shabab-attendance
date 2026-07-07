@@ -12,8 +12,8 @@
 //   other 4xx      → terminal (event closed/deleted, malformed); drop so it can't
 //                    retry forever, and flag it as failed for the UI to surface.
 
-import { pending, remove, removeIfUnchanged, refreshPending, type PendingMark } from "./outbox";
-import { setLastSyncedAt, addFailed } from "./store";
+import { pending, moveToFailed, removeIfUnchanged, failedCount, refreshPending, type PendingMark } from "./outbox";
+import { setLastSyncedAt, setFailed } from "./store";
 
 let flushing = false;
 
@@ -33,12 +33,13 @@ function isOffline(): boolean {
 
 // How to treat an attendance POST response:
 //   "ack"   → server durably decided; drop the acked keys.
-//   "retry" → transient (5xx / 401 re-auth); leave queued for the next tick.
-//   "drop"  → terminal 4xx (event closed/deleted, malformed); drop so it can't
-//             loop forever, and surface as failed.
+//   "retry" → transient (5xx / 401 re-auth / 429 rate-limit); leave queued.
+//   "drop"  → terminal 4xx (event deleted, malformed, no permission); move to the
+//             durable failed store so it can't loop forever AND isn't lost.
+// 429 is explicitly transient — rate-limited marks are valid and must not be lost.
 export function classifyResponse(status: number): "ack" | "retry" | "drop" {
   if (status >= 200 && status < 300) return "ack";
-  if (status >= 500 || status === 401) return "retry";
+  if (status >= 500 || status === 401 || status === 429) return "retry";
   return "drop";
 }
 
@@ -67,13 +68,24 @@ function scheduleRetry(): void {
   }, delay);
 }
 
-// Returns true if the outbox is now empty (nothing left pending).
-export async function flush(): Promise<boolean> {
-  if (flushing || isOffline()) return (await pending()).length === 0;
+// Outcome of a flush. `drained` = outbox empty. `ackedAny` = the server durably
+// accepted at least one batch. `failedCount` = marks terminally rejected THIS
+// flush (moved to the durable failed store). Note: drained can be true while
+// failedCount > 0 (all remaining marks were rejected) — callers must NOT treat an
+// empty outbox as success.
+export type FlushResult = { drained: boolean; ackedAny: boolean; failedCount: number };
+
+export async function flush(): Promise<FlushResult> {
+  if (flushing || isOffline()) {
+    return { drained: (await pending()).length === 0, ackedAny: false, failedCount: 0 };
+  }
   flushing = true;
   try {
     const all = await pending();
-    if (all.length === 0) return true;
+    if (all.length === 0) return { drained: true, ackedAny: false, failedCount: 0 };
+
+    let ackedAny = false;
+    let failedThisFlush = 0;
 
     for (const [eventId, marks] of groupByEvent(all)) {
       let res: Response;
@@ -96,6 +108,7 @@ export async function flush(): Promise<boolean> {
 
       const decision = classifyResponse(res.status);
       if (decision === "ack") {
+        ackedAny = true;
         const json = await res.json().catch(() => null);
         const acked = new Set<string>([
           ...(json?.data?.syncedPersonIds ?? []),
@@ -112,14 +125,18 @@ export async function flush(): Promise<boolean> {
       } else if (decision === "retry") {
         continue; // transient — leave queued, retry next tick
       } else {
-        // Terminal 4xx: the server will never accept these. Drop so they don't
-        // retry forever; surface a failed count.
-        await remove(marks.map((m) => `${eventId}:${m.personId}`));
-        addFailed(marks.length);
+        // Terminal 4xx: the server will never accept these. Preserve them in the
+        // failed store (never silently deleted) so they can't loop forever and
+        // stay recoverable/inspectable.
+        await moveToFailed(marks);
+        failedThisFlush += marks.length;
       }
     }
 
-    setLastSyncedAt(Date.now());
+    if (failedThisFlush > 0) setFailed(await failedCount());
+    // Only claim "synced" when the server actually acked something — never on a
+    // no-op / all-failed flush (that would falsely tell the marker their data is safe).
+    if (ackedAny) setLastSyncedAt(Date.now());
     const drained = (await pending()).length === 0;
     // Self-heal transient failures: if anything is still queued while online, it's
     // a transient error — retry with backoff (no reload/online event needed).
@@ -129,7 +146,7 @@ export async function flush(): Promise<boolean> {
     } else if (!isOffline()) {
       scheduleRetry();
     }
-    return drained;
+    return { drained, ackedAny, failedCount: failedThisFlush };
   } finally {
     flushing = false;
   }
@@ -145,5 +162,6 @@ export function startSyncEngine(): void {
     void flush();
   });
   void refreshPending(); // seed the pending badge
+  void failedCount().then(setFailed); // seed the failed badge from the durable store
   void flush();
 }

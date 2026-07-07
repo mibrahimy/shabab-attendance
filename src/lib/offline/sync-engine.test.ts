@@ -7,14 +7,15 @@ describe("classifyResponse (offline sync outcome)", () => {
     expect(classifyResponse(201)).toBe("ack");
   });
 
-  it("5xx and 401 → retry (leave queued)", () => {
+  it("5xx, 401, and 429 → retry (leave queued — valid marks must not be lost)", () => {
     expect(classifyResponse(500)).toBe("retry");
     expect(classifyResponse(503)).toBe("retry");
     expect(classifyResponse(401)).toBe("retry"); // re-auth then replay
+    expect(classifyResponse(429)).toBe("retry"); // rate-limited — transient, retry
   });
 
-  it("terminal 4xx → drop (don't loop forever)", () => {
-    expect(classifyResponse(400)).toBe("drop"); // malformed / event closed
+  it("terminal 4xx → drop (preserved in the failed store, not looped)", () => {
+    expect(classifyResponse(400)).toBe("drop"); // malformed
     expect(classifyResponse(403)).toBe("drop"); // no permission on the event
     expect(classifyResponse(404)).toBe("drop"); // event deleted
   });

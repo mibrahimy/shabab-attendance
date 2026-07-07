@@ -7,6 +7,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { startSyncEngine, flush } from "./sync-engine";
 import { subscribe as subscribeStore, getSnapshot, SERVER_SNAPSHOT, clearFailed } from "./store";
+import { clearFailedMarks } from "./outbox";
 
 function subscribeOnline(cb: () => void): () => void {
   window.addEventListener("online", cb);
@@ -43,6 +44,6 @@ export function useOnline(): {
     lastSyncedAt: snap.lastSyncedAt,
     failed: snap.failed,
     syncNow: () => void flush(),
-    dismissFailed: clearFailed,
+    dismissFailed: () => void clearFailedMarks().then(clearFailed),
   };
 }
