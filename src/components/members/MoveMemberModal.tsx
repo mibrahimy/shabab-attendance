@@ -4,6 +4,7 @@
 // that role's level (candidates come from the city tree already loaded client-side).
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
@@ -28,6 +29,7 @@ export function MoveMemberModal({
   onMoved: () => void;
 }) {
   const { toast } = useToast();
+  const { t } = useTranslation("hierarchy");
   const [roleKey, setRoleKey] = useState(roles[0]?.canonicalKey ?? "");
   const [targetNodeId, setTargetNodeId] = useState("");
   const [saving, setSaving] = useState(false);
@@ -47,13 +49,13 @@ export function MoveMemberModal({
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast(json?.error?.message ?? "Could not move member", "error");
+        toast(json?.error?.message ?? t("toast.couldNotMove"), "error");
         return;
       }
-      toast(`Moved ${member.name}`);
+      toast(t("toast.moved", { name: member.name }));
       onMoved();
     } catch {
-      toast("Network error", "error");
+      toast(t("toast.networkError"), "error");
     } finally {
       setSaving(false);
     }
@@ -63,21 +65,21 @@ export function MoveMemberModal({
     <Modal
       open={!!member}
       onClose={onClose}
-      title={member ? `Move ${member.name}` : "Move member"}
+      title={member ? t("member.move.title", { name: member.name }) : t("member.move.titleFallback")}
       footer={
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
-            Cancel
+            {t("modal.cancel")}
           </Button>
           <Button onClick={submit} loading={saving} disabled={!canSubmit}>
-            Move
+            {t("member.move.submit")}
           </Button>
         </div>
       }
     >
       <div className="space-y-4">
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">Role</label>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("member.fields.role")}</label>
           <select
             value={roleKey}
             onChange={(e) => {
@@ -94,13 +96,17 @@ export function MoveMemberModal({
           </select>
         </div>
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">Move to</label>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("member.move.toLabel")}</label>
           <select
             value={targetNodeId}
             onChange={(e) => setTargetNodeId(e.target.value)}
             className={inputClass}
           >
-            <option value="">Select a {role?.label.toLowerCase() ?? "node"} location…</option>
+            <option value="">
+              {t("member.move.selectPlaceholder", {
+                label: role?.label.toLowerCase() ?? t("member.move.selectFallback"),
+              })}
+            </option>
             {candidates.map((n) => (
               <option key={n.id} value={n.id}>
                 {n.name}
@@ -109,7 +115,7 @@ export function MoveMemberModal({
           </select>
           {candidates.length === 0 && (
             <p className="mt-1.5 text-xs text-gray-400">
-              No {role?.label.toLowerCase()} locations exist in this city yet.
+              {t("member.move.noLocations", { label: role?.label.toLowerCase() ?? "" })}
             </p>
           )}
         </div>

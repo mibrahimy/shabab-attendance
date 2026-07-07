@@ -1,0 +1,15 @@
+{
+  "page": {
+    "eyebrow": "Roles",
+    "title": "Manage roles",
+    "description": "Choose what each role can do in this city. Changes apply the next time the holder acts.",
+    "noAccess": "You don’t have access to manage this city’s roles."
+  },
+  "editor": {
+    "notInUse": "not in use yet",
+    "save": "Save",
+    "saved": "Saved {{role}}",
+    "saveError": "Could not save role",
+    "networkError": "Network error"
+  }
+}

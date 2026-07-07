@@ -1,0 +1,45 @@
+{
+  "page": {
+    "title": "Countries & Cities",
+    "description": "Create the top of the org tree. Adding a city provisions its admin.",
+    "addCountry": "Add country"
+  },
+  "empty": {
+    "title": "No countries yet",
+    "description": "Add a country to begin building the organisation."
+  },
+  "country": {
+    "addCity": "Add city",
+    "noCities": "No cities yet.",
+    "hierarchy": "Hierarchy ›"
+  },
+  "createCountry": {
+    "title": "Add country",
+    "nameLabel": "Country name",
+    "namePlaceholder": "Pakistan",
+    "submit": "Create",
+    "created": "Created {{name}}",
+    "error": "Could not create country"
+  },
+  "createCity": {
+    "title": "Add city in {{country}}",
+    "titleFallback": "Add city",
+    "submit": "Create city & admin",
+    "nameLabel": "City name",
+    "namePlaceholder": "Islamabad",
+    "adminSection": "City admin (provisioned now)",
+    "adminName": "Full name",
+    "adminCnic": "CNIC (login username)",
+    "adminPhone": "Phone (optional)",
+    "cnicPlaceholder": "00000-0000000-0",
+    "created": "Created {{name}}",
+    "adminContext": "{{name}} City Admin",
+    "error": "Could not create city"
+  },
+  "modal": {
+    "cancel": "Cancel"
+  },
+  "toast": {
+    "networkError": "Network error"
+  }
+}

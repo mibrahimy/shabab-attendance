@@ -5,6 +5,8 @@ import { getAuthzContext } from "@/server/auth/authz-context";
 import * as rolesService from "@/server/services/roles-service";
 import { ForbiddenError, NotFoundError } from "@/server/errors";
 import { RolesEditor } from "@/components/roles/RolesEditor";
+import { getLocale } from "@/i18n/get-locale";
+import { getServerI18n } from "@/i18n/server";
 
 export default async function RolesPage({
   params,
@@ -13,6 +15,7 @@ export default async function RolesPage({
 }) {
   const { cityId } = await params;
   const ctx = await getAuthzContext();
+  const { t } = await getServerI18n(await getLocale(), "roles");
 
   let payload: Awaited<ReturnType<typeof rolesService.listRoles>>;
   try {
@@ -21,7 +24,7 @@ export default async function RolesPage({
     if (err instanceof ForbiddenError || err instanceof NotFoundError) {
       return (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
-          You don’t have access to manage this city’s roles.
+          {t("page.noAccess")}
         </div>
       );
     }
@@ -30,11 +33,9 @@ export default async function RolesPage({
 
   return (
     <div>
-      <p className="mb-1 text-sm text-gray-500">Roles</p>
-      <h1 className="mb-1 text-xl font-semibold tracking-tight text-gray-900">Manage roles</h1>
-      <p className="mb-5 text-sm text-gray-500">
-        Choose what each role can do in this city. Changes apply the next time the holder acts.
-      </p>
+      <p className="mb-1 text-sm text-gray-500">{t("page.eyebrow")}</p>
+      <h1 className="mb-1 text-xl font-semibold tracking-tight text-gray-900">{t("page.title")}</h1>
+      <p className="mb-5 text-sm text-gray-500">{t("page.description")}</p>
       <RolesEditor cityId={cityId} permissions={payload.permissions} roles={payload.roles} />
     </div>
   );

@@ -109,14 +109,14 @@ export function HierarchyBuilder({
       const res = await fetch(`/api/assignments/${removeTarget.assignmentId}`, { method: "DELETE" });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast(json?.error?.message ?? "Could not remove member", "error");
+        toast(json?.error?.message ?? t("toast.couldNotRemove"), "error");
         return;
       }
-      toast(`Removed ${removeTarget.name}`);
+      toast(t("toast.removed", { name: removeTarget.name }));
       setRemoveTarget(null);
       void loadMembers(current.id);
     } catch {
-      toast("Network error", "error");
+      toast(t("toast.networkError"), "error");
     } finally {
       setRemoving(false);
     }
@@ -143,12 +143,12 @@ export function HierarchyBuilder({
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast(json?.error?.message ?? "Something went wrong", "error");
+        toast(json?.error?.message ?? t("toast.somethingWrong"), "error");
         return false;
       }
       return true;
     } catch {
-      toast("Network error", "error");
+      toast(t("toast.networkError"), "error");
       return false;
     } finally {
       setSaving(false);
@@ -157,7 +157,7 @@ export function HierarchyBuilder({
 
   async function addChild(name: string) {
     if (await call("/api/org-nodes", "POST", { parentId: current.id, name })) {
-      toast(`Added ${name}`);
+      toast(t("toast.added", { name }));
       setModal(null);
       router.refresh();
     }
@@ -165,7 +165,7 @@ export function HierarchyBuilder({
 
   async function rename(name: string) {
     if (await call(`/api/org-nodes/${current.id}`, "PATCH", { name })) {
-      toast("Renamed");
+      toast(t("toast.renamed"));
       setModal(null);
       router.refresh();
     }
@@ -173,7 +173,7 @@ export function HierarchyBuilder({
 
   async function remove() {
     if (await call(`/api/org-nodes/${current.id}`, "DELETE")) {
-      toast("Deleted");
+      toast(t("toast.deleted"));
       setConfirmDelete(false);
       if (current.parentId) setCurrentId(current.parentId);
       router.refresh();
@@ -243,11 +243,11 @@ export function HierarchyBuilder({
           </div>
           <div className="flex shrink-0 gap-2">
             <Button size="sm" variant="secondary" onClick={() => setModal("rename")}>
-              Rename
+              {t("node.rename")}
             </Button>
             {!isCityRoot && (
               <Button size="sm" variant="danger" onClick={() => setConfirmDelete(true)}>
-                Delete
+                {t("node.delete")}
               </Button>
             )}
           </div>
@@ -255,7 +255,7 @@ export function HierarchyBuilder({
         {childLevel && (
           <div className="mt-4">
             <Button size="sm" onClick={() => setModal("add")}>
-              + Add {childLevel.label}
+              {t("node.addChild", { label: childLevel.label })}
             </Button>
           </div>
         )}
@@ -265,9 +265,9 @@ export function HierarchyBuilder({
       {rolesHere.length > 0 && (
         <div className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-900">People here</h2>
+            <h2 className="text-sm font-semibold text-gray-900">{t("people.title")}</h2>
             <Button size="sm" variant="secondary" onClick={() => setAddMemberOpen(true)}>
-              Add member
+              {t("people.addMember")}
             </Button>
           </div>
           {membersLoading ? (
@@ -280,7 +280,7 @@ export function HierarchyBuilder({
               ))}
             </div>
           ) : members.length === 0 ? (
-            <p className="mt-3 text-sm text-gray-400">No one assigned here yet.</p>
+            <p className="mt-3 text-sm text-gray-400">{t("people.empty")}</p>
           ) : (
             <ul className="mt-3 divide-y divide-gray-100">
               {members.map((m) => (
@@ -288,10 +288,12 @@ export function HierarchyBuilder({
                   <span className="flex min-w-0 items-center gap-2">
                     <Badge color="slate">{m.roleLabel}</Badge>
                     <span className="truncate text-sm font-medium text-gray-900">{m.name}</span>
-                    {m.segment && <span className="text-xs text-gray-400">{m.segment}</span>}
+                    {m.segment && (
+                      <span className="text-xs text-gray-400">{t(`people.segment.${m.segment}`)}</span>
+                    )}
                     {m.hasLogin && (
-                      <span className="text-xs text-gray-400" title="Has a login account">
-                        login
+                      <span className="text-xs text-gray-400" title={t("people.hasLoginTitle")}>
+                        {t("people.login")}
                       </span>
                     )}
                   </span>
@@ -300,13 +302,13 @@ export function HierarchyBuilder({
                       onClick={() => setMoveTarget({ assignmentId: m.assignmentId, name: m.name })}
                       className="rounded-lg px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700"
                     >
-                      Move
+                      {t("people.move")}
                     </button>
                     <button
                       onClick={() => setRemoveTarget({ assignmentId: m.assignmentId, name: m.name })}
                       className="rounded-lg px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
                     >
-                      Remove
+                      {t("people.remove")}
                     </button>
                   </span>
                 </li>
@@ -319,16 +321,20 @@ export function HierarchyBuilder({
       {/* Children */}
       {children.length === 0 ? (
         <EmptyState
-          title={childLevel ? `No ${childLevel.label.toLowerCase()}s yet` : "Nothing under here"}
+          title={
+            childLevel
+              ? t("node.empty.childTitle", { label: `${childLevel.label.toLowerCase()}s` })
+              : t("node.empty.leafTitle")
+          }
           description={
             childLevel
-              ? `Add the first ${childLevel.label.toLowerCase()} to keep building.`
-              : "This is the deepest level."
+              ? t("node.empty.childDescription", { label: childLevel.label.toLowerCase() })
+              : t("node.empty.leafDescription")
           }
           action={
             childLevel ? (
               <Button size="sm" onClick={() => setModal("add")}>
-                + Add {childLevel.label}
+                {t("node.addChild", { label: childLevel.label })}
               </Button>
             ) : undefined
           }
@@ -362,9 +368,9 @@ export function HierarchyBuilder({
 
       {modal === "add" && childLevel && (
         <NodeNameModal
-          title={`Add ${childLevel.label}`}
-          label={`${childLevel.label} name`}
-          submitLabel="Add"
+          title={t("modal.add.title", { label: childLevel.label })}
+          label={t("modal.add.nameLabel", { label: childLevel.label })}
+          submitLabel={t("modal.add.submit")}
           saving={saving}
           onSubmit={addChild}
           onClose={() => setModal(null)}
@@ -372,10 +378,10 @@ export function HierarchyBuilder({
       )}
       {modal === "rename" && (
         <NodeNameModal
-          title={`Rename ${current.level.label}`}
-          label="Name"
+          title={t("modal.rename.title", { label: current.level.label })}
+          label={t("modal.rename.nameLabel")}
           initialValue={current.name}
-          submitLabel="Save"
+          submitLabel={t("modal.rename.submit")}
           saving={saving}
           onSubmit={rename}
           onClose={() => setModal(null)}
@@ -383,9 +389,9 @@ export function HierarchyBuilder({
       )}
       <ConfirmDialog
         open={confirmDelete}
-        title={`Delete ${current.name}?`}
-        message="This can't be undone. A node with child nodes or assigned people can't be deleted."
-        confirmLabel="Delete"
+        title={t("delete.title", { name: current.name })}
+        message={t("delete.message")}
+        confirmLabel={t("delete.confirm")}
         variant="danger"
         loading={saving}
         onConfirm={remove}
@@ -418,9 +424,9 @@ export function HierarchyBuilder({
       />
       <ConfirmDialog
         open={!!removeTarget}
-        title={removeTarget ? `Remove ${removeTarget.name}?` : "Remove member"}
-        message="This ends their assignment at this node. Their profile and history are kept."
-        confirmLabel="Remove"
+        title={removeTarget ? t("remove.title", { name: removeTarget.name }) : t("remove.titleFallback")}
+        message={t("remove.message")}
+        confirmLabel={t("remove.confirm")}
         variant="danger"
         loading={removing}
         onConfirm={removeMember}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
@@ -23,6 +24,7 @@ export function CreateCityModal({
   onCreated: (creds: Credentials) => void;
 }) {
   const { toast } = useToast();
+  const { t } = useTranslation("cities");
   const [name, setName] = useState("");
   const [adminName, setAdminName] = useState("");
   const [cnic, setCnic] = useState("");
@@ -51,19 +53,19 @@ export function CreateCityModal({
       });
       const json = await res.json();
       if (!res.ok) {
-        toast(json?.error?.message ?? "Could not create city", "error");
+        toast(json?.error?.message ?? t("createCity.error"), "error");
         return;
       }
-      toast(`Created ${name}`);
+      toast(t("createCity.created", { name }));
       reset();
       onCreated({
         name: adminName,
         cnic: json.data.admin.cnic,
         tempPassword: json.data.admin.tempPassword,
-        context: `${name} City Admin`,
+        context: t("createCity.adminContext", { name }),
       });
     } catch {
-      toast("Network error", "error");
+      toast(t("toast.networkError"), "error");
     } finally {
       setSaving(false);
     }
@@ -75,39 +77,39 @@ export function CreateCityModal({
     <Modal
       open={!!country}
       onClose={onClose}
-      title={country ? `Add city in ${country.name}` : "Add city"}
+      title={country ? t("createCity.title", { country: country.name }) : t("createCity.titleFallback")}
       footer={
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
-            Cancel
+            {t("modal.cancel")}
           </Button>
           <Button onClick={submit} loading={saving} disabled={!canSubmit}>
-            Create city & admin
+            {t("createCity.submit")}
           </Button>
         </div>
       }
     >
       <div className="space-y-4">
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">City name</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Islamabad" className={inputClass} />
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("createCity.nameLabel")}</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("createCity.namePlaceholder")} className={inputClass} />
         </div>
 
         <div className="rounded-xl bg-gray-50 p-4">
           <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            City admin (provisioned now)
+            {t("createCity.adminSection")}
           </p>
           <div className="space-y-3">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Full name</label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("createCity.adminName")}</label>
               <input value={adminName} onChange={(e) => setAdminName(e.target.value)} className={inputClass} />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">CNIC (login username)</label>
-              <input value={cnic} onChange={(e) => setCnic(formatCnic(e.target.value))} inputMode="numeric" maxLength={15} placeholder="00000-0000000-0" className={inputClass} />
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("createCity.adminCnic")}</label>
+              <input value={cnic} onChange={(e) => setCnic(formatCnic(e.target.value))} inputMode="numeric" maxLength={15} placeholder={t("createCity.cnicPlaceholder")} className={inputClass} />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Phone (optional)</label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("createCity.adminPhone")}</label>
               <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} />
             </div>
           </div>

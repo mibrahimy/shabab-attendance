@@ -25,5 +25,17 @@
   "empty": {
     "title": "Nothing here yet",
     "description": "There's nothing to show."
+  },
+  "credentials": {
+    "title": "Account created",
+    "done": "Done",
+    "canSignIn": "can now sign in",
+    "asContext": "as",
+    "shareNote": "Share these credentials securely — the password is shown only once.",
+    "cnicLabel": "CNIC (username)",
+    "tempPasswordLabel": "Temp password",
+    "copy": "Copy",
+    "copied": "Copied",
+    "firstLoginNote": "They’ll be required to set a new password on first login."
   }
 }

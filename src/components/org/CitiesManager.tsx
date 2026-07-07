@@ -6,6 +6,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import Button from "@/components/ui/Button";
 import EmptyState from "@/components/ui/EmptyState";
 import { CredentialsDialog, type Credentials } from "@/components/ui/CredentialsDialog";
@@ -17,6 +18,7 @@ export type CountryNode = { id: string; name: string; cities: CityNode[] };
 
 export function CitiesManager({ countries }: { countries: CountryNode[] }) {
   const router = useRouter();
+  const { t } = useTranslation("cities");
   const [countryModal, setCountryModal] = useState(false);
   const [cityForCountry, setCityForCountry] = useState<CountryNode | null>(null);
   const [provisioned, setProvisioned] = useState<Credentials | null>(null);
@@ -29,19 +31,17 @@ export function CitiesManager({ countries }: { countries: CountryNode[] }) {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-gray-900">Countries & Cities</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Create the top of the org tree. Adding a city provisions its admin.
-          </p>
+          <h1 className="text-xl font-semibold tracking-tight text-gray-900">{t("page.title")}</h1>
+          <p className="mt-1 text-sm text-gray-500">{t("page.description")}</p>
         </div>
-        <Button onClick={() => setCountryModal(true)}>Add country</Button>
+        <Button onClick={() => setCountryModal(true)}>{t("page.addCountry")}</Button>
       </div>
 
       {countries.length === 0 ? (
         <EmptyState
-          title="No countries yet"
-          description="Add a country to begin building the organisation."
-          action={<Button onClick={() => setCountryModal(true)}>Add country</Button>}
+          title={t("empty.title")}
+          description={t("empty.description")}
+          action={<Button onClick={() => setCountryModal(true)}>{t("page.addCountry")}</Button>}
         />
       ) : (
         <div className="space-y-4">
@@ -50,11 +50,11 @@ export function CitiesManager({ countries }: { countries: CountryNode[] }) {
               <div className="flex items-center justify-between">
                 <h2 className="font-semibold text-gray-900">{country.name}</h2>
                 <Button size="sm" variant="secondary" onClick={() => setCityForCountry(country)}>
-                  Add city
+                  {t("country.addCity")}
                 </Button>
               </div>
               {country.cities.length === 0 ? (
-                <p className="mt-3 text-sm text-gray-400">No cities yet.</p>
+                <p className="mt-3 text-sm text-gray-400">{t("country.noCities")}</p>
               ) : (
                 <ul className="mt-3 divide-y divide-gray-100">
                   {country.cities.map((city) => (
@@ -65,7 +65,7 @@ export function CitiesManager({ countries }: { countries: CountryNode[] }) {
                       >
                         <span>{city.name}</span>
                         <span className="text-gray-400" aria-hidden>
-                          Hierarchy ›
+                          {t("country.hierarchy")}
                         </span>
                       </Link>
                     </li>

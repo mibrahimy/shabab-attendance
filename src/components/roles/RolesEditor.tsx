@@ -5,6 +5,7 @@
 // holders' next request (AuthzContext is per-request).
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
@@ -22,6 +23,7 @@ export function RolesEditor({
   roles: Role[];
 }) {
   const { toast } = useToast();
+  const { t } = useTranslation("roles");
   const [granted, setGranted] = useState<Record<string, Set<string>>>(() =>
     Object.fromEntries(roles.map((r) => [r.canonicalKey, new Set(r.permissionKeys)])),
   );
@@ -46,12 +48,12 @@ export function RolesEditor({
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast(json?.error?.message ?? "Could not save role", "error");
+        toast(json?.error?.message ?? t("editor.saveError"), "error");
         return;
       }
-      toast(`Saved ${role.label}`);
+      toast(t("editor.saved", { role: role.label }));
     } catch {
-      toast("Network error", "error");
+      toast(t("editor.networkError"), "error");
     } finally {
       setSaving(null);
     }
@@ -64,10 +66,10 @@ export function RolesEditor({
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="font-semibold text-gray-900">{role.label}</h2>
-              {!role.instantiated && <Badge color="amber">not in use yet</Badge>}
+              {!role.instantiated && <Badge color="amber">{t("editor.notInUse")}</Badge>}
             </div>
             <Button size="sm" onClick={() => save(role)} loading={saving === role.canonicalKey}>
-              Save
+              {t("editor.save")}
             </Button>
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

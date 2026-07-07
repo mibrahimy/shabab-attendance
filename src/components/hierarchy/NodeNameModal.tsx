@@ -4,6 +4,7 @@
 // different title/initial value. The caller does the fetch + toast.
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 
@@ -27,6 +28,7 @@ export function NodeNameModal({
   onClose: () => void;
 }) {
   const [name, setName] = useState(initialValue);
+  const { t } = useTranslation("hierarchy");
 
   return (
     <Modal
@@ -36,7 +38,7 @@ export function NodeNameModal({
       footer={
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
-            Cancel
+            {t("modal.cancel")}
           </Button>
           <Button onClick={() => onSubmit(name.trim())} loading={saving} disabled={!name.trim()}>
             {submitLabel}

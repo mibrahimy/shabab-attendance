@@ -5,6 +5,7 @@
 // + phone (+ optional segment) and yields a one-time temp password.
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
@@ -27,6 +28,7 @@ export function AddMemberModal({
   onAdded: (creds: Credentials | null) => void; // creds set only for staff
 }) {
   const { toast } = useToast();
+  const { t } = useTranslation("hierarchy");
   const [roleKey, setRoleKey] = useState(roles[0]?.canonicalKey ?? "");
   const [name, setName] = useState("");
   const [cnic, setCnic] = useState("");
@@ -57,17 +59,17 @@ export function AddMemberModal({
       });
       const json = await res.json();
       if (!res.ok) {
-        toast(json?.error?.message ?? "Could not add member", "error");
+        toast(json?.error?.message ?? t("toast.couldNotAdd"), "error");
         return;
       }
-      toast(`Added ${name}`);
+      toast(t("toast.added", { name }));
       onAdded(
         json.data.tempPassword
           ? { name, cnic, tempPassword: json.data.tempPassword, context: role.label }
           : null,
       );
     } catch {
-      toast("Network error", "error");
+      toast(t("toast.networkError"), "error");
     } finally {
       setSaving(false);
     }
@@ -77,33 +79,33 @@ export function AddMemberModal({
     <Modal
       open={!!nodeId}
       onClose={onClose}
-      title="Add member"
+      title={t("member.add.title")}
       footer={
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
-            Cancel
+            {t("modal.cancel")}
           </Button>
           <Button onClick={submit} loading={saving} disabled={!canSubmit}>
-            Add {role?.label ?? "member"}
+            {t("member.add.submit", { label: role?.label ?? t("member.add.submitFallback") })}
           </Button>
         </div>
       }
     >
       <div className="space-y-4">
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">Role</label>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("member.fields.role")}</label>
           <select value={roleKey} onChange={(e) => setRoleKey(e.target.value)} className={inputClass}>
             {roles.map((r) => (
               <option key={r.canonicalKey} value={r.canonicalKey}>
                 {r.label}
-                {r.isStudent ? " (no login)" : ""}
+                {r.isStudent ? t("member.fields.noLogin") : ""}
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">Full name</label>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("member.fields.fullName")}</label>
           <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
         </div>
 
@@ -111,7 +113,7 @@ export function AddMemberModal({
           <>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                CNIC (login username)
+                {t("member.fields.cnic")}
               </label>
               <input
                 value={cnic}
@@ -123,22 +125,22 @@ export function AddMemberModal({
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Phone (optional)</label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("member.fields.phone")}</label>
               <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} />
             </div>
           </>
         )}
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">Segment (optional)</label>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("member.fields.segment")}</label>
           <select
             value={segment}
             onChange={(e) => setSegment(e.target.value as "" | "junior" | "senior")}
             className={inputClass}
           >
-            <option value="">—</option>
-            <option value="junior">Junior</option>
-            <option value="senior">Senior</option>
+            <option value="">{t("member.fields.segmentNone")}</option>
+            <option value="junior">{t("member.fields.segmentJunior")}</option>
+            <option value="senior">{t("member.fields.segmentSenior")}</option>
           </select>
         </div>
       </div>

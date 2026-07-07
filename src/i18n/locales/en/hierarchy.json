@@ -9,5 +9,92 @@
     "empty": "No locations yet — add one to start building.",
     "children_one": "{{count}} inside",
     "children_other": "{{count}} inside"
+  },
+  "node": {
+    "rename": "Rename",
+    "delete": "Delete",
+    "addChild": "+ Add {{label}}",
+    "empty": {
+      "childTitle": "No {{label}} yet",
+      "childDescription": "Add the first {{label}} to keep building.",
+      "leafTitle": "Nothing under here",
+      "leafDescription": "This is the deepest level."
+    }
+  },
+  "people": {
+    "title": "People here",
+    "addMember": "Add member",
+    "empty": "No one assigned here yet.",
+    "move": "Move",
+    "remove": "Remove",
+    "login": "login",
+    "hasLoginTitle": "Has a login account",
+    "segment": {
+      "junior": "junior",
+      "senior": "senior"
+    }
+  },
+  "delete": {
+    "title": "Delete {{name}}?",
+    "message": "This can’t be undone. A node with child nodes or assigned people can’t be deleted.",
+    "confirm": "Delete"
+  },
+  "remove": {
+    "title": "Remove {{name}}?",
+    "titleFallback": "Remove member",
+    "message": "This ends their assignment at this node. Their profile and history are kept.",
+    "confirm": "Remove"
+  },
+  "modal": {
+    "add": {
+      "title": "Add {{label}}",
+      "nameLabel": "{{label}} name",
+      "submit": "Add"
+    },
+    "rename": {
+      "title": "Rename {{label}}",
+      "nameLabel": "Name",
+      "submit": "Save"
+    },
+    "cancel": "Cancel"
+  },
+  "toast": {
+    "added": "Added {{name}}",
+    "renamed": "Renamed",
+    "deleted": "Deleted",
+    "removed": "Removed {{name}}",
+    "moved": "Moved {{name}}",
+    "somethingWrong": "Something went wrong",
+    "networkError": "Network error",
+    "couldNotRemove": "Could not remove member",
+    "couldNotAdd": "Could not add member",
+    "couldNotMove": "Could not move member"
+  },
+  "member": {
+    "add": {
+      "title": "Add member",
+      "submit": "Add {{label}}",
+      "submitFallback": "member"
+    },
+    "move": {
+      "title": "Move {{name}}",
+      "titleFallback": "Move member",
+      "submit": "Move",
+      "toLabel": "Move to",
+      "selectPlaceholder": "Select a {{label}} location…",
+      "selectFallback": "node",
+      "noLocations": "No {{label}} locations exist in this city yet."
+    },
+    "fields": {
+      "role": "Role",
+      "fullName": "Full name",
+      "cnic": "CNIC (login username)",
+      "phone": "Phone (optional)",
+      "segment": "Segment (optional)",
+      "noLogin": " (no login)",
+      "segmentNone": "—",
+      "segmentJunior": "Junior",
+      "segmentSenior": "Senior"
+    }
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
@@ -18,6 +19,7 @@ export function CreateCountryModal({
   onCreated: () => void;
 }) {
   const { toast } = useToast();
+  const { t } = useTranslation("cities");
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -31,15 +33,15 @@ export function CreateCountryModal({
       });
       const json = await res.json();
       if (!res.ok) {
-        toast(json?.error?.message ?? "Could not create country", "error");
+        toast(json?.error?.message ?? t("createCountry.error"), "error");
         return;
       }
-      toast(`Created ${name}`);
+      toast(t("createCountry.created", { name }));
       setName("");
       onCreated();
       onClose();
     } catch {
-      toast("Network error", "error");
+      toast(t("toast.networkError"), "error");
     } finally {
       setSaving(false);
     }
@@ -49,24 +51,24 @@ export function CreateCountryModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="Add country"
+      title={t("createCountry.title")}
       footer={
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
-            Cancel
+            {t("modal.cancel")}
           </Button>
           <Button onClick={submit} loading={saving} disabled={!name.trim()}>
-            Create
+            {t("createCountry.submit")}
           </Button>
         </div>
       }
     >
-      <label className="mb-1.5 block text-sm font-medium text-gray-700">Country name</label>
+      <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("createCountry.nameLabel")}</label>
       <input
         autoFocus
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="Pakistan"
+        placeholder={t("createCountry.namePlaceholder")}
         className={inputClass}
       />
     </Modal>
