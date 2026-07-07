@@ -87,7 +87,11 @@ export const EVENT_PARK_ALIAS: Record<string, string> = {
 // The suspected council/test park. REVIEW: keep as a real Park or exclude.
 // Default (per MIGRATION.md suspicion): EXCLUDE — flip to false to include.
 export const EXCLUDE_PARK_IDS = new Set<string>([
-  // "6ce367df-...": leave commented until the review decision — default INCLUDE
+  // "Shabab Friday Study Circle" is NOT a park — it's a city-wide event for all
+  // Islamabad murabbis (its 35 "members" are attendees, largely duplicates of
+  // murabbis in the real parks). Excluded for now; re-add later as a proper
+  // Islamabad-wide event from the dump's attendee list. (User decision 2026-07.)
+  "6ce367df-b556-4291-93c6-560d7c04c3e8",
 ]);
 
 // Sub-group classification default: has children → real group (→ Class node);
