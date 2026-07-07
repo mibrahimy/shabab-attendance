@@ -20,7 +20,7 @@ How we build the multi-city v2 app. Companion to `target-architecture.html` (the
 |---|---|---|---|
 | **0** | **Foundations** | v2 Prisma schema (`DATABASE_URL_V2`); layer-cake folder skeleton; CI (lint/typecheck/test); Railway deploy pipeline + **staging env**; `seed` script (global root + superadmin) | empty app deploys to staging; lint/`tsc`/CI green; login as seeded superadmin |
 | **1** | **Identity & org spine + auth** | `OrgNode` (materialized path) · `Person`/`User`/`Assignment` · `Position`/`Permission`; `AuthzContext` + `canActOn`; login + ~8h sliding JWT + middleware | permission rule unit-tested; assignment-scoped allow/deny proven |
-| **2** | **Onboarding & hierarchy** | superadmin → country/city + city admin inline; hierarchy builder page; direct-add members; approvals queue; **audit log** introduced here | a city admin builds a tree and places people, fully scoped |
+| **2** | **Onboarding & hierarchy** | superadmin → country/city + city admin inline; hierarchy builder page; direct-add members; **teams per level** (see below); approvals queue; **audit log** introduced here | a city admin builds a tree and places people, fully scoped; every node shows its team |
 | **3** | **Attendance (offline-first)** | `Event` + roster-by-path; slice marking; mobile UI + PWA/Workbox + IndexedDB outbox + sync | a murabbi marks ~20 students offline and it syncs cleanly |
 | **4** | **ETL migration** | run Murabbi-Training data → v2 (per `MIGRATION.md`); resolve the review report | counts reconcile; real Islamabad data live; spot checks pass |
 | **5** | **Public intake + WhatsApp** | `/register/team` + `/apply`; outbox + Meta Cloud API client + webhook; **rate-limit/CAPTCHA on public forms** | apply → pending → approve → enrolled, with WhatsApp confirmations; abuse-protected |
@@ -29,6 +29,26 @@ How we build the multi-city v2 app. Companion to `target-architecture.html` (the
 | **8** | **Native mobile apps** *(future)* | iOS + Android consuming the **same versioned API**; OS **background sync** (`WorkManager`/`BGTaskScheduler`) on the shared sync contract; bearer-token auth | a native app marks + background-syncs against the existing backend, no API rework |
 
 > **First shippable (MVP) = Phases 0–3**: a working multi-city, offline-capable attendance app on the v2 architecture (seed data). Migration (4) then brings real data; 5–7 extend.
+
+### Teams per level (Phase 2)
+
+Every org node has a **team**, and a team is **derived, not hand-maintained**: `team(node) = the node's own head + the heads of its direct children`. Assign someone as e.g. a Sector Lead under a zone and they automatically appear on that zone's team — there is no separate team list to curate. Teams are **per-node** (each Park has its own team).
+
+Each level has a single **head position**:
+
+| Level | Head | Team = head + children's heads |
+|---|---|---|
+| global-root | **Operations Lead** *(= the `superadmin`)* | Ops Lead + Country Leads |
+| country | **Country Lead** *(new)* | Country Lead + City Leads |
+| city | **City Lead** *(= the `city_admin`)* | City Lead + Zone Leads |
+| zone | **Zone Lead** *(new)* | Zone Lead + Sector Leads |
+| sector | **Sector Lead** *(new)* | Sector Lead + Park Admins |
+| park | **Park Admin** *(exists)* | Park Admin + Murabbis |
+| class | **Murabbi** *(exists)* | Murabbi (students are the attendance target, not team) |
+
+- The **Operations Lead is the `superadmin`** and the **City Lead is the `city_admin`** — the same provisioned person doubles as their level's head, not a separate role. So only **three new head positions** are needed: `country_lead`, `zone_lead`, `sector_lead`.
+- This closes today's gap: only `park_admin`/`murabbi` are level-attachable, so Zone/Sector/Country/City nodes can't currently be staffed (the "People at this node" panel only renders when the level defines roles).
+- **Implementation:** mark which `Position` is a level's head (an `isHead` flag, or top-ranked non-student role per level); a team is then a query — no new `Team` table. Feeds the **position catalog** open item below.
 
 ---
 
@@ -64,7 +84,7 @@ These are the software practices that don't live in one milestone. They were und
 - ~~**i18n / Urdu / RTL**~~ — **SETTLED: bilingual English + Urdu (RTL).** "Urdu where it counts": the whole app is built *i18n-ready* (string catalog + CSS **logical** properties `ms-/me-/text-start`, never physical `ml-/left-`), with **full Urdu + RTL on the Urdu-first public surfaces** — the `/apply` form and WhatsApp messages (Phase 5). Admin + attendance UI ship English-first with Urdu strings filled in incrementally and a full language toggle by launch (Phase 7). The **i18n foundation is laid before Phase 3** (next-intl or equivalent, locale/`dir` switch, an Urdu script font e.g. Noto Nastaliq, logical-CSS lint) so the attendance UI is built i18n-aware and the most-used screen is never retrofitted. See [[v2-i18n-bilingual-decision]].
 - **Data-protection posture for minors' PII** — how strict (retention window, deletion, encryption scope, consent records). *(Awaiting input.)*
 - **Reporting requirements** — the concrete reports admins need (deferred to Phase 7; spec before building).
-- **Permission & position catalog** — enumerate the actual permissions and the per-city default positions (the model exists; the content doesn't).
+- **Permission & position catalog** — enumerate the actual permissions and the per-city default positions (the model exists; the content doesn't). *Partially settled:* the **head position per level** is fixed (see "Teams per level" above) — Ops Lead (`superadmin`), Country/City/Zone/Sector Leads, Park Admin, Murabbi — with `country_lead`/`zone_lead`/`sector_lead` still to be added to the catalog. Non-head positions per level still open.
 - **Native app approach** *(future, not blocking)* — fully native (Kotlin/Swift), React Native (shares React skills/logic with the web), or a Capacitor wrapper of the PWA (fastest to app stores + background sync, least rework). Decide when closer to Phase 8.
 
 ---
