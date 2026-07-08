@@ -32,10 +32,14 @@ export default async function RolesPage({
   }
 
   return (
-    <div>
-      <p className="mb-1 text-sm text-gray-500">{t("page.eyebrow")}</p>
-      <h1 className="mb-1 text-xl font-semibold tracking-tight text-gray-900">{t("page.title")}</h1>
-      <p className="mb-5 text-sm text-gray-500">{t("page.description")}</p>
+    <div className="space-y-6">
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#2f55ea]">
+          {t("page.eyebrow")}
+        </div>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{t("page.title")}</h1>
+        <p className="mt-0.5 text-sm text-slate-500">{t("page.description")}</p>
+      </div>
       <RolesEditor cityId={cityId} permissions={payload.permissions} roles={payload.roles} />
     </div>
   );

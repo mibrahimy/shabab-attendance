@@ -185,7 +185,7 @@ export function HierarchyBuilder({
   return (
     <div>
       {/* View toggle: overview vs focus — mobile only; on lg both panes show side by side */}
-      <div className="mb-4 inline-flex rounded-xl border border-gray-200 bg-white p-0.5 text-sm lg:hidden">
+      <div className="mb-4 inline-flex rounded-xl border border-slate-200/70 bg-white p-0.5 text-sm shadow-[0_1px_2px_rgba(16,24,40,0.04)] lg:hidden">
         {(["overview", "focus"] as const).map((v) => (
           <button
             key={v}
@@ -237,7 +237,7 @@ export function HierarchyBuilder({
       </nav>
 
       {/* Current node */}
-      <div className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
+      <div className="mb-4 rounded-2xl border border-slate-200/70 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
@@ -267,7 +267,7 @@ export function HierarchyBuilder({
 
       {/* People at this node */}
       {rolesHere.length > 0 && (
-        <div className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
+        <div className="mb-4 rounded-2xl border border-slate-200/70 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-900">{t("people.title")}</h2>
             <Button size="sm" variant="secondary" onClick={() => setAddMemberOpen(true)}>
@@ -351,7 +351,7 @@ export function HierarchyBuilder({
               <li key={child.id}>
                 <button
                   onClick={() => setCurrentId(child.id)}
-                  className="flex w-full items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-start transition hover:border-gray-300 hover:bg-gray-50"
+                  className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200/70 bg-white px-4 py-3 text-start shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:border-[#2f55ea]/30 hover:bg-slate-50"
                 >
                   <span className="flex items-center gap-2">
                     <Badge color={LEVEL_COLORS[child.level.key] ?? "gray"}>{child.level.label}</Badge>

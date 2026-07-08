@@ -62,7 +62,7 @@ export function RolesEditor({
   return (
     <div className="space-y-4">
       {roles.map((role) => (
-        <div key={role.canonicalKey} className="rounded-2xl border border-gray-200 bg-white p-4">
+        <div key={role.canonicalKey} className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="font-semibold text-gray-900">{role.label}</h2>

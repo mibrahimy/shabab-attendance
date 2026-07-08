@@ -21,7 +21,7 @@ export default async function HierarchyPage({
   } catch (err) {
     if (err instanceof ForbiddenError || err instanceof NotFoundError) {
       return (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
           You don’t have access to this city’s hierarchy.
         </div>
       );
@@ -30,8 +30,14 @@ export default async function HierarchyPage({
   }
 
   return (
-    <div>
-      <p className="mb-1 text-sm text-gray-500">Hierarchy</p>
+    <div className="space-y-6">
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#2f55ea]">
+          Administration
+        </div>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Hierarchy</h1>
+        <p className="mt-0.5 text-sm text-slate-500">{tree.city.name} · structure &amp; people</p>
+      </div>
       <HierarchyBuilder
         city={{ id: tree.city.id, name: tree.city.name }}
         levels={tree.levels}

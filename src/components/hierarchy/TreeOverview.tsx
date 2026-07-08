@@ -81,12 +81,12 @@ export function TreeOverview({
   }
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-3">
+    <div className="rounded-2xl border border-slate-200/70 bg-white p-3 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder={t("overview.search")}
-        className="mb-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm text-gray-900 outline-none transition focus:border-[#2f55ea] focus:ring-2 focus:ring-[#2f55ea]/20"
+        className="mb-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 outline-none transition focus:border-[#2f55ea] focus:ring-2 focus:ring-[#2f55ea]/15"
       />
 
       {searching ? (
