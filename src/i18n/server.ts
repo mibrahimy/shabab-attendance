@@ -18,7 +18,9 @@ export async function getServerI18n(
     fallbackLng: "en",
     supportedLngs: ["en", "ur"],
     ns,
-    defaultNS: DEFAULT_NAMESPACE,
+    // Default to the caller's requested namespace so bare keys (t("page.title"))
+    // resolve there — not the global default, which would return the raw key.
+    defaultNS: Array.isArray(ns) ? ns[0] : ns,
     resources,
     interpolation: { escapeValue: false },
   });
