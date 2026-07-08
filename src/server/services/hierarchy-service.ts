@@ -79,13 +79,34 @@ export async function getCitySummary(ctx: AuthzContext, cityId: string): Promise
   };
 }
 
-// The city a caller's dashboard should default to: their managed city, or (for a
-// superadmin with no single city) the first city in the system.
-export async function getDefaultCityId(ctx: AuthzContext): Promise<string | null> {
+// Can this caller operate in `cityId`? Superadmin → any real city; otherwise only
+// a city they hold manage_city on.
+async function canUseCity(ctx: AuthzContext, cityId: string): Promise<boolean> {
+  if (ctx.isSuperadmin) return (await orgNodeRepo.findById(cityId)) !== null;
+  return ctx.grants.some((g) => g.permission === "manage_city" && g.cityId === cityId);
+}
+
+// The city a caller's views should scope to: their explicit choice (the city
+// switcher's `sb_city` cookie, if they may use it), else their managed city, else
+// (superadmin) the first city in the system.
+export async function getDefaultCityId(
+  ctx: AuthzContext,
+  preferred?: string | null,
+): Promise<string | null> {
+  if (preferred && (await canUseCity(ctx, preferred))) return preferred;
   const managed = ctx.grants.find((g) => g.permission === "manage_city" && g.cityId)?.cityId;
   if (managed) return managed;
   if (ctx.isSuperadmin) return (await orgNodeRepo.firstCity())?.id ?? null;
   return null;
+}
+
+// Cities the caller can switch between (superadmin → all; city admin → their one).
+export async function listSwitchableCities(ctx: AuthzContext): Promise<{ id: string; name: string }[]> {
+  if (ctx.isSuperadmin) return orgNodeRepo.listCities();
+  const managed = ctx.grants.find((g) => g.permission === "manage_city" && g.cityId)?.cityId;
+  if (!managed) return [];
+  const city = await orgNodeRepo.findById(managed);
+  return city ? [{ id: city.id, name: city.name }] : [];
 }
 
 export type CityDashboard = {

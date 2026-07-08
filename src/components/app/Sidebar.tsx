@@ -35,16 +35,22 @@ function Icon({ name }: { name?: string }) {
   );
 }
 
+export type NavGroup = { label?: string; items: NavItem[] };
+
 export function Sidebar({
-  items,
+  groups,
   appName,
+  topSlot,
   footer,
 }: {
-  items: NavItem[];
+  groups: NavGroup[];
   appName: string;
+  topSlot?: React.ReactNode;
   footer?: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
   return (
     <aside className="fixed inset-y-0 start-0 z-40 hidden w-60 flex-col border-e border-slate-200/80 bg-white/70 backdrop-blur-xl lg:flex">
       <div className="flex h-16 items-center gap-2.5 px-5">
@@ -54,27 +60,38 @@ export function Sidebar({
         <span className="text-[15px] font-semibold tracking-tight text-slate-900">{appName}</span>
       </div>
 
-      <nav className="flex-1 space-y-0.5 px-3 py-2">
-        {items.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(item.href + "/");
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`group relative flex items-center gap-3 rounded-xl px-3 py-2 text-[13.5px] font-medium transition ${
-                active
-                  ? "bg-[#2f55ea]/[0.07] text-[#2f55ea]"
-                  : "text-slate-500 hover:bg-slate-100/70 hover:text-slate-900"
-              }`}
-            >
-              {active && (
-                <span className="absolute inset-y-1.5 start-0 w-1 rounded-full bg-[#2f55ea]" aria-hidden />
-              )}
-              <Icon name={item.icon} />
-              {item.label}
-            </Link>
-          );
-        })}
+      {topSlot && <div className="px-3 pb-2">{topSlot}</div>}
+
+      <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-2">
+        {groups.map((group, gi) => (
+          <div key={group.label ?? gi} className="space-y-0.5">
+            {group.label && (
+              <div className="px-3 pb-1 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-slate-400">
+                {group.label}
+              </div>
+            )}
+            {group.items.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`group relative flex items-center gap-3 rounded-xl px-3 py-2 text-[13.5px] font-medium transition ${
+                    active
+                      ? "bg-[#2f55ea]/[0.07] text-[#2f55ea]"
+                      : "text-slate-500 hover:bg-slate-100/70 hover:text-slate-900"
+                  }`}
+                >
+                  {active && (
+                    <span className="absolute inset-y-1.5 start-0 w-1 rounded-full bg-[#2f55ea]" aria-hidden />
+                  )}
+                  <Icon name={item.icon} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {footer && <div className="border-t border-slate-200/80 p-3">{footer}</div>}

@@ -3,12 +3,16 @@
     "name": "Shabab"
   },
   "nav": {
-    "home": "Home",
+    "home": "Dashboard",
     "cities": "Cities",
     "hierarchy": "Hierarchy",
     "roles": "Roles",
     "attendance": "Attendance",
-    "profile": "Profile"
+    "profile": "Profile",
+    "group": {
+      "operations": "Operations",
+      "administration": "Administration"
+    }
   },
   "actions": {
     "signOut": "Sign out",

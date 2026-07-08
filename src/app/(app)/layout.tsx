@@ -3,10 +3,13 @@
 // grants to gate nav. A thin top bar + ToastProvider; no v1 coupling.
 
 import Image from "next/image";
+import { cookies } from "next/headers";
 import { getAuthzContext } from "@/server/auth/authz-context";
+import * as hierarchyService from "@/server/services/hierarchy-service";
 import { ToastProvider } from "@/components/ui/Toast";
 import { type NavItem } from "@/components/app/AppNav";
-import { Sidebar } from "@/components/app/Sidebar";
+import { Sidebar, type NavGroup } from "@/components/app/Sidebar";
+import { CitySwitcher } from "@/components/app/CitySwitcher";
 import { BottomTabBar } from "@/components/app/BottomTabBar";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { LocaleToggle } from "@/components/app/LocaleToggle";
@@ -17,36 +20,47 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const ctx = await getAuthzContext();
   const { t } = await getServerI18n(await getLocale(), "common");
 
-  const nav: NavItem[] = [{ href: "/", label: t("nav.home"), icon: "home" }];
-  if (ctx.isSuperadmin) nav.push({ href: "/cities", label: t("nav.cities"), icon: "cities" });
-  // Attendance is for anyone who can mark or view it (or a superadmin).
-  if (
-    ctx.isSuperadmin ||
-    ctx.grants.some((g) => g.permission === "mark_attendance" || g.permission === "view_attendance")
-  ) {
-    nav.push({ href: "/mark", label: t("nav.attendance"), icon: "attendance" });
-  }
-  // The city-wide Hierarchy and Roles views are for a city admin. Gate on a
-  // manage_city grant (only city admins hold it) rather than any cityId-bearing
-  // grant — a park admin also carries a cityId but is anchored deeper, so the
-  // city-level pages would 403 and the link would dead-end.
-  const managedCityId = ctx.isSuperadmin
-    ? null
-    : ctx.grants.find((g) => g.permission === "manage_city" && g.cityId)?.cityId;
-  if (managedCityId) {
-    nav.push({ href: `/hierarchy/${managedCityId}`, label: t("nav.hierarchy"), icon: "hierarchy" });
-    nav.push({ href: `/roles/${managedCityId}`, label: t("nav.roles"), icon: "roles" });
-  }
+  // City context (switcher) — scopes the operational + admin links.
+  const preferredCity = (await cookies()).get("sb_city")?.value ?? null;
+  const [cityId, cities] = await Promise.all([
+    hierarchyService.getDefaultCityId(ctx, preferredCity),
+    hierarchyService.listSwitchableCities(ctx),
+  ]);
 
-  // Profile is a mobile-only tab (its actions live in the top bar on desktop).
-  const tabs: NavItem[] = [...nav, { href: "/profile", label: t("nav.profile"), icon: "profile" }];
+  const canAttend =
+    ctx.isSuperadmin ||
+    ctx.grants.some((g) => g.permission === "mark_attendance" || g.permission === "view_attendance");
+
+  // Operations: the day-to-day. Administration: managing the org.
+  const operations: NavItem[] = [{ href: "/", label: t("nav.home"), icon: "home" }];
+  if (canAttend) operations.push({ href: "/mark", label: t("nav.attendance"), icon: "attendance" });
+
+  const admin: NavItem[] = [];
+  if (cityId) {
+    admin.push({ href: `/hierarchy/${cityId}`, label: t("nav.hierarchy"), icon: "hierarchy" });
+    admin.push({ href: `/roles/${cityId}`, label: t("nav.roles"), icon: "roles" });
+  }
+  if (ctx.isSuperadmin) admin.push({ href: "/cities", label: t("nav.cities"), icon: "cities" });
+
+  const groups: NavGroup[] = [
+    { label: t("nav.group.operations"), items: operations },
+    ...(admin.length ? [{ label: t("nav.group.administration"), items: admin }] : []),
+  ];
+
+  // Mobile bottom bar stays lean: operations + hierarchy (if any) + profile.
+  const tabs: NavItem[] = [
+    ...operations,
+    ...(cityId ? [{ href: `/hierarchy/${cityId}`, label: t("nav.hierarchy"), icon: "hierarchy" }] : []),
+    { href: "/profile", label: t("nav.profile"), icon: "profile" },
+  ];
 
   return (
     <div className="min-h-screen bg-[#f6f7f9]">
       {/* Desktop: persistent command-center sidebar. */}
       <Sidebar
-        items={nav}
+        groups={groups}
         appName={t("app.name")}
+        topSlot={cities.length > 0 ? <CitySwitcher cities={cities} currentId={cityId} /> : undefined}
         footer={
           <div className="flex items-center justify-between gap-2">
             <LocaleToggle />

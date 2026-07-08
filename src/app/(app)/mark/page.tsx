@@ -7,7 +7,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import Button from "@/components/ui/Button";
 import Spinner from "@/components/ui/Spinner";
 import EmptyState from "@/components/ui/EmptyState";
 import Eyebrow from "@/components/ui/Eyebrow";
@@ -26,28 +25,44 @@ type TodayEvent = {
 function EventCard({ e, done }: { e: TodayEvent; done: boolean }) {
   const { t } = useTranslation("attendance");
   const time = new Date(e.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const rate = e.rosterCount > 0 ? Math.round((e.markedCount / e.rosterCount) * 100) : 0;
   return (
     <Link
       href={`/mark/${e.id}`}
-      className="flex items-stretch gap-3 overflow-hidden rounded-2xl border border-gray-200 bg-white transition hover:border-gray-300 hover:bg-gray-50"
+      className="group flex items-center gap-4 rounded-2xl border border-slate-200/70 bg-white px-4 py-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:border-[#2f55ea]/30 hover:shadow-[0_2px_10px_rgba(47,85,234,0.08)]"
     >
-      <span className={`w-1.5 shrink-0 ${done ? "bg-[#15a34a]" : "bg-[#2f55ea]"}`} aria-hidden />
-      <span className="flex flex-1 items-center justify-between gap-3 py-3 pe-4">
-        <span className="min-w-0">
-          <span className="block font-num text-xs text-gray-400">{time}</span>
-          <span className="block truncate font-medium text-gray-900">{e.title}</span>
-          <span className="block text-xs text-gray-400">
-            {t("today.people", { count: e.rosterCount })}
+      <span
+        className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl text-sm font-num font-semibold ${
+          done ? "bg-emerald-50 text-emerald-600" : "bg-[#2f55ea]/[0.08] text-[#2f55ea]"
+        }`}
+      >
+        {done ? "✓" : e.rosterCount}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-2">
+          <span className="truncate text-sm font-medium text-slate-900">{e.title}</span>
+          <span
+            className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ring-inset ${
+              done ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20" : "bg-[#2f55ea]/[0.07] text-[#2f55ea] ring-[#2f55ea]/20"
+            }`}
+          >
+            {done ? t("today.marked") : t("today.notMarked")}
           </span>
         </span>
-        <span
-          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
-            done ? "bg-[#e7f6ed] text-[#15a34a]" : "bg-[#eef1fe] text-[#2f55ea]"
-          }`}
-        >
-          {done ? t("today.marked") : t("today.notMarked")}
+        <span className="mt-0.5 block text-xs text-slate-400">
+          {time} · {t("today.people", { count: e.rosterCount })}
         </span>
       </span>
+      <span className="hidden w-28 shrink-0 sm:block">
+        <div className="flex items-center justify-between text-[11px] text-slate-400">
+          <span className="font-num font-medium text-slate-600">{rate}%</span>
+          <span className="font-num">{e.markedCount}/{e.rosterCount}</span>
+        </div>
+        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
+          <div className={`h-full rounded-full ${done ? "bg-emerald-500" : "bg-[#2f55ea]"}`} style={{ inlineSize: `${rate}%` }} />
+        </div>
+      </span>
+      <span className="text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-[#2f55ea]" aria-hidden>→</span>
     </Link>
   );
 }
@@ -80,18 +95,26 @@ export default function AttendanceTodayPage() {
   const done = events.filter((e) => e.rosterCount > 0 && e.markedCount >= e.rosterCount);
 
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold tracking-tight text-gray-900">{t("today.title")}</h1>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#2f55ea]">
+            {t("today.eyebrow", "Operations")}
+          </div>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{t("today.title")}</h1>
+          <p className="mt-0.5 text-sm text-slate-500">{t("today.subtitle", "Today’s sessions")}</p>
+        </div>
         <div className="flex items-center gap-3">
           {!online ? (
-            <span className="text-xs font-semibold text-[#9a5a17]">{t("offline.banner")}</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {t("offline.banner")}
+            </span>
           ) : pending > 0 ? (
             <button onClick={syncNow} className="text-xs font-medium text-[#2f55ea] hover:underline">
               {t("offline.pending", { count: pending })} · {t("offline.syncNow")}
             </button>
           ) : (
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-slate-400">
               {lastSyncedAt == null
                 ? t("offline.synced")
                 : Date.now() - lastSyncedAt < 60_000
@@ -99,9 +122,12 @@ export default function AttendanceTodayPage() {
                   : t("offline.lastSynced", { mins: Math.floor((Date.now() - lastSyncedAt) / 60_000) })}
             </span>
           )}
-          <Button size="sm" onClick={() => setCreating((v) => !v)}>
+          <button
+            onClick={() => setCreating((v) => !v)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#2f55ea] px-3.5 py-2 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(16,24,40,0.1),0_4px_12px_rgba(47,85,234,0.25)] transition hover:bg-[#2848c8]"
+          >
             {t("today.newEvent")}
-          </Button>
+          </button>
         </div>
       </div>
 

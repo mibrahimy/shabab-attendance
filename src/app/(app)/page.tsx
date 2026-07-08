@@ -2,6 +2,7 @@
 // superadmin defaults to the first city (so the landing is never empty). Users
 // with neither get quick links appropriate to their grants.
 
+import { cookies } from "next/headers";
 import { getAuthzContext } from "@/server/auth/authz-context";
 import * as hierarchyService from "@/server/services/hierarchy-service";
 import { ForbiddenError, NotFoundError } from "@/server/errors";
@@ -9,7 +10,8 @@ import { HomeDashboard } from "@/components/home/HomeDashboard";
 
 export default async function Home() {
   const ctx = await getAuthzContext();
-  const cityId = await hierarchyService.getDefaultCityId(ctx);
+  const preferredCity = (await cookies()).get("sb_city")?.value ?? null;
+  const cityId = await hierarchyService.getDefaultCityId(ctx, preferredCity);
   const canMarkAttendance =
     ctx.isSuperadmin || ctx.grants.some((g) => g.permission === "mark_attendance");
 
