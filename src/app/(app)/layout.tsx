@@ -5,7 +5,8 @@
 import Image from "next/image";
 import { getAuthzContext } from "@/server/auth/authz-context";
 import { ToastProvider } from "@/components/ui/Toast";
-import { AppNav, type NavItem } from "@/components/app/AppNav";
+import { type NavItem } from "@/components/app/AppNav";
+import { Sidebar } from "@/components/app/Sidebar";
 import { BottomTabBar } from "@/components/app/BottomTabBar";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { LocaleToggle } from "@/components/app/LocaleToggle";
@@ -41,28 +42,38 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const tabs: NavItem[] = [...nav, { href: "/profile", label: t("nav.profile"), icon: "profile" }];
 
   return (
-    <div className="min-h-screen bg-[#f4f3ff]">
-      <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-2 font-semibold text-gray-900">
-              <Image src="/logo.png" alt="" width={28} height={28} priority unoptimized />
-              {t("app.name")}
-            </span>
-            {/* Desktop nav; on mobile the bottom tab bar takes over. */}
-            <div className="hidden lg:block">
-              <AppNav items={nav} />
-            </div>
+    <div className="min-h-screen bg-[#f6f7f9]">
+      {/* Desktop: persistent command-center sidebar. */}
+      <Sidebar
+        items={nav}
+        appName={t("app.name")}
+        footer={
+          <div className="flex items-center justify-between gap-2">
+            <LocaleToggle />
+            <SignOutButton />
           </div>
-          <div className="hidden items-center gap-3 lg:flex">
+        }
+      />
+
+      {/* Mobile: slim top bar (the bottom tab bar handles nav). */}
+      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/80 backdrop-blur lg:hidden">
+        <div className="flex h-14 items-center justify-between px-4">
+          <span className="flex items-center gap-2 font-semibold text-slate-900">
+            <Image src="/logo.png" alt="" width={26} height={26} priority unoptimized />
+            {t("app.name")}
+          </span>
+          <div className="flex items-center gap-2">
             <LocaleToggle />
             <SignOutButton />
           </div>
         </div>
       </header>
-      <ToastProvider>
-        <main className="mx-auto max-w-6xl px-4 py-6 pb-24 lg:pb-6">{children}</main>
-      </ToastProvider>
+
+      <div className="lg:ps-60">
+        <ToastProvider>
+          <main className="mx-auto max-w-6xl px-4 py-6 pb-24 lg:px-8 lg:py-8 lg:pb-10">{children}</main>
+        </ToastProvider>
+      </div>
       <BottomTabBar items={tabs} />
     </div>
   );

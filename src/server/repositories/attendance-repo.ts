@@ -13,6 +13,37 @@ export type MarkRow = {
   clientUpdatedAt: Date | null;
 };
 
+// City-wide attendance rate: present marks over total marks across all of a city's
+// events. Two cheap counts for the dashboard headline.
+export async function rateInCity(cityId: string): Promise<{ present: number; total: number }> {
+  const [present, total] = await Promise.all([
+    prisma.attendance.count({ where: { event: { cityId }, status: "present" } }),
+    prisma.attendance.count({ where: { event: { cityId } } }),
+  ]);
+  return { present, total };
+}
+
+// present/total per event for a set of events — one grouped query (dashboard's
+// recent-sessions list).
+export async function statusByEvents(
+  eventIds: string[],
+): Promise<Map<string, { present: number; total: number }>> {
+  if (eventIds.length === 0) return new Map();
+  const rows = await prisma.attendance.groupBy({
+    by: ["eventId", "status"],
+    where: { eventId: { in: eventIds } },
+    _count: { _all: true },
+  });
+  const m = new Map<string, { present: number; total: number }>();
+  for (const r of rows) {
+    const cur = m.get(r.eventId) ?? { present: 0, total: 0 };
+    cur.total += r._count._all;
+    if (r.status === "present") cur.present += r._count._all;
+    m.set(r.eventId, cur);
+  }
+  return m;
+}
+
 // Number of attendance rows per event, for a set of events — one grouped query
 // instead of one listByEvent per event (avoids the N+1 in the "today" list).
 export async function countByEvents(eventIds: string[]): Promise<Map<string, number>> {

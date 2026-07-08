@@ -119,6 +119,27 @@ export async function todayStatsInCity(
   return { events, started };
 }
 
+export async function countInCity(cityId: string): Promise<number> {
+  return prisma.event.count({ where: { cityId } });
+}
+
+export type RecentEvent = {
+  id: string; title: string; scheduledAt: Date; status: EventStatus; nodeName: string;
+};
+
+// Most-recent HELD (completed) sessions in a city — the dashboard's recent list,
+// which is about sessions that actually happened and were marked (scheduled ones
+// are upcoming, not "recent"). Lightweight — no live roster resolution.
+export async function recentInCity(cityId: string, limit: number): Promise<RecentEvent[]> {
+  const rows = await prisma.event.findMany({
+    where: { cityId, status: "completed" },
+    orderBy: { scheduledAt: "desc" },
+    take: limit,
+    select: { id: true, title: true, scheduledAt: true, status: true, orgNode: { select: { name: true } } },
+  });
+  return rows.map((r) => ({ id: r.id, title: r.title, scheduledAt: r.scheduledAt, status: r.status, nodeName: r.orgNode.name }));
+}
+
 export type RosterPerson = {
   personId: string;
   name: string;

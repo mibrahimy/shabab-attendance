@@ -1,6 +1,6 @@
-// Authed home. Reached only by a signed-in, onboarded user (middleware enforces
-// session + password-change first). A city admin lands on their city dashboard;
-// others get quick links appropriate to their grants.
+// Authed home = the command-center dashboard. A city admin sees their city; a
+// superadmin defaults to the first city (so the landing is never empty). Users
+// with neither get quick links appropriate to their grants.
 
 import { getAuthzContext } from "@/server/auth/authz-context";
 import * as hierarchyService from "@/server/services/hierarchy-service";
@@ -9,18 +9,14 @@ import { HomeDashboard } from "@/components/home/HomeDashboard";
 
 export default async function Home() {
   const ctx = await getAuthzContext();
-
-  const managedCityId = ctx.isSuperadmin
-    ? null
-    : (ctx.grants.find((g) => g.permission === "manage_city" && g.cityId)?.cityId ?? null);
-
+  const cityId = await hierarchyService.getDefaultCityId(ctx);
   const canMarkAttendance =
     ctx.isSuperadmin || ctx.grants.some((g) => g.permission === "mark_attendance");
 
-  let summary: Awaited<ReturnType<typeof hierarchyService.getCitySummary>> | null = null;
-  if (managedCityId) {
+  let dashboard: Awaited<ReturnType<typeof hierarchyService.getCityDashboard>> | null = null;
+  if (cityId) {
     try {
-      summary = await hierarchyService.getCitySummary(ctx, managedCityId);
+      dashboard = await hierarchyService.getCityDashboard(ctx, cityId);
     } catch (err) {
       if (!(err instanceof ForbiddenError || err instanceof NotFoundError)) throw err;
     }
@@ -28,8 +24,8 @@ export default async function Home() {
 
   return (
     <HomeDashboard
-      summary={summary}
-      cityId={managedCityId}
+      dashboard={dashboard}
+      cityId={cityId}
       isSuperadmin={ctx.isSuperadmin}
       canMarkAttendance={canMarkAttendance}
     />

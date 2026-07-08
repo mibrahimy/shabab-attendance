@@ -86,6 +86,16 @@ export async function listRoots(): Promise<OrgNodeRow[]> {
   return prisma.orgNode.findMany({ where: { parentId: null }, select: baseSelect });
 }
 
+// The first city node (alphabetical) — the superadmin's default dashboard city
+// when they haven't got a single managed city of their own.
+export async function firstCity(): Promise<{ id: string; name: string } | null> {
+  return prisma.orgNode.findFirst({
+    where: { type: { canonical: { key: "city" } } },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
+}
+
 export async function listChildren(parentId: string): Promise<OrgNodeRow[]> {
   return prisma.orgNode.findMany({
     where: { parentId },

@@ -15,6 +15,7 @@ import * as orgNodeRepo from "@/server/repositories/org-node-repo";
 import * as nodeTypeRepo from "@/server/repositories/node-type-repo";
 import * as assignmentRepo from "@/server/repositories/assignment-repo";
 import * as eventRepo from "@/server/repositories/event-repo";
+import * as attendanceRepo from "@/server/repositories/attendance-repo";
 import * as auditRepo from "@/server/repositories/audit-repo";
 
 const MANAGE = "manage_hierarchy";
@@ -75,6 +76,58 @@ export async function getCitySummary(ctx: AuthzContext, cityId: string): Promise
     levels: summarizeLevels(nodes, levels),
     peopleCount,
     today,
+  };
+}
+
+// The city a caller's dashboard should default to: their managed city, or (for a
+// superadmin with no single city) the first city in the system.
+export async function getDefaultCityId(ctx: AuthzContext): Promise<string | null> {
+  const managed = ctx.grants.find((g) => g.permission === "manage_city" && g.cityId)?.cityId;
+  if (managed) return managed;
+  if (ctx.isSuperadmin) return (await orgNodeRepo.firstCity())?.id ?? null;
+  return null;
+}
+
+export type CityDashboard = {
+  city: { id: string; name: string };
+  levels: LevelCount[];
+  peopleCount: number;
+  sessions: { total: number; today: number; markedToday: number };
+  rate: { present: number; total: number };
+  recent: {
+    id: string; title: string; when: string; nodeName: string;
+    status: "scheduled" | "completed" | "cancelled"; present: number; total: number;
+  }[];
+};
+
+// Rich command-center dashboard for a city: org shape + attendance headline +
+// recent sessions. Same scope guard as the tree.
+export async function getCityDashboard(ctx: AuthzContext, cityId: string): Promise<CityDashboard> {
+  const city = await orgNodeRepo.findById(cityId);
+  if (!city) throw new NotFoundError("City not found");
+  canManage(ctx, city);
+
+  const [levels, nodes, peopleCount, today, totalSessions, rate, recent] = await Promise.all([
+    nodeTypeRepo.listCityLevels(cityId),
+    orgNodeRepo.listSubtree(city.path),
+    assignmentRepo.countActiveInSubtree(city.path),
+    eventRepo.todayStatsInCity(cityId, pktDayRange()),
+    eventRepo.countInCity(cityId),
+    attendanceRepo.rateInCity(cityId),
+    eventRepo.recentInCity(cityId, 6),
+  ]);
+  const byEvent = await attendanceRepo.statusByEvents(recent.map((r) => r.id));
+
+  return {
+    city: { id: city.id, name: city.name },
+    levels: summarizeLevels(nodes, levels),
+    peopleCount,
+    sessions: { total: totalSessions, today: today.events, markedToday: today.started },
+    rate,
+    recent: recent.map((r) => ({
+      id: r.id, title: r.title, when: r.scheduledAt.toISOString(), nodeName: r.nodeName,
+      status: r.status, ...(byEvent.get(r.id) ?? { present: 0, total: 0 }),
+    })),
   };
 }
 
