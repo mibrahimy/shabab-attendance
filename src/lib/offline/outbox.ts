@@ -53,6 +53,18 @@ function db(): Promise<IDBPDatabase<OutboxDB>> {
   return dbPromise;
 }
 
+// Close the DB connection (and reset the cached promise) so a subsequent
+// deleteDatabase on sign-out isn't blocked by an open connection from this page.
+export async function closeDb(): Promise<void> {
+  if (!dbPromise) return;
+  try {
+    (await dbPromise).close();
+  } catch {
+    // already closing/closed — fine
+  }
+  dbPromise = null;
+}
+
 export async function queueMark(
   m: Omit<PendingMark, "key" | "clientUpdatedAt"> & { clientUpdatedAt?: string },
 ): Promise<void> {

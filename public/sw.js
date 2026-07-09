@@ -33,7 +33,11 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
 
   if (request.mode === "navigate") {
-    event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_URL)));
+    // Offline: serve the requested route from cache if present (so a refresh or
+    // deep-link to /mark/<id> doesn't bounce to the home shell), else the shell.
+    event.respondWith(
+      fetch(request).catch(async () => (await caches.match(request)) || (await caches.match(OFFLINE_URL))),
+    );
     return;
   }
 

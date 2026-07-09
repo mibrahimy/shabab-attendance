@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { closeDb } from "@/lib/offline/outbox";
 
 export function SignOutButton() {
   const router = useRouter();
@@ -20,7 +21,12 @@ export function SignOutButton() {
         const keys = await caches.keys();
         await Promise.all(keys.map((k) => caches.delete(k)));
       }
-      indexedDB.deleteDatabase("shabab-attendance");
+      // Close our open connection first, or deleteDatabase blocks until it closes.
+      await closeDb();
+      await new Promise<void>((resolve) => {
+        const req = indexedDB.deleteDatabase("shabab-attendance");
+        req.onsuccess = req.onerror = req.onblocked = () => resolve();
+      });
     } catch {
       // best-effort — never block sign-out
     }

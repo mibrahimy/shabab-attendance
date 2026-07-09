@@ -78,13 +78,17 @@ function ToastItem({ toast, onDone }: { toast: Toast; onDone: () => void }) {
   const [exiting, setExiting] = useState(false);
 
   useEffect(() => {
+    // Errors are the only feedback for a failed action — keep them until the user
+    // dismisses (a 3s auto-hide is easy to miss on a phone mid-task). Success/info
+    // auto-dismiss.
+    if (toast.type === "error") return;
     const exitTimer = setTimeout(() => setExiting(true), 2700);
     const removeTimer = setTimeout(onDone, 3000);
     return () => {
       clearTimeout(exitTimer);
       clearTimeout(removeTimer);
     };
-  }, [onDone]);
+  }, [onDone, toast.type]);
 
   function handleDismiss() {
     setExiting(true);

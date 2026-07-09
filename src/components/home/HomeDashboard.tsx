@@ -102,6 +102,11 @@ export function HomeDashboard({
             <QuickCard href="/mark" title="Attendance" desc="Mark today’s sessions" />
           )}
         </div>
+        {!isSuperadmin && !canMarkAttendance && (
+          <p className="mt-6 text-sm text-slate-400">
+            Nothing’s assigned to you yet — your city admin can add you to a class or team.
+          </p>
+        )}
       </div>
     );
   }
@@ -125,6 +130,22 @@ export function HomeDashboard({
           Take attendance
         </Link>
       </div>
+
+      {/* Cold start: a fresh city with no people yet → point at the hierarchy builder. */}
+      {dashboard.peopleCount === 0 && (
+        <Link
+          href={`/hierarchy/${cityId}`}
+          className="flex items-center justify-between gap-3 rounded-2xl border border-[#2f55ea]/20 bg-[#eef1fe] px-5 py-4 transition hover:bg-[#e4eafe]"
+        >
+          <span>
+            <span className="block text-sm font-semibold text-slate-900">Set up your city structure</span>
+            <span className="mt-0.5 block text-xs text-slate-500">
+              Add zones, parks and classes, then place your people to get started.
+            </span>
+          </span>
+          <span className="text-[#2f55ea]" aria-hidden>→</span>
+        </Link>
+      )}
 
       {/* Attendance headline + KPIs */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
