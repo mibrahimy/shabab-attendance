@@ -12,6 +12,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import Eyebrow from "@/components/ui/Eyebrow";
 import { useToast } from "@/components/ui/Toast";
 import { useOnline } from "@/lib/offline/use-online";
+import { pending as pendingMarks } from "@/lib/offline/outbox";
 import { CreateEventForm } from "@/components/attendance/CreateEventForm";
 
 type TodayEvent = {
@@ -79,7 +80,22 @@ export default function AttendanceTodayPage() {
     try {
       const res = await fetch("/api/events");
       const json = await res.json().catch(() => ({}));
-      setEvents(res.ok ? json.data.events : []);
+      const evs: TodayEvent[] = res.ok ? json.data.events : [];
+      // Overlay locally-queued (unsynced) marks so a card reflects offline work —
+      // otherwise a session you just marked offline stays in "To mark".
+      const queued = await pendingMarks();
+      const pendingByEvent = new Map<string, Set<string>>();
+      for (const m of queued) {
+        const set = pendingByEvent.get(m.eventId) ?? new Set<string>();
+        set.add(m.personId);
+        pendingByEvent.set(m.eventId, set);
+      }
+      setEvents(
+        evs.map((e) => ({
+          ...e,
+          markedCount: Math.min(e.rosterCount, e.markedCount + (pendingByEvent.get(e.id)?.size ?? 0)),
+        })),
+      );
     } catch {
       setEvents([]);
     } finally {
@@ -87,9 +103,10 @@ export default function AttendanceTodayPage() {
     }
   }, []);
 
+  // Reload on mount and whenever the outbox count changes (marks queued or synced).
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, pending]);
 
   const toMark = events.filter((e) => e.markedCount < e.rosterCount || e.rosterCount === 0);
   const done = events.filter((e) => e.rosterCount > 0 && e.markedCount >= e.rosterCount);
