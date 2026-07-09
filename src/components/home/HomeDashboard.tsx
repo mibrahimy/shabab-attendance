@@ -6,6 +6,7 @@
 // nor grants get a clean quick-links state.
 
 import Link from "next/link";
+import { Trail } from "./Trail";
 import type { LevelCount } from "@/lib/city-summary";
 
 type Dashboard = {
@@ -32,21 +33,6 @@ function pct(present: number, total: number): number {
 
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
-// A conic-gradient ring for the attendance headline — no chart dependency.
-function Ring({ value }: { value: number }) {
-  return (
-    <div
-      className="relative grid h-[92px] w-[92px] place-items-center rounded-full"
-      style={{ background: `conic-gradient(#2f55ea ${value}%, #e7eaf1 0)` }}
-    >
-      <div className="grid h-[70px] w-[70px] place-items-center rounded-full bg-white">
-        <span className="font-num text-[22px] font-semibold tracking-tight text-slate-900">{value}</span>
-        <span className="-mt-1 text-[10px] font-medium text-slate-400">%</span>
-      </div>
-    </div>
-  );
 }
 
 function Stat({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
@@ -147,20 +133,31 @@ export function HomeDashboard({
         </Link>
       )}
 
-      {/* Attendance headline + KPIs */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <div className="flex items-center gap-4 rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white to-[#f4f6ff] p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] md:col-span-2 lg:col-span-1">
-          <Ring value={rate} />
+      {/* Attendance headline — the Trail: rate at the head of a comet path of
+          recent sessions (brighter = higher attendance). */}
+      <div className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white to-[#f6f5ff] p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+        <div className="flex flex-wrap items-center justify-between gap-6">
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.07em] text-slate-400">Attendance</div>
-            <div className="mt-1 text-sm text-slate-600">
-              <span className="font-num font-semibold text-slate-900">{dashboard.rate.present.toLocaleString()}</span>
-              {" present of "}
-              <span className="font-num">{dashboard.rate.total.toLocaleString()}</span>
+            <div className="mt-1 flex items-baseline gap-1">
+              <span className="bg-[linear-gradient(90deg,#2b27c2,#6f1f9e,#c41f6a)] bg-clip-text font-num text-5xl font-semibold tracking-tight text-transparent">
+                {rate}
+              </span>
+              <span className="text-lg font-semibold text-slate-300">%</span>
             </div>
-            <div className="mt-0.5 text-xs text-slate-400">across all sessions</div>
+            <div className="mt-1 text-xs text-slate-400">
+              <span className="font-num text-slate-600">{dashboard.rate.present.toLocaleString()}</span> present of{" "}
+              <span className="font-num">{dashboard.rate.total.toLocaleString()}</span> · recent sessions
+            </div>
+          </div>
+          <div className="min-w-[220px] flex-1 sm:max-w-[380px]">
+            <Trail points={[...dashboard.recent].reverse().map((s) => pct(s.present, s.total))} />
           </div>
         </div>
+      </div>
+
+      {/* KPIs */}
+      <div className="grid gap-4 sm:grid-cols-3">
         <Stat label="People" value={dashboard.peopleCount.toLocaleString()} sub="active members" />
         <Stat label="Sessions" value={dashboard.sessions.total.toLocaleString()} sub="recorded" />
         <Stat label="Parks" value={String(parks)} sub={`${dashboard.levels.find((l) => l.key === "class")?.count ?? 0} classes`} />

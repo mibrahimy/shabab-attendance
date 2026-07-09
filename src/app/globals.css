@@ -110,3 +110,15 @@ body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* ── Trail identity: the comet path draws in once on arrival ── */
+@keyframes trail-draw {
+  from { stroke-dasharray: 420; stroke-dashoffset: 420; }
+  to { stroke-dasharray: 420; stroke-dashoffset: 0; }
+}
+.trail-draw {
+  animation: trail-draw 0.9s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .trail-draw { animation: none; }
+}
