@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rootPath, buildChildPath, childDepth } from "./org-path";
+import { rootPath, buildChildPath, childDepth, rewriteSubtreePath } from "./org-path";
 
 describe("org-path", () => {
   it("root path is trailing-delimited", () => {
@@ -24,5 +24,26 @@ describe("org-path", () => {
   it("depth increments by one", () => {
     expect(childDepth(0)).toBe(1);
     expect(childDepth(2)).toBe(3);
+  });
+
+  describe("rewriteSubtreePath (moving a subtree)", () => {
+    // Move node N from under A to under B: oldPrefix "/root/A/N/" → newNodePath "/root/B/N/".
+    const oldPrefix = "/root/A/N/";
+    const newNodePath = "/root/B/N/";
+
+    it("rewrites the moved node's own path", () => {
+      expect(rewriteSubtreePath("/root/A/N/", oldPrefix, newNodePath)).toBe("/root/B/N/");
+    });
+
+    it("rewrites descendants, preserving the tail below the moved node", () => {
+      expect(rewriteSubtreePath("/root/A/N/x/", oldPrefix, newNodePath)).toBe("/root/B/N/x/");
+      expect(rewriteSubtreePath("/root/A/N/x/y/", oldPrefix, newNodePath)).toBe("/root/B/N/x/y/");
+    });
+
+    it("keeps every rewritten path trailing-delimited and prefixed by the new node path", () => {
+      const out = rewriteSubtreePath("/root/A/N/x/y/", oldPrefix, newNodePath);
+      expect(out.startsWith(newNodePath)).toBe(true);
+      expect(out.endsWith("/")).toBe(true);
+    });
   });
 });

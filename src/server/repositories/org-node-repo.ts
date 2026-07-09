@@ -167,3 +167,25 @@ export async function rename(nodeId: string, name: string): Promise<OrgNodeRow> 
 export async function remove(nodeId: string, db: Db = prisma): Promise<void> {
   await db.orgNode.delete({ where: { id: nodeId } });
 }
+
+// Move a subtree under a new parent (same city ⇒ denorm keys unchanged). Rewrites
+// every descendant's path + depth in one UPDATE (the trailing-delimited prefix
+// scan is index-backed), then repoints the moved node's parentId. Wrap in a
+// transaction (the service does) so the two statements are atomic.
+export async function moveSubtree(
+  node: Pick<OrgNodeRow, "id" | "path" | "depth">,
+  newParent: Pick<OrgNodeRow, "id" | "path" | "depth">,
+  db: Db = prisma,
+): Promise<void> {
+  const oldPrefix = node.path;
+  const newNodePath = buildChildPath(newParent.path, node.id);
+  const depthDelta = childDepth(newParent.depth) - node.depth;
+  // substring(... from N) is 1-indexed; oldPrefix.length + 1 starts after the prefix.
+  await db.$executeRaw`
+    UPDATE "OrgNode"
+    SET "path" = ${newNodePath} || substring("path" from ${oldPrefix.length + 1}),
+        "depth" = "depth" + ${depthDelta},
+        "updatedAt" = now()
+    WHERE "path" LIKE ${oldPrefix + "%"}`;
+  await db.orgNode.update({ where: { id: node.id }, data: { parentId: newParent.id } });
+}

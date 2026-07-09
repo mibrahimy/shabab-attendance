@@ -206,6 +206,54 @@ export async function renameNode(
   return updated;
 }
 
+// Move a subtree under a new parent. Requires manage on BOTH the node and the
+// target; stays within one city; enforces the level template (a node may only sit
+// under the level exactly one rank above it); refuses cycles and structural roots.
+export async function moveNode(
+  ctx: AuthzContext,
+  input: { nodeId: string; newParentId: string },
+): Promise<void> {
+  const node = await orgNodeRepo.findById(input.nodeId);
+  if (!node) throw new NotFoundError("Node not found");
+  const newParent = await orgNodeRepo.findById(input.newParentId);
+  if (!newParent) throw new NotFoundError("Target node not found");
+  canManage(ctx, node);
+  canManage(ctx, newParent);
+
+  if (input.nodeId === input.newParentId) throw new ValidationError("Can't move a node into itself");
+  if (node.parentId === input.newParentId) return; // already there — no-op
+  if (!node.parentId || node.countryId === node.id || node.cityId === node.id) {
+    throw new ValidationError("Cities and countries can't be moved", "NODE_NOT_MOVABLE");
+  }
+  if (!node.cityId || node.cityId !== newParent.cityId) {
+    throw new ValidationError("A node can only move within its own city", "CROSS_CITY_MOVE");
+  }
+  // No cycle: the new parent must not be inside the subtree being moved.
+  if (newParent.path.startsWith(node.path)) {
+    throw new ValidationError("Can't move a node under its own descendant", "MOVE_CYCLE");
+  }
+
+  // Level template: the moved node's level must be the valid child of the target's.
+  const levels = await nodeTypeRepo.listCityLevels(node.cityId);
+  const parentLevel = levels.find((l) => l.id === newParent.typeId);
+  const nodeLevel = levels.find((l) => l.id === node.typeId);
+  if (!parentLevel || !nodeLevel) throw new ValidationError("Unknown level");
+  const childLevel = nextLevel(levels, parentLevel.rank);
+  if (!childLevel || childLevel.id !== node.typeId) {
+    throw new ValidationError(`A ${nodeLevel.label} can't sit under a ${parentLevel.label}`, "LEVEL_MISMATCH");
+  }
+
+  await prisma.$transaction((tx) => orgNodeRepo.moveSubtree(node, newParent, tx));
+  await auditRepo.record({
+    actorPersonId: ctx.personId,
+    action: "move_node",
+    targetType: "OrgNode",
+    targetId: node.id,
+    cityId: node.cityId,
+    metadata: { name: node.name, newParentId: newParent.id },
+  });
+}
+
 export async function deleteNode(ctx: AuthzContext, nodeId: string): Promise<void> {
   const node = await orgNodeRepo.findById(nodeId);
   if (!node) throw new NotFoundError("Node not found");
