@@ -4,7 +4,7 @@
 // Save is per-role (PUT replaces that role's grants). Edits take effect on the
 // holders' next request (AuthzContext is per-request).
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -12,6 +12,10 @@ import { useToast } from "@/components/ui/Toast";
 
 type Permission = { key: string; label: string; description: string | null };
 type Role = { canonicalKey: string; label: string; permissionKeys: string[]; instantiated: boolean };
+
+function setsEqual(a: Set<string>, b: Set<string>): boolean {
+  return a.size === b.size && [...a].every((k) => b.has(k));
+}
 
 export function RolesEditor({
   cityId,
@@ -27,7 +31,25 @@ export function RolesEditor({
   const [granted, setGranted] = useState<Record<string, Set<string>>>(() =>
     Object.fromEntries(roles.map((r) => [r.canonicalKey, new Set(r.permissionKeys)])),
   );
+  // The last-saved state per role — a role is "dirty" when its current grants differ.
+  const [saved, setSaved] = useState<Record<string, Set<string>>>(() =>
+    Object.fromEntries(roles.map((r) => [r.canonicalKey, new Set(r.permissionKeys)])),
+  );
   const [saving, setSaving] = useState<string | null>(null);
+
+  const isDirty = (roleKey: string) => !setsEqual(granted[roleKey], saved[roleKey]);
+  const anyDirty = roles.some((r) => isDirty(r.canonicalKey));
+
+  // Warn before leaving with unsaved permission edits (per-row Save is easy to miss).
+  useEffect(() => {
+    if (!anyDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [anyDirty]);
 
   function toggle(roleKey: string, permKey: string) {
     setGranted((prev) => {
@@ -51,6 +73,8 @@ export function RolesEditor({
         toast(json?.error?.message ?? t("editor.saveError"), "error");
         return;
       }
+      // Mark this role clean by snapshotting what we just saved.
+      setSaved((prev) => ({ ...prev, [role.canonicalKey]: new Set(granted[role.canonicalKey]) }));
       toast(t("editor.saved", { role: role.label }));
     } catch {
       toast(t("editor.networkError"), "error");
@@ -65,10 +89,20 @@ export function RolesEditor({
         <div key={role.canonicalKey} className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h2 className="font-semibold text-gray-900">{role.label}</h2>
+              <h2 className="font-semibold text-slate-900">{role.label}</h2>
               {!role.instantiated && <Badge color="amber">{t("editor.notInUse")}</Badge>}
+              {isDirty(role.canonicalKey) && (
+                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                  {t("editor.unsaved", "Unsaved")}
+                </span>
+              )}
             </div>
-            <Button size="sm" onClick={() => save(role)} loading={saving === role.canonicalKey}>
+            <Button
+              size="sm"
+              onClick={() => save(role)}
+              loading={saving === role.canonicalKey}
+              disabled={!isDirty(role.canonicalKey) || saving === role.canonicalKey}
+            >
               {t("editor.save")}
             </Button>
           </div>

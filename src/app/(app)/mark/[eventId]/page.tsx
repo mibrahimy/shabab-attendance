@@ -46,6 +46,7 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
   // status — so default-absent reads as "not marked yet", not a wall of red.
   const [touched, setTouched] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [saving, setSaving] = useState(false);
   const rosterRef = useRef<Entry[]>([]);
 
@@ -55,6 +56,7 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
   }
 
   const load = useCallback(async () => {
+    setError(false);
     try {
       const [res, queued] = await Promise.all([
         fetch(`/api/events/${eventId}/roster`),
@@ -72,7 +74,14 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
         const seed = new Set<string>(queued.map((q) => q.personId));
         for (const e of serverRoster) if (e.marked) seed.add(e.personId);
         setTouched(seed);
+      } else {
+        // Overlay the queued marks even on a load failure so offline work isn't lost
+        // from view; still surface the error so it's not mistaken for an empty event.
+        if (queued.length) applyRoster(overlayPending(rosterRef.current, queued));
+        setError(true);
       }
+    } catch {
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -146,6 +155,22 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
             </li>
           ))}
         </ul>
+      </div>
+    );
+  }
+
+  // Load failed and there's nothing (not even queued marks) to show → offer a retry,
+  // so a fetch error can't be mistaken for a legitimately empty roster.
+  if (error && roster.length === 0) {
+    return (
+      <div className="mx-auto max-w-md rounded-2xl border border-slate-200/70 bg-white p-8 text-center shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+        <p className="text-sm text-slate-500">{t("mark.loadError", "Couldn’t load the roster.")}</p>
+        <button
+          onClick={() => { setLoading(true); void load(); }}
+          className="mt-4 rounded-xl bg-[#2f55ea] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#2848c8]"
+        >
+          {t("mark.retry", "Try again")}
+        </button>
       </div>
     );
   }

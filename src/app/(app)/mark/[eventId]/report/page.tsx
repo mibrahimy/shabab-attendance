@@ -23,8 +23,10 @@ export default function ReportPage({ params }: { params: Promise<{ eventId: stri
   const [title, setTitle] = useState("");
   const [roster, setRoster] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   const load = useCallback(async () => {
+    setError(false);
     try {
       const [res, queued] = await Promise.all([
         fetch(`/api/events/${eventId}/roster`),
@@ -34,7 +36,11 @@ export default function ReportPage({ params }: { params: Promise<{ eventId: stri
       if (res.ok) {
         setTitle(json.data.event.title);
         setRoster(overlayPending(json.data.roster as Entry[], queued));
+      } else {
+        setError(true);
       }
+    } catch {
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -45,6 +51,19 @@ export default function ReportPage({ params }: { params: Promise<{ eventId: stri
   }, [load]);
 
   if (loading) return <Spinner />;
+  if (error) {
+    return (
+      <div className="mx-auto max-w-md rounded-2xl border border-slate-200/70 bg-white p-8 text-center shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+        <p className="text-sm text-slate-500">{t("report.loadError", "Couldn’t load the report.")}</p>
+        <button
+          onClick={() => { setLoading(true); void load(); }}
+          className="mt-4 rounded-xl bg-[#2f55ea] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#2848c8]"
+        >
+          {t("report.retry", "Try again")}
+        </button>
+      </div>
+    );
+  }
 
   const counts = tally(roster);
   const rate = attendanceRate(counts);
