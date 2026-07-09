@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { ATTENDANCE_STATUSES, type AttendanceStatus } from "@/lib/attendance-status";
 import Spinner from "@/components/ui/Spinner";
+import { Trail } from "@/components/home/Trail";
 import { pending } from "@/lib/offline/outbox";
 import { overlayPending, tally, attendanceRate } from "@/lib/offline/overlay";
 import { STATUS_SOFT } from "@/components/attendance/status-styles";
@@ -22,6 +23,7 @@ export default function ReportPage({ params }: { params: Promise<{ eventId: stri
 
   const [title, setTitle] = useState("");
   const [roster, setRoster] = useState<Entry[]>([]);
+  const [recentRates, setRecentRates] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -36,6 +38,7 @@ export default function ReportPage({ params }: { params: Promise<{ eventId: stri
       if (res.ok) {
         setTitle(json.data.event.title);
         setRoster(overlayPending(json.data.roster as Entry[], queued));
+        setRecentRates((json.data.recentRates as number[]) ?? []);
       } else {
         setError(true);
       }
@@ -88,6 +91,12 @@ export default function ReportPage({ params }: { params: Promise<{ eventId: stri
         <p className="mt-1 text-sm text-white/80">
           {t("report.rate", { attended: rate.attended, total: rate.total, percent: rate.percent })}
         </p>
+        {recentRates.length > 1 && (
+          <div className="mx-auto mt-4 max-w-[280px]">
+            <Trail points={recentRates} light />
+            <p className="mt-1 text-[11px] text-white/60">{t("report.trend", "Recent sessions here")}</p>
+          </div>
+        )}
       </div>
 
       {/* Per-status breakdown — zero-count statuses are muted so the ones that

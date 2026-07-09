@@ -23,6 +23,7 @@ export type RosterEntry = {
 export type MarkerRoster = {
   event: { id: string; title: string; scheduledAt: Date; status: string };
   roster: RosterEntry[];
+  recentRates: number[]; // rate % of recent completed sessions at this node (oldest→newest)
 };
 
 // A roster person is in the marker's slice iff the marker holds mark_attendance
@@ -52,9 +53,21 @@ export async function getMarkerRoster(ctx: AuthzContext, eventId: string): Promi
       marked: byPerson.has(p.personId),
     }));
 
+  // Trend trail: rate of recent completed sessions at this node (oldest→newest).
+  const recentIds = await eventRepo.recentCompletedAtNode(event.orgNodeId, 8);
+  const ratesByEvent = await attendanceRepo.statusByEvents(recentIds);
+  const recentRates = recentIds
+    .slice()
+    .reverse()
+    .map((id) => {
+      const s = ratesByEvent.get(id) ?? { present: 0, total: 0 };
+      return s.total > 0 ? Math.round((s.present / s.total) * 100) : 0;
+    });
+
   return {
     event: { id: event.id, title: event.title, scheduledAt: event.scheduledAt, status: event.status },
     roster: slice,
+    recentRates,
   };
 }
 

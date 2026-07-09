@@ -4,7 +4,9 @@
 
 const GRAD = "trail-grad";
 
-export function Trail({ points }: { points: number[] }) {
+// `light` renders the trail in white (for use on the gradient hero); default uses
+// the logo gradient (for use on a light surface).
+export function Trail({ points, light = false }: { points: number[]; light?: boolean }) {
   const w = 320;
   const h = 84;
   const padX = 16;
@@ -32,7 +34,8 @@ export function Trail({ points }: { points: number[] }) {
         <path
           d={d}
           fill="none"
-          stroke={`url(#${GRAD})`}
+          stroke={light ? "#ffffff" : `url(#${GRAD})`}
+          strokeOpacity={light ? 0.85 : 1}
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -47,13 +50,13 @@ export function Trail({ points }: { points: number[] }) {
             cx={x}
             cy={ys[i]}
             r={head ? 5 : 3.2}
-            fill={head ? `url(#${GRAD})` : "#2f55ea"}
-            fillOpacity={head ? 1 : 0.28 + 0.62 * (clamp(points[i]) / 100)}
+            fill={light ? "#ffffff" : head ? `url(#${GRAD})` : "#2f55ea"}
+            fillOpacity={head ? 1 : (light ? 0.35 : 0.28) + 0.62 * (clamp(points[i]) / 100)}
           />
         );
       })}
       {/* head glow */}
-      <circle cx={hx} cy={hy} r="9" fill={`url(#${GRAD})`} opacity="0.16" />
+      <circle cx={hx} cy={hy} r="9" fill={light ? "#ffffff" : `url(#${GRAD})`} opacity={light ? 0.22 : 0.16} />
     </svg>
   );
 }
