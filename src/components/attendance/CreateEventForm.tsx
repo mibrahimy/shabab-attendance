@@ -29,6 +29,8 @@ export function CreateEventForm({ onCreated }: { onCreated: () => void }) {
   const [query, setQuery] = useState("");
   const [title, setTitle] = useState("");
   const [when, setWhen] = useState(defaultLocalDateTime);
+  const [segment, setSegment] = useState<"" | "junior" | "senior">("");
+  const [reach, setReach] = useState<"direct" | "subtree">("direct");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -58,6 +60,9 @@ export function CreateEventForm({ onCreated }: { onCreated: () => void }) {
           nodeId,
           title,
           scheduledAt: new Date(when).toISOString(),
+          segment: segment || undefined,
+          // "direct" = just this group's members; "subtree" = everyone underneath.
+          rosterDepth: reach === "subtree" ? null : 1,
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -118,6 +123,26 @@ export function CreateEventForm({ onCreated }: { onCreated: () => void }) {
           className={inputClass}
         />
       </div>
+
+      {/* Audience */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("create.reach", "Who")}</label>
+          <select value={reach} onChange={(e) => setReach(e.target.value as "direct" | "subtree")} className={inputClass}>
+            <option value="direct">{t("create.reachDirect", "This group’s members")}</option>
+            <option value="subtree">{t("create.reachSubtree", "Everyone underneath")}</option>
+          </select>
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("create.segment", "Segment")}</label>
+          <select value={segment} onChange={(e) => setSegment(e.target.value as "" | "junior" | "senior")} className={inputClass}>
+            <option value="">{t("create.segmentAll", "All")}</option>
+            <option value="junior">{t("create.segmentJunior", "Junior")}</option>
+            <option value="senior">{t("create.segmentSenior", "Senior")}</option>
+          </select>
+        </div>
+      </div>
+
       <div className="flex justify-end">
         <Button onClick={submit} loading={saving} disabled={!nodeId || !title.trim() || saving}>
           {t("create.submit")}

@@ -19,7 +19,17 @@ type Segment = "junior" | "senior";
 
 export async function createEvent(
   ctx: AuthzContext,
-  input: { nodeId: string; title: string; scheduledAt: Date; segment?: Segment | null },
+  input: {
+    nodeId: string;
+    title: string;
+    scheduledAt: Date;
+    segment?: Segment | null;
+    // Audience: how deep the roster reaches under the anchor. 1 = direct members
+    // (a class's students / a park's own staff); null = the whole subtree (a park-
+    // wide or zone-wide session). Defaults to direct members.
+    rosterDepth?: number | null;
+    audiencePositionId?: string | null;
+  },
 ): Promise<{ id: string }> {
   const node = await orgNodeRepo.findById(input.nodeId);
   if (!node) throw new NotFoundError("Node not found");
@@ -34,8 +44,9 @@ export async function createEvent(
     orgNodeId: node.id,
     cityId: node.cityId,
     scheduledAt: input.scheduledAt,
-    rosterDepth: 1, // direct members at the node (minimal-create default)
+    rosterDepth: input.rosterDepth === undefined ? 1 : input.rosterDepth,
     segment: input.segment ?? null,
+    audiencePositionId: input.audiencePositionId ?? null,
     createdById: ctx.personId,
   });
 

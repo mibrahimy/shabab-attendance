@@ -28,6 +28,9 @@ const postSchema = z.object({
   title: z.string().min(1, "Title is required"),
   scheduledAt: z.string().datetime({ message: "Invalid date/time" }),
   segment: z.enum(["junior", "senior"]).optional(),
+  // null = whole subtree; a number = that many levels below the anchor (1 = direct).
+  rosterDepth: z.number().int().min(1).nullable().optional(),
+  audiencePositionId: z.string().min(1).nullable().optional(),
 });
 
 export async function POST(req: Request): Promise<NextResponse> {
@@ -42,6 +45,8 @@ export async function POST(req: Request): Promise<NextResponse> {
       title: parsed.data.title,
       scheduledAt: new Date(parsed.data.scheduledAt),
       segment: parsed.data.segment,
+      rosterDepth: parsed.data.rosterDepth,
+      audiencePositionId: parsed.data.audiencePositionId,
     });
     return NextResponse.json({ data: result });
   } catch (err) {
