@@ -226,6 +226,9 @@ model Assignment {
   @@index([orgNodeId])
   @@index([positionId])
   @@index([endDate])
+  // NOTE: a partial UNIQUE index "Assignment_active_unique" on
+  // (personId, positionId, orgNodeId) WHERE endDate IS NULL is hand-maintained in
+  // migration SQL (Prisma can't express partial-unique) — one active grant per tuple.
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

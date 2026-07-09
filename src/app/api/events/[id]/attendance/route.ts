@@ -17,7 +17,7 @@ const bodySchema = z.object({
         personId: z.string().min(1),
         status: z.enum(["present", "late", "absent", "excused"]),
         clientUpdatedAt: z.string().datetime(),
-        overrideReason: z.string().optional(),
+        overrideReason: z.string().max(500).optional(),
       }),
     )
     .max(500),
