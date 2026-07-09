@@ -183,6 +183,25 @@ export async function resolveRoster(event: EventRow): Promise<RosterPerson[]> {
   return out;
 }
 
+// Roster SIZE only — for the "today" list's per-event count. Fetches just distinct
+// personIds (not names/paths), so it's far lighter than resolveRoster when all we
+// need is a number.
+export async function countRoster(event: EventRow): Promise<number> {
+  const maxDepth =
+    event.rosterDepth == null ? Number.MAX_SAFE_INTEGER : event.orgNodeDepth + event.rosterDepth;
+  const rows = await prisma.assignment.findMany({
+    where: {
+      endDate: null,
+      orgNode: { path: { startsWith: event.orgNodePath }, depth: { lte: maxDepth } },
+      ...(event.audiencePositionId ? { positionId: event.audiencePositionId } : {}),
+      ...(event.segment ? { person: { segment: event.segment } } : {}),
+    },
+    select: { personId: true },
+    distinct: ["personId"],
+  });
+  return rows.length;
+}
+
 export type MarkInput = {
   personId: string;
   status: AttendanceStatus;
