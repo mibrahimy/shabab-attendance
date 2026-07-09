@@ -1,6 +1,6 @@
 # Development Plan — v2
 
-How we build the multi-city v2 app. Companion to `target-architecture.html` (the model), `v2-flows.html` (the flows), `ENGINEERING.md` (how we write code), and `MIGRATION.md` (the one-time ETL). **Plan only — no v2 app code written yet.**
+How we build the multi-city v2 app. Companion to `target-architecture.html` (the model), `v2-flows.html` (the flows), `ENGINEERING.md` (how we write code), and `MIGRATION.md` (the one-time ETL). **Status: Phases 0–4 built + hardened + redesigned; real Islamabad data migrated (see below).**
 
 ---
 
@@ -91,4 +91,18 @@ These are the software practices that don't live in one milestone. They were und
 
 ## Status
 
-Plan only. Next concrete deliverable: the **v2 Prisma schema** (Phase 0) against `DATABASE_URL_V2`.
+**Phases 0–4 built, hardened, and redesigned** on `feat/v2-multi-city-architecture`:
+- **0–3 (MVP):** org spine + `canActOn` authz, onboarding/hierarchy/roles, offline-first attendance
+  (IndexedDB outbox + foreground sync engine + service worker), all on the v2 schema/DB.
+- **4 (ETL):** real Islamabad data migrated + verified into the v2 Neon DB — 7 parks, ~316 people,
+  198 events, 2978 attendances, 2 programmes (`prisma/etl/`).
+- **Redesign:** command-center portal (sidebar + Operations/Administration groups + city switcher),
+  vibecoded language across dashboard/attendance/cities/hierarchy/roles/login.
+- **Hardening:** P0 (offline data-loss, JWT_SECRET fail-fast, legacy-route removal, FK RESTRICT +
+  transactional delete) + P1/P2 (moveSubtree, roster-count perf, RolesEditor dirty-tracking,
+  fetch-error states, assignment-uniqueness, SW deep-link, sticky errors, …).
+- **Teams per level** (derived head + children's heads) and **event audience controls** (reach + segment).
+
+Deployed on Railway. **Remaining before a real launch:** set a production `JWT_SECRET` on Railway
+(the app now refuses to boot without it); full Urdu/RTL; then Phases 5–8 (public intake + WhatsApp,
+assessments, hardening/security/reporting, native) — see the R&D notes.
