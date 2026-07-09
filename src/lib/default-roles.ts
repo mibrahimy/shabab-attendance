@@ -43,7 +43,43 @@ export const DEFAULT_ROLES: RoleDef[] = [
     ],
     isStudent: false,
   },
+  // Level leads — the head of each level (see HEAD_CANONICAL_BY_LEVEL). Adding these
+  // also lets Zones/Sectors/Countries be staffed at all (they had no attachable role).
+  {
+    canonicalKey: "sector_lead",
+    label: "Sector Lead",
+    attachLevelKey: "sector",
+    permissionKeys: ["manage_hierarchy", "add_member", "create_event", "mark_attendance", "view_attendance"],
+    isStudent: false,
+  },
+  {
+    canonicalKey: "zone_lead",
+    label: "Zone Lead",
+    attachLevelKey: "zone",
+    permissionKeys: ["manage_hierarchy", "add_member", "create_event", "mark_attendance", "view_attendance"],
+    isStudent: false,
+  },
+  {
+    canonicalKey: "country_lead",
+    label: "Country Lead",
+    attachLevelKey: "country",
+    permissionKeys: ["manage_hierarchy", "add_member", "create_event", "mark_attendance", "view_attendance"],
+    isStudent: false,
+  },
 ];
+
+// The single "head" position at each level. A node's TEAM = its own head + the
+// heads of its direct children (derived from live Assignments — see the hierarchy
+// service). Ops Lead is the superadmin; City Lead is the city_admin.
+export const HEAD_CANONICAL_BY_LEVEL: Record<string, string> = {
+  "global-root": "superadmin",
+  country: "country_lead",
+  city: "city_admin",
+  zone: "zone_lead",
+  sector: "sector_lead",
+  park: "park_admin",
+  class: "murabbi",
+};
 
 export function rolesForLevel(levelKey: string): RoleDef[] {
   return DEFAULT_ROLES.filter((r) => r.attachLevelKey === levelKey);

@@ -27,11 +27,14 @@ const canonicalNodeTypes = [
 
 const canonicalPositions = [
   { id: "cpos-superadmin", key: "superadmin", label: "Super Admin", rank: 0 },
-  { id: "cpos-city-admin", key: "city_admin", label: "City Admin", rank: 1 },
-  { id: "cpos-park-admin", key: "park_admin", label: "Park Admin", rank: 2 },
-  { id: "cpos-murabbi", key: "murabbi", label: "Murabbi", rank: 3 },
-  { id: "cpos-student", key: "student", label: "Student", rank: 4 },
-  { id: "cpos-city-poc", key: "city_poc", label: "City POC", rank: 5 },
+  { id: "cpos-country-lead", key: "country_lead", label: "Country Lead", rank: 1 },
+  { id: "cpos-city-admin", key: "city_admin", label: "City Admin", rank: 2 },
+  { id: "cpos-zone-lead", key: "zone_lead", label: "Zone Lead", rank: 3 },
+  { id: "cpos-sector-lead", key: "sector_lead", label: "Sector Lead", rank: 4 },
+  { id: "cpos-park-admin", key: "park_admin", label: "Park Admin", rank: 5 },
+  { id: "cpos-murabbi", key: "murabbi", label: "Murabbi", rank: 6 },
+  { id: "cpos-student", key: "student", label: "Student", rank: 7 },
+  { id: "cpos-city-poc", key: "city_poc", label: "City POC", rank: 8 },
 ];
 
 const functions = [

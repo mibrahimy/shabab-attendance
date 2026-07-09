@@ -11,10 +11,12 @@ describe("rolesForLevel", () => {
     expect(rolesForLevel("park").map((r) => r.canonicalKey)).toEqual(["park_admin"]);
   });
 
-  it("higher levels offer no direct-add roles yet", () => {
+  it("mid levels offer their lead role", () => {
+    expect(rolesForLevel("zone").map((r) => r.canonicalKey)).toEqual(["zone_lead"]);
+    expect(rolesForLevel("sector").map((r) => r.canonicalKey)).toEqual(["sector_lead"]);
+    expect(rolesForLevel("country").map((r) => r.canonicalKey)).toEqual(["country_lead"]);
+    // city's head is the provisioned city_admin (a protected role), not a direct-add role
     expect(rolesForLevel("city")).toEqual([]);
-    expect(rolesForLevel("zone")).toEqual([]);
-    expect(rolesForLevel("sector")).toEqual([]);
   });
 
   it("only the student role is profile-only (no login)", () => {
