@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import { useToast } from "@/components/ui/Toast";
 import { ATTENDANCE_STATUSES, type AttendanceStatus } from "@/lib/attendance-status";
 import { initials } from "@/lib/initials";
-import { queueMark, pending } from "@/lib/offline/outbox";
+import { queueMark, queueMany, pending } from "@/lib/offline/outbox";
 import { flush } from "@/lib/offline/sync-engine";
 import { overlayPending, tally } from "@/lib/offline/overlay";
 import { useOnline } from "@/lib/offline/use-online";
@@ -103,7 +103,8 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
     const next = rosterRef.current.map((e) => ({ ...e, status: "present" as AttendanceStatus }));
     applyRoster(next);
     setTouched(new Set(next.map((e) => e.personId)));
-    await Promise.all(next.map((e) => queueMark({ eventId, personId: e.personId, status: "present" })));
+    // One transaction + one store notification instead of N (big rosters).
+    await queueMany(next.map((e) => ({ eventId, personId: e.personId, status: "present" as AttendanceStatus })));
   }
 
   async function save() {
@@ -264,7 +265,14 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
                 {initials(e.name)}
               </span>
               <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-900">{e.name}</span>
-              {/* Segmented control — one grouped track, four choices (mockup). */}
+              {readOnly ? (
+                // Closed event → a static result badge, not a disabled control that
+                // reads as "broken".
+                <span className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold ${STATUS_SOLID[e.status]}`}>
+                  {t(`status.${e.status}`)}
+                </span>
+              ) : (
+              /* Segmented control — one grouped track, four choices (mockup). */
               <span className="flex shrink-0 gap-0.5 rounded-2xl bg-[#edeff5] p-0.5">
                 {ATTENDANCE_STATUSES.map((s) => {
                   // A button colors only once the row is touched — an untouched
@@ -288,6 +296,7 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
                   );
                 })}
               </span>
+              )}
             </li>
           ))}
         </ul>

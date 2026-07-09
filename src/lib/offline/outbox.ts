@@ -81,6 +81,31 @@ export async function queueMark(
   await refreshPending();
 }
 
+// Queue many marks in ONE transaction + ONE refreshPending (mark-all-present on a
+// large roster shouldn't fire N writes + N store notifications).
+export async function queueMany(
+  marks: (Omit<PendingMark, "key" | "clientUpdatedAt"> & { clientUpdatedAt?: string })[],
+): Promise<void> {
+  if (marks.length === 0) return;
+  const database = await db();
+  const now = new Date().toISOString();
+  const tx = database.transaction(STORE, "readwrite");
+  await Promise.all(
+    marks.map((m) =>
+      tx.store.put({
+        key: `${m.eventId}:${m.personId}`,
+        eventId: m.eventId,
+        personId: m.personId,
+        status: m.status,
+        clientUpdatedAt: m.clientUpdatedAt ?? now,
+        overrideReason: m.overrideReason,
+      }),
+    ),
+  );
+  await tx.done;
+  await refreshPending();
+}
+
 export async function pending(eventId?: string): Promise<PendingMark[]> {
   const database = await db();
   return eventId
