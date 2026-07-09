@@ -8,7 +8,7 @@ import { prisma } from "@/server/db";
 import { NotFoundError, ValidationError } from "@/server/errors";
 import { requirePermission } from "@/server/auth/can-act-on";
 import { nextLevel, type Level } from "@/lib/org-levels";
-import { DEFAULT_ROLES, type RoleDef } from "@/lib/default-roles";
+import { DEFAULT_ROLES, HEAD_CANONICAL_BY_LEVEL, type RoleDef } from "@/lib/default-roles";
 import { summarizeLevels, type LevelCount } from "@/lib/city-summary";
 import { pktDayRange } from "@/lib/pkt-day";
 import * as orgNodeRepo from "@/server/repositories/org-node-repo";
@@ -150,6 +150,32 @@ export async function getCityDashboard(ctx: AuthzContext, cityId: string): Promi
       status: r.status, ...(byEvent.get(r.id) ?? { present: 0, total: 0 }),
     })),
   };
+}
+
+export type NodeTeam = {
+  node: { id: string; name: string; levelKey: string };
+  members: assignmentRepo.TeamMember[];
+};
+
+// A node's derived team: its own head (the level's head position) + the heads of
+// its direct children. No Team table — computed live from active assignments.
+export async function getNodeTeam(ctx: AuthzContext, nodeId: string): Promise<NodeTeam> {
+  const node = await orgNodeRepo.findById(nodeId);
+  if (!node) throw new NotFoundError("Node not found");
+  canManage(ctx, node);
+  if (!node.cityId) throw new ValidationError("Teams are resolved within a city");
+
+  const levels = await nodeTypeRepo.listCityLevels(node.cityId);
+  const nodeLevel = levels.find((l) => l.id === node.typeId);
+  if (!nodeLevel) throw new ValidationError("Unknown level");
+  const childLevel = nextLevel(levels, nodeLevel.rank);
+
+  const headForNode = HEAD_CANONICAL_BY_LEVEL[nodeLevel.key];
+  const headForChild = childLevel ? (HEAD_CANONICAL_BY_LEVEL[childLevel.key] ?? null) : null;
+  const members = headForNode
+    ? await assignmentRepo.listTeam(node.id, headForNode, headForChild)
+    : [];
+  return { node: { id: node.id, name: node.name, levelKey: nodeLevel.key }, members };
 }
 
 export async function addNode(

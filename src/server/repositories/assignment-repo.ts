@@ -3,6 +3,43 @@
 import { prisma } from "@/server/db";
 import type { Db } from "./org-node-repo";
 
+export type TeamMember = {
+  personId: string; name: string; roleLabel: string; nodeId: string; nodeName: string; own: boolean;
+};
+
+// A node's TEAM: the head(s) anchored at the node itself (headForNode canonical)
+// plus the heads of its DIRECT children (headForChild canonical). Derived live
+// from active assignments — no Team table. `own` distinguishes the node's own head
+// from the rolled-up child heads.
+export async function listTeam(
+  nodeId: string,
+  headForNode: string,
+  headForChild: string | null,
+): Promise<TeamMember[]> {
+  const rows = await prisma.assignment.findMany({
+    where: {
+      endDate: null,
+      OR: [
+        { orgNodeId: nodeId, position: { canonical: { key: headForNode } } },
+        ...(headForChild
+          ? [{ orgNode: { parentId: nodeId }, position: { canonical: { key: headForChild } } }]
+          : []),
+      ],
+    },
+    select: {
+      orgNodeId: true,
+      person: { select: { id: true, name: true } },
+      position: { select: { label: true } },
+      orgNode: { select: { name: true } },
+    },
+    orderBy: [{ orgNode: { name: "asc" } }, { person: { name: "asc" } }],
+  });
+  return rows.map((r) => ({
+    personId: r.person.id, name: r.person.name, roleLabel: r.position.label,
+    nodeId: r.orgNodeId, nodeName: r.orgNode.name, own: r.orgNodeId === nodeId,
+  }));
+}
+
 export async function create(
   input: {
     personId: string;
