@@ -123,6 +123,18 @@ export async function countInCity(cityId: string): Promise<number> {
   return prisma.event.count({ where: { cityId } });
 }
 
+// Ids of the most-recent COMPLETED events anchored at a node (newest-first) — for
+// the report's trend trail. Rates are computed in the service via statusByEvents.
+export async function recentCompletedAtNode(orgNodeId: string, limit: number): Promise<string[]> {
+  const rows = await prisma.event.findMany({
+    where: { orgNodeId, status: "completed" },
+    orderBy: { scheduledAt: "desc" },
+    take: limit,
+    select: { id: true },
+  });
+  return rows.map((r) => r.id);
+}
+
 export type RecentEvent = {
   id: string; title: string; scheduledAt: Date; status: EventStatus; nodeName: string;
 };
@@ -147,16 +159,22 @@ export type RosterPerson = {
   nodePath: string; // the assignment's node path — used for the marker-scope ∩
 };
 
+// The org-node predicate for an event's roster: the anchor subtree (path prefix),
+// bounded by rosterDepth. rosterDepth null = whole subtree → NO depth bound (a
+// large sentinel would overflow Postgres INT4). A number bounds it.
+function rosterNodeWhere(event: EventRow) {
+  return event.rosterDepth == null
+    ? { path: { startsWith: event.orgNodePath } }
+    : { path: { startsWith: event.orgNodePath }, depth: { lte: event.orgNodeDepth + event.rosterDepth } };
+}
+
 // Live roster: active assignments under the event's anchor within the depth band,
 // filtered by the event's segment / audience position when set.
 export async function resolveRoster(event: EventRow): Promise<RosterPerson[]> {
-  const maxDepth =
-    event.rosterDepth == null ? Number.MAX_SAFE_INTEGER : event.orgNodeDepth + event.rosterDepth;
-
   const rows = await prisma.assignment.findMany({
     where: {
       endDate: null,
-      orgNode: { path: { startsWith: event.orgNodePath }, depth: { lte: maxDepth } },
+      orgNode: rosterNodeWhere(event),
       ...(event.audiencePositionId ? { positionId: event.audiencePositionId } : {}),
       ...(event.segment ? { person: { segment: event.segment } } : {}),
     },
@@ -187,12 +205,10 @@ export async function resolveRoster(event: EventRow): Promise<RosterPerson[]> {
 // personIds (not names/paths), so it's far lighter than resolveRoster when all we
 // need is a number.
 export async function countRoster(event: EventRow): Promise<number> {
-  const maxDepth =
-    event.rosterDepth == null ? Number.MAX_SAFE_INTEGER : event.orgNodeDepth + event.rosterDepth;
   const rows = await prisma.assignment.findMany({
     where: {
       endDate: null,
-      orgNode: { path: { startsWith: event.orgNodePath }, depth: { lte: maxDepth } },
+      orgNode: rosterNodeWhere(event),
       ...(event.audiencePositionId ? { positionId: event.audiencePositionId } : {}),
       ...(event.segment ? { person: { segment: event.segment } } : {}),
     },
