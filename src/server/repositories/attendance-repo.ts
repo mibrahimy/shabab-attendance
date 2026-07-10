@@ -13,12 +13,19 @@ export type MarkRow = {
   clientUpdatedAt: Date | null;
 };
 
-// City-wide attendance rate: present marks over total marks across all of a city's
-// events. Two cheap counts for the dashboard headline.
-export async function rateInCity(cityId: string): Promise<{ present: number; total: number }> {
+export type DateRange = { start: Date; end: Date };
+
+function eventWhere(cityId: string, range?: DateRange) {
+  return range ? { cityId, scheduledAt: { gte: range.start, lt: range.end } } : { cityId };
+}
+
+// City-wide attendance rate: present marks over total marks across a city's events
+// (optionally within a date range). Two cheap counts for the dashboard/report.
+export async function rateInCity(cityId: string, range?: DateRange): Promise<{ present: number; total: number }> {
+  const ev = eventWhere(cityId, range);
   const [present, total] = await Promise.all([
-    prisma.attendance.count({ where: { event: { cityId }, status: "present" } }),
-    prisma.attendance.count({ where: { event: { cityId } } }),
+    prisma.attendance.count({ where: { event: ev, status: "present" } }),
+    prisma.attendance.count({ where: { event: ev } }),
   ]);
   return { present, total };
 }
@@ -47,10 +54,11 @@ export async function statusByEvents(
 // City-wide attendance counts per status — the report's status breakdown.
 export async function statusBreakdownInCity(
   cityId: string,
+  range?: DateRange,
 ): Promise<Record<AttendanceStatus, number>> {
   const rows = await prisma.attendance.groupBy({
     by: ["status"],
-    where: { event: { cityId } },
+    where: { event: eventWhere(cityId, range) },
     _count: { _all: true },
   });
   const out: Record<AttendanceStatus, number> = { present: 0, late: 0, absent: 0, excused: 0 };

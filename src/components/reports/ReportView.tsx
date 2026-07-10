@@ -4,8 +4,16 @@
 // breakdown, and a by-node table sorted lowest-first for triage. Client-side CSV
 // export from the same data.
 
+import Link from "next/link";
 import { Trail } from "@/components/home/Trail";
 import type { CityReport } from "@/server/services/report-service";
+
+const PERIODS: { key: string; label: string }[] = [
+  { key: "30", label: "30d" },
+  { key: "90", label: "90d" },
+  { key: "365", label: "1y" },
+  { key: "all", label: "All" },
+];
 
 const STATUS_STYLE: Record<string, string> = {
   present: "bg-emerald-50 text-emerald-700",
@@ -31,7 +39,7 @@ function download(filename: string, text: string) {
   URL.revokeObjectURL(url);
 }
 
-export function ReportView({ report }: { report: CityReport }) {
+export function ReportView({ report, cityId, period }: { report: CityReport; cityId: string; period: string }) {
   const { overall, byStatus, byNode, trend } = report;
 
   function exportCsv() {
@@ -50,12 +58,27 @@ export function ReportView({ report }: { report: CityReport }) {
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Reports</h1>
           <p className="mt-0.5 text-sm text-slate-500">{report.city.name} · attendance analytics</p>
         </div>
-        <button
-          onClick={exportCsv}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:border-[#2f55ea]/40 hover:text-[#2f55ea]"
-        >
-          Export CSV
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="inline-flex rounded-xl border border-slate-200/70 bg-white p-0.5 text-sm shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+            {PERIODS.map((p) => (
+              <Link
+                key={p.key}
+                href={`/reports/${cityId}?period=${p.key}`}
+                className={`rounded-lg px-3 py-1.5 font-medium transition ${
+                  period === p.key ? "bg-[#2f55ea] text-white" : "text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                {p.label}
+              </Link>
+            ))}
+          </div>
+          <button
+            onClick={exportCsv}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:border-[#2f55ea]/40 hover:text-[#2f55ea]"
+          >
+            Export CSV
+          </button>
+        </div>
       </div>
 
       {/* Headline: Trail + overall */}

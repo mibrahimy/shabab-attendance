@@ -139,11 +139,18 @@ export type ReportEvent = {
   id: string; orgNodeId: string; nodeName: string; nodeLevel: string; scheduledAt: Date;
 };
 
-// All completed sessions in a city (oldest→newest) with their anchor node's name +
-// level — the raw material for the reporting aggregates.
-export async function listCompletedInCity(cityId: string): Promise<ReportEvent[]> {
+// All completed sessions in a city (oldest→newest, optionally within a date range)
+// with their anchor node's name + level — raw material for the reporting aggregates.
+export async function listCompletedInCity(
+  cityId: string,
+  range?: { start: Date; end: Date },
+): Promise<ReportEvent[]> {
   const rows = await prisma.event.findMany({
-    where: { cityId, status: "completed" },
+    where: {
+      cityId,
+      status: "completed",
+      ...(range ? { scheduledAt: { gte: range.start, lt: range.end } } : {}),
+    },
     orderBy: { scheduledAt: "asc" },
     select: {
       id: true, orgNodeId: true, scheduledAt: true,

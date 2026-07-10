@@ -25,15 +25,21 @@ function pct(present: number, total: number): number {
   return total > 0 ? Math.round((present / total) * 100) : 0;
 }
 
-export async function getCityReport(ctx: AuthzContext, cityId: string): Promise<CityReport> {
+export type DateRange = { start: Date; end: Date };
+
+export async function getCityReport(
+  ctx: AuthzContext,
+  cityId: string,
+  range?: DateRange,
+): Promise<CityReport> {
   const city = await orgNodeRepo.findById(cityId);
   if (!city) throw new NotFoundError("City not found");
   requirePermission(ctx, "view_attendance", { path: city.path, functionId: null });
 
   const [overall, byStatus, events] = await Promise.all([
-    attendanceRepo.rateInCity(cityId),
-    attendanceRepo.statusBreakdownInCity(cityId),
-    eventRepo.listCompletedInCity(cityId),
+    attendanceRepo.rateInCity(cityId, range),
+    attendanceRepo.statusBreakdownInCity(cityId, range),
+    eventRepo.listCompletedInCity(cityId, range),
   ]);
   const ratesByEvent = await attendanceRepo.statusByEvents(events.map((e) => e.id));
 
