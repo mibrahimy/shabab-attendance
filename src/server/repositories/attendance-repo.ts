@@ -44,6 +44,20 @@ export async function statusByEvents(
   return m;
 }
 
+// City-wide attendance counts per status — the report's status breakdown.
+export async function statusBreakdownInCity(
+  cityId: string,
+): Promise<Record<AttendanceStatus, number>> {
+  const rows = await prisma.attendance.groupBy({
+    by: ["status"],
+    where: { event: { cityId } },
+    _count: { _all: true },
+  });
+  const out: Record<AttendanceStatus, number> = { present: 0, late: 0, absent: 0, excused: 0 };
+  for (const r of rows) out[r.status] = r._count._all;
+  return out;
+}
+
 // Number of attendance rows per event, for a set of events — one grouped query
 // instead of one listByEvent per event (avoids the N+1 in the "today" list).
 export async function countByEvents(eventIds: string[]): Promise<Map<string, number>> {

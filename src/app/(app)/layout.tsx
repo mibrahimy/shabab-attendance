@@ -39,6 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (cityId) {
     admin.push({ href: `/hierarchy/${cityId}`, label: t("nav.hierarchy"), icon: "hierarchy" });
     admin.push({ href: `/roles/${cityId}`, label: t("nav.roles"), icon: "roles" });
+    admin.push({ href: `/reports/${cityId}`, label: t("nav.reports"), icon: "reports" });
   }
   if (ctx.isSuperadmin) admin.push({ href: "/cities", label: t("nav.cities"), icon: "cities" });
 

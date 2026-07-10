@@ -135,6 +135,27 @@ export async function recentCompletedAtNode(orgNodeId: string, limit: number): P
   return rows.map((r) => r.id);
 }
 
+export type ReportEvent = {
+  id: string; orgNodeId: string; nodeName: string; nodeLevel: string; scheduledAt: Date;
+};
+
+// All completed sessions in a city (oldest→newest) with their anchor node's name +
+// level — the raw material for the reporting aggregates.
+export async function listCompletedInCity(cityId: string): Promise<ReportEvent[]> {
+  const rows = await prisma.event.findMany({
+    where: { cityId, status: "completed" },
+    orderBy: { scheduledAt: "asc" },
+    select: {
+      id: true, orgNodeId: true, scheduledAt: true,
+      orgNode: { select: { name: true, type: { select: { canonical: { select: { key: true } } } } } },
+    },
+  });
+  return rows.map((r) => ({
+    id: r.id, orgNodeId: r.orgNodeId, nodeName: r.orgNode.name,
+    nodeLevel: r.orgNode.type.canonical.key, scheduledAt: r.scheduledAt,
+  }));
+}
+
 export type RecentEvent = {
   id: string; title: string; scheduledAt: Date; status: EventStatus; nodeName: string;
 };
