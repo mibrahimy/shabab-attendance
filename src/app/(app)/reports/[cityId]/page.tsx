@@ -9,6 +9,13 @@ import { ReportView } from "@/components/reports/ReportView";
 // Period presets → a day window (null = all time).
 const PERIODS: Record<string, number | null> = { all: null, "30": 30, "90": 90, "365": 365 };
 
+function rangeForPeriod(period: string): { start: Date; end: Date } | undefined {
+  const days = PERIODS[period] ?? null;
+  if (!days) return undefined;
+  const now = Date.now();
+  return { start: new Date(now - days * 86400e3), end: new Date(now + 86400e3) };
+}
+
 export default async function ReportsPage({
   params,
   searchParams,
@@ -18,8 +25,7 @@ export default async function ReportsPage({
 }) {
   const { cityId } = await params;
   const period = (await searchParams).period ?? "all";
-  const days = PERIODS[period] ?? null;
-  const range = days ? { start: new Date(Date.now() - days * 86400e3), end: new Date(Date.now() + 86400e3) } : undefined;
+  const range = rangeForPeriod(period);
   const ctx = await getAuthzContext();
 
   let report: Awaited<ReturnType<typeof reportService.getCityReport>>;
