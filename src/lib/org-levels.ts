@@ -4,9 +4,11 @@
 
 export type Level = {
   id: string; // NodeType id (per-city)
-  key: string; // canonical key: zone | sector | park | class | city | ...
+  key: string; // level key: zone | sector | park | class | city | <custom> | ...
   label: string;
-  rank: number; // canonical rank
+  rank: number; // level rank (order in the template)
+  color?: string | null; // per-level badge color (data-driven)
+  headPositionKey?: string | null; // the role key that heads this level
 };
 
 // The level to use for a new child under a parent at `parentRank`, or null if the

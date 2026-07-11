@@ -11,7 +11,10 @@ export async function findNationalByCanonicalKey(key: string): Promise<{ id: str
   });
 }
 
-export type CityLevel = { id: string; key: string; label: string; rank: number };
+export type CityLevel = {
+  id: string; key: string; label: string; rank: number;
+  color: string | null; headPositionKey: string | null;
+};
 
 // The default per-city level template, in order.
 const TEMPLATE_CANONICAL_KEYS = ["zone", "sector", "park", "class"];
@@ -47,8 +50,11 @@ export async function ensureCityTemplate(cityId: string, db: Db = prisma): Promi
 export async function listCityLevels(cityId: string): Promise<CityLevel[]> {
   const rows = await prisma.nodeType.findMany({
     where: { OR: [{ cityId }, { cityId: null, key: "city" }] },
-    select: { id: true, label: true, rank: true, key: true },
+    select: { id: true, label: true, rank: true, key: true, color: true, headPositionKey: true },
     orderBy: { rank: "asc" },
   });
-  return rows.map((r) => ({ id: r.id, key: r.key ?? "", label: r.label, rank: r.rank }));
+  return rows.map((r) => ({
+    id: r.id, key: r.key ?? "", label: r.label, rank: r.rank,
+    color: r.color, headPositionKey: r.headPositionKey,
+  }));
 }

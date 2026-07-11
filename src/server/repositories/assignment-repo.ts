@@ -20,9 +20,9 @@ export async function listTeam(
     where: {
       endDate: null,
       OR: [
-        { orgNodeId: nodeId, position: { canonical: { key: headForNode } } },
+        { orgNodeId: nodeId, position: { key: headForNode } },
         ...(headForChild
-          ? [{ orgNode: { parentId: nodeId }, position: { canonical: { key: headForChild } } }]
+          ? [{ orgNode: { parentId: nodeId }, position: { key: headForChild } }]
           : []),
       ],
     },

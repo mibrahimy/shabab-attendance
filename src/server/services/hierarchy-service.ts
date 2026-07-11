@@ -8,7 +8,7 @@ import { prisma } from "@/server/db";
 import { NotFoundError, ValidationError } from "@/server/errors";
 import { requirePermission } from "@/server/auth/can-act-on";
 import { nextLevel, type Level } from "@/lib/org-levels";
-import { DEFAULT_ROLES, HEAD_CANONICAL_BY_LEVEL, type RoleDef } from "@/lib/default-roles";
+import { DEFAULT_ROLES, type RoleDef } from "@/lib/default-roles";
 import { summarizeLevels, type LevelCount } from "@/lib/city-summary";
 import { pktDayRange } from "@/lib/pkt-day";
 import { pktWeekRange, pktPrevWeekRange } from "@/lib/pkt-week";
@@ -184,8 +184,9 @@ export async function getNodeTeam(ctx: AuthzContext, nodeId: string): Promise<No
   if (!nodeLevel) throw new ValidationError("Unknown level");
   const childLevel = nextLevel(levels, nodeLevel.rank);
 
-  const headForNode = HEAD_CANONICAL_BY_LEVEL[nodeLevel.key];
-  const headForChild = childLevel ? (HEAD_CANONICAL_BY_LEVEL[childLevel.key] ?? null) : null;
+  // Each level names its own head role (data-driven, per city).
+  const headForNode = nodeLevel.headPositionKey ?? undefined;
+  const headForChild = childLevel?.headPositionKey ?? null;
   const members = headForNode
     ? await assignmentRepo.listTeam(node.id, headForNode, headForChild)
     : [];
