@@ -4,9 +4,66 @@
 // breakdown, and a by-node table sorted lowest-first for triage. Client-side CSV
 // export from the same data.
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Trail } from "@/components/home/Trail";
 import type { CityReport } from "@/server/services/report-service";
+
+type PersonHit = { id: string; name: string; nodeName: string | null };
+
+function PeopleSearch({ cityId }: { cityId: string }) {
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState<PersonHit[]>([]);
+  useEffect(() => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => {
+      const query = q.trim();
+      if (query.length < 2) {
+        setResults([]);
+        return;
+      }
+      fetch(`/api/cities/${cityId}/people?q=${encodeURIComponent(query)}`, { signal: ctrl.signal })
+        .then((r) => r.json())
+        .then((j) => setResults(j?.data?.people ?? []))
+        .catch(() => {});
+    }, 250);
+    return () => {
+      clearTimeout(timer);
+      ctrl.abort();
+    };
+  }, [q, cityId]);
+
+  return (
+    <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Find a person’s attendance…"
+        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#2f55ea] focus:ring-2 focus:ring-[#2f55ea]/15"
+      />
+      {results.length > 0 && (
+        <ul className="mt-2 divide-y divide-slate-100">
+          {results.map((p) => (
+            <li key={p.id}>
+              <Link
+                href={`/reports/${cityId}/person/${p.id}`}
+                className="flex items-center justify-between gap-3 rounded-lg px-2 py-2 transition hover:bg-slate-50"
+              >
+                <span className="flex items-center gap-2.5">
+                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#2f55ea]/10 text-[11px] font-bold text-[#2f55ea]">
+                    {p.name.charAt(0)}
+                  </span>
+                  <span className="text-sm font-medium text-slate-900">{p.name}</span>
+                </span>
+                {p.nodeName && <span className="text-xs text-slate-400">{p.nodeName}</span>}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 const PERIODS: { key: string; label: string }[] = [
   { key: "30", label: "30d" },
@@ -112,6 +169,9 @@ export function ReportView({ report, cityId, period }: { report: CityReport; cit
           </div>
         ))}
       </div>
+
+      {/* People search → per-person report */}
+      <PeopleSearch cityId={cityId} />
 
       {/* By node — lowest first (triage) */}
       <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">

@@ -9,6 +9,7 @@ import type { AttendanceStatus } from "@/lib/attendance-status";
 import * as orgNodeRepo from "@/server/repositories/org-node-repo";
 import * as eventRepo from "@/server/repositories/event-repo";
 import * as attendanceRepo from "@/server/repositories/attendance-repo";
+import * as personRepo from "@/server/repositories/person-repo";
 
 export type CityReport = {
   city: { id: string; name: string };
@@ -23,6 +24,65 @@ export type CityReport = {
 
 function pct(present: number, total: number): number {
   return total > 0 ? Math.round((present / total) * 100) : 0;
+}
+
+async function requireCityView(ctx: AuthzContext, cityId: string): Promise<orgNodeRepo.OrgNodeRow> {
+  const city = await orgNodeRepo.findById(cityId);
+  if (!city) throw new NotFoundError("City not found");
+  requirePermission(ctx, "view_attendance", { path: city.path, functionId: null });
+  return city;
+}
+
+// People-search for the reports drill-down (scoped by view_attendance on the city).
+export async function searchPeople(
+  ctx: AuthzContext,
+  cityId: string,
+  query: string,
+): Promise<personRepo.PersonSearchResult[]> {
+  await requireCityView(ctx, cityId);
+  const q = query.trim();
+  if (q.length < 2) return [];
+  return personRepo.searchInCity(cityId, q, 20);
+}
+
+export type PersonReport = {
+  person: { id: string; name: string };
+  overall: { present: number; total: number; rate: number };
+  byStatus: Record<AttendanceStatus, number>;
+  trend: number[]; // per-session "lit" value (present/late 100, excused 40, absent 0), oldest→newest
+  sessions: { eventId: string; title: string; when: string; nodeName: string; status: AttendanceStatus }[];
+};
+
+const LIT: Record<AttendanceStatus, number> = { present: 100, late: 100, excused: 40, absent: 0 };
+
+// One person's attendance history + rollups. Scoped by view_attendance on the
+// person's city.
+export async function getPersonReport(ctx: AuthzContext, personId: string): Promise<PersonReport> {
+  const person = await personRepo.findById(personId);
+  if (!person) throw new NotFoundError("Person not found");
+  if (!person.cityId) throw new NotFoundError("Person has no city");
+  await requireCityView(ctx, person.cityId);
+
+  const rows = await attendanceRepo.listByPerson(personId);
+  const byStatus: Record<AttendanceStatus, number> = { present: 0, late: 0, absent: 0, excused: 0 };
+  for (const r of rows) byStatus[r.status] += 1;
+  const present = byStatus.present;
+  const total = rows.length;
+
+  const trend = rows
+    .slice(0, 14)
+    .reverse()
+    .map((r) => LIT[r.status]);
+
+  return {
+    person: { id: person.id, name: person.name },
+    overall: { present, total, rate: pct(present, total) },
+    byStatus,
+    trend,
+    sessions: rows.map((r) => ({
+      eventId: r.eventId, title: r.title, when: r.when.toISOString(), nodeName: r.nodeName, status: r.status,
+    })),
+  };
 }
 
 export type DateRange = { start: Date; end: Date };

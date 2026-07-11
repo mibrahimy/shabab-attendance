@@ -51,6 +51,27 @@ export async function statusByEvents(
   return m;
 }
 
+export type PersonAttendanceRow = {
+  eventId: string; title: string; when: Date; nodeName: string; status: AttendanceStatus;
+};
+
+// A person's attendance history (newest-first) with each session's title/date/node
+// — for the per-person report.
+export async function listByPerson(personId: string): Promise<PersonAttendanceRow[]> {
+  const rows = await prisma.attendance.findMany({
+    where: { personId },
+    orderBy: { event: { scheduledAt: "desc" } },
+    select: {
+      status: true,
+      event: { select: { id: true, title: true, scheduledAt: true, orgNode: { select: { name: true } } } },
+    },
+  });
+  return rows.map((r) => ({
+    eventId: r.event.id, title: r.event.title, when: r.event.scheduledAt,
+    nodeName: r.event.orgNode.name, status: r.status,
+  }));
+}
+
 // City-wide attendance counts per status — the report's status breakdown.
 export async function statusBreakdownInCity(
   cityId: string,
