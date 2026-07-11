@@ -183,8 +183,8 @@ export async function moveSubtree(
   // substring(... from N) is 1-indexed; oldPrefix.length + 1 starts after the prefix.
   await db.$executeRaw`
     UPDATE "OrgNode"
-    SET "path" = ${newNodePath} || substring("path" from ${oldPrefix.length + 1}),
-        "depth" = "depth" + ${depthDelta},
+    SET "path" = ${newNodePath} || substring("path" from ${oldPrefix.length + 1}::int),
+        "depth" = "depth" + ${depthDelta}::int,
         "updatedAt" = now()
     WHERE "path" LIKE ${oldPrefix + "%"}`;
   await db.orgNode.update({ where: { id: node.id }, data: { parentId: newParent.id } });

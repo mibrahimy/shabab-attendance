@@ -54,3 +54,6 @@ next-env.d.ts
 
 # ETL local artifacts
 prisma/etl/credentials.local.json
+
+# Zone-lead mapping (personal data — local only)
+prisma/zone-leads.local.json

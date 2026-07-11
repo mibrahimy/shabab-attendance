@@ -66,6 +66,15 @@ export const DEFAULT_ROLES: RoleDef[] = [
     permissionKeys: ["manage_hierarchy", "add_member", "create_event", "mark_attendance", "view_attendance"],
     isStudent: false,
   },
+  // City-level staff (a point of contact / coordinator) — lets the city node itself
+  // be staffed. The city HEAD is still city_admin (onboarding-only, protected).
+  {
+    canonicalKey: "city_poc",
+    label: "City POC",
+    attachLevelKey: "city",
+    permissionKeys: ["create_event", "mark_attendance", "view_attendance"],
+    isStudent: false,
+  },
 ];
 
 // The single "head" position at each level. A node's TEAM = its own head + the
@@ -83,6 +92,16 @@ export const HEAD_CANONICAL_BY_LEVEL: Record<string, string> = {
 
 export function rolesForLevel(levelKey: string): RoleDef[] {
   return DEFAULT_ROLES.filter((r) => r.attachLevelKey === levelKey);
+}
+
+// The level a canonical role attaches at: a member role's own attachLevelKey, or —
+// for head roles not in DEFAULT_ROLES (city_admin, superadmin) — the level it heads.
+// Used to stamp Position.attachLevelKey when a role is first instantiated.
+export function attachLevelForRole(canonicalKey: string): string | null {
+  const role = DEFAULT_ROLES.find((r) => r.canonicalKey === canonicalKey);
+  if (role) return role.attachLevelKey;
+  const headed = Object.entries(HEAD_CANONICAL_BY_LEVEL).find(([, head]) => head === canonicalKey);
+  return headed ? headed[0] : null;
 }
 
 export function findRole(roleKey: string): RoleDef | undefined {

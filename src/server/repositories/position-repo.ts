@@ -5,7 +5,7 @@
 
 import { prisma } from "@/server/db";
 import { diffSets } from "@/lib/diff-sets";
-import { PROTECTED_CANONICAL_KEYS } from "@/lib/default-roles";
+import { PROTECTED_CANONICAL_KEYS, attachLevelForRole } from "@/lib/default-roles";
 import type { Db } from "./org-node-repo";
 
 const CITY_ADMIN_CANONICAL_KEY = "city_admin";
@@ -51,6 +51,9 @@ export async function findOrCreateRolePosition(
       data: {
         cityId,
         canonicalId: canonical.id,
+        // Self-describing per-city role identity (data-driven levels/teams read these).
+        key: canonicalKey,
+        attachLevelKey: attachLevelForRole(canonicalKey),
         label: canonical.label,
         rank: canonical.rank,
         functionId: null,
