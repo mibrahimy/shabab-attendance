@@ -2,6 +2,7 @@
 // permission check throws ForbiddenError for anyone outside the city's scope,
 // which we render as a friendly panel.
 
+import Link from "next/link";
 import { getAuthzContext } from "@/server/auth/authz-context";
 import * as hierarchyService from "@/server/services/hierarchy-service";
 import { ForbiddenError, NotFoundError } from "@/server/errors";
@@ -31,12 +32,20 @@ export default async function HierarchyPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#2f55ea]">
-          Administration
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#2f55ea]">
+            Administration
+          </div>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Hierarchy</h1>
+          <p className="mt-0.5 text-sm text-slate-500">{tree.city.name} · structure &amp; people</p>
         </div>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Hierarchy</h1>
-        <p className="mt-0.5 text-sm text-slate-500">{tree.city.name} · structure &amp; people</p>
+        <Link
+          href={`/hierarchy/${cityId}/levels`}
+          className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:border-[#2f55ea]/40 hover:text-[#2f55ea]"
+        >
+          Manage levels
+        </Link>
       </div>
       <HierarchyBuilder
         city={{ id: tree.city.id, name: tree.city.name }}
