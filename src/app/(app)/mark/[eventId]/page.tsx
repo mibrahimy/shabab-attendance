@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/components/ui/Toast";
 import SearchInput from "@/components/ui/SearchInput";
+import { EventActionsMenu } from "@/components/attendance/EventActionsMenu";
 import { ATTENDANCE_STATUSES, type AttendanceStatus } from "@/lib/attendance-status";
 import { initials } from "@/lib/initials";
 import { queueMark, queueMany, pending } from "@/lib/offline/outbox";
@@ -212,18 +213,26 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
   return (
     <div className="pb-28">
       {/* Header */}
-      <div className="mb-3">
-        <button onClick={() => router.push("/mark")} className="text-sm text-gray-400 hover:text-gray-600">
-          ‹ {t("today.title")}
-        </button>
-        <h1 className="mt-1 text-xl font-semibold tracking-tight text-gray-900">
-          {title || t("mark.title")}
-        </h1>
-        <p className="text-sm text-gray-500">
-          {time && <span className="font-num">{time}</span>}
-          {time && " · "}
-          {t("today.people", { count: roster.length })}
-        </p>
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <button onClick={() => router.push("/mark")} className="text-sm text-gray-400 hover:text-gray-600">
+            ‹ {t("today.title")}
+          </button>
+          <h1 className="mt-1 text-xl font-semibold tracking-tight text-gray-900">
+            {title || t("mark.title")}
+          </h1>
+          <p className="text-sm text-gray-500">
+            {time && <span className="font-num">{time}</span>}
+            {time && " · "}
+            {t("today.people", { count: roster.length })}
+          </p>
+        </div>
+        {!readOnly && scheduledAt && (
+          <EventActionsMenu
+            event={{ id: eventId, title, scheduledAt }}
+            onChanged={() => { setLoading(true); void load(); }}
+          />
+        )}
       </div>
 
       {/* Completion progress — how many the marker has acted on */}

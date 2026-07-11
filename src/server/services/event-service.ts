@@ -90,6 +90,65 @@ export async function previewRosterSize(
   return eventRepo.countRoster(draft);
 }
 
+// Edit an event's title and/or time. Requires create_event on the event's node
+// (the same authority that created it). Node/audience aren't editable (would orphan
+// existing marks). At least one field must be present.
+export async function updateEvent(
+  ctx: AuthzContext,
+  id: string,
+  patch: { title?: string; scheduledAt?: Date },
+): Promise<void> {
+  const event = await eventRepo.findById(id);
+  if (!event) throw new NotFoundError("Event not found");
+  requirePermission(ctx, CREATE_EVENT, { path: event.orgNodePath, functionId: null });
+
+  const data: { title?: string; scheduledAt?: Date } = {};
+  if (patch.title !== undefined) {
+    const title = patch.title.trim();
+    if (!title) throw new ValidationError("Title is required");
+    data.title = title;
+  }
+  if (patch.scheduledAt !== undefined) {
+    if (Number.isNaN(patch.scheduledAt.getTime())) throw new ValidationError("Invalid date/time");
+    data.scheduledAt = patch.scheduledAt;
+  }
+  if (data.title === undefined && data.scheduledAt === undefined) {
+    throw new ValidationError("Nothing to update");
+  }
+
+  await eventRepo.update(id, data);
+  await auditRepo.record({
+    actorPersonId: ctx.personId,
+    action: "update_event",
+    targetType: "Event",
+    targetId: id,
+    cityId: event.cityId,
+    metadata: {
+      ...(data.title !== undefined ? { title: data.title } : {}),
+      ...(data.scheduledAt !== undefined ? { scheduledAt: data.scheduledAt.toISOString() } : {}),
+    },
+  });
+}
+
+// Soft-cancel an event: flips status to cancelled (marks kept; the mark screen
+// renders a cancelled event read-only). Requires create_event on its node.
+export async function cancelEvent(ctx: AuthzContext, id: string): Promise<void> {
+  const event = await eventRepo.findById(id);
+  if (!event) throw new NotFoundError("Event not found");
+  requirePermission(ctx, CREATE_EVENT, { path: event.orgNodePath, functionId: null });
+  if (event.status === "cancelled") return;
+
+  await eventRepo.setStatus(id, "cancelled");
+  await auditRepo.record({
+    actorPersonId: ctx.personId,
+    action: "cancel_event",
+    targetType: "Event",
+    targetId: id,
+    cityId: event.cityId,
+    metadata: { title: event.title },
+  });
+}
+
 export type CreatableNode = {
   id: string;
   name: string;

@@ -85,6 +85,27 @@ export async function findById(id: string): Promise<EventRow | null> {
   return r ? toRow(r as Raw) : null;
 }
 
+// Edit an event's title and/or time. Node / audience are intentionally not editable
+// here (changing them after marks exist would orphan attendance).
+export async function update(
+  id: string,
+  patch: { title?: string; scheduledAt?: Date },
+  db: Db = prisma,
+): Promise<void> {
+  await db.event.update({
+    where: { id },
+    data: {
+      ...(patch.title !== undefined ? { title: patch.title } : {}),
+      ...(patch.scheduledAt !== undefined ? { scheduledAt: patch.scheduledAt } : {}),
+    },
+  });
+}
+
+// Soft state change (e.g. cancel) — attendance rows are kept.
+export async function setStatus(id: string, status: EventStatus, db: Db = prisma): Promise<void> {
+  await db.event.update({ where: { id }, data: { status } });
+}
+
 // Events whose anchor node is within one of `anchorPaths` (or all events, for a
 // superadmin), filtered by an optional scheduledAt window + status set. This is the
 // one scoped list query; Today/Upcoming/Past are just different windows over it.

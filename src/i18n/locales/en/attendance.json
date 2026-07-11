@@ -30,6 +30,20 @@
     "completed": "Completed",
     "cancelled": "Cancelled"
   },
+  "actions": {
+    "menu": "Event actions",
+    "edit": "Edit details",
+    "cancel": "Cancel event",
+    "editTitle": "Edit event",
+    "save": "Save changes",
+    "updated": "Event updated",
+    "editError": "Could not update event",
+    "cancelled": "Event cancelled",
+    "cancelError": "Could not cancel event",
+    "cancelConfirmTitle": "Cancel this event?",
+    "cancelConfirmMessage": "Attendance already recorded is kept, but the event becomes read-only.",
+    "cancelConfirm": "Cancel event"
+  },
   "create": {
     "title": "New event",
     "name": "Event title",
