@@ -228,15 +228,15 @@ export default function AttendanceHubPage() {
         </div>
       )}
 
-      {creating && (
-        <CreateEventForm
-          onCreated={() => {
-            setCreating(false);
-            toast(t("mark.saved"));
-            void load(scope);
-          }}
-        />
-      )}
+      <CreateEventForm
+        open={creating}
+        onClose={() => setCreating(false)}
+        onCreated={() => {
+          setCreating(false);
+          toast(t("mark.saved"));
+          void load(scope);
+        }}
+      />
 
       {loading ? (
         <Spinner />

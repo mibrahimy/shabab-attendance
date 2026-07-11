@@ -61,6 +61,35 @@ export async function createEvent(
   return event;
 }
 
+// How many people a not-yet-created event would put on its roster, given the same
+// Where / reach / segment inputs createEvent takes. Reuses the EXACT roster
+// resolution (countRoster) so the preview can't disagree with the real creation.
+export async function previewRosterSize(
+  ctx: AuthzContext,
+  input: { nodeId: string; rosterDepth?: number | null; segment?: Segment | null },
+): Promise<number> {
+  const node = await orgNodeRepo.findById(input.nodeId);
+  if (!node) throw new NotFoundError("Node not found");
+  requirePermission(ctx, CREATE_EVENT, { path: node.path, functionId: null });
+
+  const draft: eventRepo.EventRow = {
+    id: "",
+    title: "",
+    orgNodeId: node.id,
+    orgNodePath: node.path,
+    orgNodeDepth: node.depth,
+    orgNodeName: node.name,
+    rosterDepth: input.rosterDepth === undefined ? 1 : input.rosterDepth,
+    segment: input.segment ?? null,
+    audiencePositionId: null,
+    functionId: null,
+    cityId: node.cityId,
+    status: "scheduled",
+    scheduledAt: new Date(0), // irrelevant to roster resolution
+  };
+  return eventRepo.countRoster(draft);
+}
+
 export type CreatableNode = {
   id: string;
   name: string;

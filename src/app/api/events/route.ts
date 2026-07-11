@@ -18,6 +18,17 @@ export async function GET(req: Request): Promise<NextResponse> {
       const nodes = await eventService.listCreatableNodes(ctx);
       return NextResponse.json({ data: { nodes } });
     }
+    // ?preview=1&nodeId=&rosterDepth=&segment= → roster size for the create form.
+    if (params.get("preview") === "1") {
+      const nodeId = params.get("nodeId") ?? "";
+      if (!nodeId) throw new ValidationError("nodeId is required");
+      const rosterDepthParam = params.get("rosterDepth");
+      const rosterDepth = rosterDepthParam === "null" ? null : rosterDepthParam ? Number(rosterDepthParam) : 1;
+      const segParam = params.get("segment");
+      const segment = segParam === "junior" || segParam === "senior" ? segParam : null;
+      const count = await eventService.previewRosterSize(ctx, { nodeId, rosterDepth, segment });
+      return NextResponse.json({ data: { count } });
+    }
     const scopeParam = params.get("scope");
     const scope = SCOPES.find((s) => s === scopeParam) ?? "today";
     const events = await eventService.listEvents(ctx, scope);

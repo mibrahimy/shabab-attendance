@@ -1,18 +1,20 @@
 "use client";
 
-// Minimal create-event form (Chunk 1 proof). Picks a class the caller may create
-// at (their create_event nodes), a title, and a date/time; POSTs to /api/events.
+// Create-event modal: pick where, title, when, reach (direct vs whole subtree) and
+// segment, with a LIVE roster-size preview so you see who's included before you
+// create. POSTs to /api/events. The preview reuses the same server-side roster
+// resolution as creation, so the count can't disagree with the result.
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 
 const inputClass =
-  "w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-gray-900 outline-none transition focus:border-[#2f55ea] focus:ring-2 focus:ring-[#2f55ea]/20";
+  "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-slate-900 outline-none transition focus:border-[#2f55ea] focus:ring-2 focus:ring-[#2f55ea]/20";
 
 function defaultLocalDateTime(): string {
-  // now, rounded to the minute, in the input's local-datetime format
   const d = new Date();
   d.setSeconds(0, 0);
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -21,7 +23,38 @@ function defaultLocalDateTime(): string {
 
 type NodeOption = { id: string; name: string; label: string };
 
-export function CreateEventForm({ onCreated }: { onCreated: () => void }) {
+// A compact segmented control (used for Reach + Segment).
+function Segmented<T extends string>({
+  value, options, onChange,
+}: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void }) {
+  return (
+    <div className="inline-flex w-full rounded-xl border border-slate-200/70 bg-white p-0.5 text-sm">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          onClick={() => onChange(o.value)}
+          aria-pressed={value === o.value}
+          className={`flex-1 rounded-lg px-3 py-1.5 font-medium transition ${
+            value === o.value ? "bg-[#2f55ea] text-white" : "text-slate-500 hover:text-slate-900"
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function CreateEventForm({
+  open,
+  onClose,
+  onCreated,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
   const { t } = useTranslation("attendance");
   const { toast } = useToast();
   const [nodes, setNodes] = useState<NodeOption[]>([]);
@@ -32,8 +65,11 @@ export function CreateEventForm({ onCreated }: { onCreated: () => void }) {
   const [segment, setSegment] = useState<"" | "junior" | "senior">("");
   const [reach, setReach] = useState<"direct" | "subtree">("direct");
   const [saving, setSaving] = useState(false);
+  const [preview, setPreview] = useState<number | null>(null);
+  const [previewing, setPreviewing] = useState(false);
 
   useEffect(() => {
+    if (!open) return;
     void fetch("/api/events?nodes=1")
       .then((r) => r.json())
       .then((j) => {
@@ -42,10 +78,35 @@ export function CreateEventForm({ onCreated }: { onCreated: () => void }) {
         if (ns[0]) setNodeId(ns[0].id);
       })
       .catch(() => setNodes([]));
-  }, []);
+  }, [open]);
 
-  // The picker can hold the whole subtree for a high-level admin — filter by the
-  // readable path label so a specific class is quick to find.
+  // Live roster-size preview — debounced, stale-guarded, reuses the create path.
+  useEffect(() => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => {
+      if (!nodeId) {
+        setPreview(null);
+        setPreviewing(false);
+        return;
+      }
+      setPreviewing(true);
+      const rd = reach === "subtree" ? "null" : "1";
+      fetch(`/api/events?preview=1&nodeId=${encodeURIComponent(nodeId)}&rosterDepth=${rd}&segment=${segment}`, {
+        signal: ctrl.signal,
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => {
+          setPreview(typeof j?.data?.count === "number" ? j.data.count : null);
+          setPreviewing(false);
+        })
+        .catch(() => {});
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      ctrl.abort();
+    };
+  }, [nodeId, reach, segment]);
+
   const q = query.trim().toLowerCase();
   const filtered = q ? nodes.filter((n) => n.label.toLowerCase().includes(q)) : nodes;
 
@@ -58,96 +119,120 @@ export function CreateEventForm({ onCreated }: { onCreated: () => void }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nodeId,
-          title,
+          title: title.trim(),
           scheduledAt: new Date(when).toISOString(),
           segment: segment || undefined,
-          // "direct" = just this group's members; "subtree" = everyone underneath.
           rosterDepth: reach === "subtree" ? null : 1,
         }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast(json?.error?.message ?? "Could not create event", "error");
+        toast(json?.error?.message ?? t("create.error", "Could not create event"), "error");
         return;
       }
       onCreated();
     } catch {
-      toast("Network error", "error");
+      toast(t("offline.networkError", "Network error"), "error");
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("create.node")}</label>
-        {nodes.length > 8 && (
-          <input
-            value={query}
-            onChange={(e) => {
-              const v = e.target.value;
-              setQuery(v);
-              // Keep the selection on a visible option as the list narrows.
-              const vq = v.trim().toLowerCase();
-              const next = vq ? nodes.filter((n) => n.label.toLowerCase().includes(vq)) : nodes;
-              if (!next.some((n) => n.id === nodeId)) setNodeId(next[0]?.id ?? "");
-            }}
-            placeholder={t("create.search")}
-            className={`${inputClass} mb-2`}
-          />
-        )}
-        <select value={nodeId} onChange={(e) => setNodeId(e.target.value)} className={inputClass}>
-          {filtered.length === 0 && (
-            <option value="">
-              {nodes.length === 0 ? t("create.nodePlaceholder") : t("create.noMatch")}
-            </option>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={t("create.title")}
+      footer={
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs text-slate-500">
+            {!nodeId ? (
+              ""
+            ) : previewing ? (
+              <span className="text-slate-400">{t("create.previewLoading", "Counting…")}</span>
+            ) : preview === null ? (
+              ""
+            ) : (
+              <span>
+                <span className="font-num font-semibold text-slate-700">{preview}</span>{" "}
+                {t("create.preview", { count: preview, defaultValue: "people on this roster" })}
+              </span>
+            )}
+          </span>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={onClose}>
+              {t("create.cancel", "Cancel")}
+            </Button>
+            <Button onClick={submit} loading={saving} disabled={!nodeId || !title.trim() || saving}>
+              {t("create.submit")}
+            </Button>
+          </div>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("create.node")}</label>
+          {nodes.length > 8 && (
+            <input
+              value={query}
+              onChange={(e) => {
+                const v = e.target.value;
+                setQuery(v);
+                const vq = v.trim().toLowerCase();
+                const next = vq ? nodes.filter((n) => n.label.toLowerCase().includes(vq)) : nodes;
+                if (!next.some((n) => n.id === nodeId)) setNodeId(next[0]?.id ?? "");
+              }}
+              placeholder={t("create.search")}
+              className={`${inputClass} mb-2`}
+            />
           )}
-          {filtered.map((n) => (
-            <option key={n.id} value={n.id}>
-              {n.label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("create.name")}</label>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass} />
-      </div>
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("create.when")}</label>
-        <input
-          type="datetime-local"
-          value={when}
-          onChange={(e) => setWhen(e.target.value)}
-          className={inputClass}
-        />
-      </div>
-
-      {/* Audience */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("create.reach", "Who")}</label>
-          <select value={reach} onChange={(e) => setReach(e.target.value as "direct" | "subtree")} className={inputClass}>
-            <option value="direct">{t("create.reachDirect", "This group’s members")}</option>
-            <option value="subtree">{t("create.reachSubtree", "Everyone underneath")}</option>
+          <select value={nodeId} onChange={(e) => setNodeId(e.target.value)} className={inputClass}>
+            {filtered.length === 0 && (
+              <option value="">{nodes.length === 0 ? t("create.nodePlaceholder") : t("create.noMatch")}</option>
+            )}
+            {filtered.map((n) => (
+              <option key={n.id} value={n.id}>{n.label}</option>
+            ))}
           </select>
         </div>
+
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("create.segment", "Segment")}</label>
-          <select value={segment} onChange={(e) => setSegment(e.target.value as "" | "junior" | "senior")} className={inputClass}>
-            <option value="">{t("create.segmentAll", "All")}</option>
-            <option value="junior">{t("create.segmentJunior", "Junior")}</option>
-            <option value="senior">{t("create.segmentSenior", "Senior")}</option>
-          </select>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("create.name")}</label>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus className={inputClass} />
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("create.when")}</label>
+          <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className={inputClass} />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("create.reach", "Who")}</label>
+            <Segmented
+              value={reach}
+              onChange={setReach}
+              options={[
+                { value: "direct", label: t("create.reachDirect", "This group") },
+                { value: "subtree", label: t("create.reachSubtree", "Everyone under") },
+              ]}
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("create.segment", "Segment")}</label>
+            <Segmented
+              value={segment}
+              onChange={setSegment}
+              options={[
+                { value: "", label: t("create.segmentAll", "All") },
+                { value: "junior", label: t("create.segmentJunior", "Junior") },
+                { value: "senior", label: t("create.segmentSenior", "Senior") },
+              ]}
+            />
+          </div>
         </div>
       </div>
-
-      <div className="flex justify-end">
-        <Button onClick={submit} loading={saving} disabled={!nodeId || !title.trim() || saving}>
-          {t("create.submit")}
-        </Button>
-      </div>
-    </div>
+    </Modal>
   );
 }

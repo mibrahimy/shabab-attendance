@@ -36,9 +36,21 @@
     "node": "Where",
     "when": "Date & time",
     "submit": "Create event",
+    "cancel": "Cancel",
     "nodePlaceholder": "Select where",
     "search": "Search…",
-    "noMatch": "No matching places"
+    "noMatch": "No matching places",
+    "reach": "Who",
+    "reachDirect": "This group",
+    "reachSubtree": "Everyone under",
+    "segment": "Segment",
+    "segmentAll": "All",
+    "segmentJunior": "Junior",
+    "segmentSenior": "Senior",
+    "preview_one": "person on this roster",
+    "preview_other": "people on this roster",
+    "previewLoading": "Counting…",
+    "error": "Could not create event"
   },
   "mark": {
     "title": "Mark attendance",
@@ -72,7 +84,8 @@
     "lastSynced": "Synced {{mins}}m ago",
     "failed_one": "{{count}} mark couldn’t be saved",
     "failed_other": "{{count}} marks couldn’t be saved",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "networkError": "Network error"
   },
   "report": {
     "title": "Attendance saved",
