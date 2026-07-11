@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Trail } from "@/components/home/Trail";
-import type { CityReport } from "@/server/services/report-service";
+import type { ReportBody } from "@/server/services/report-service";
 
 type PersonHit = { id: string; name: string; nodeName: string | null };
 
@@ -103,7 +103,16 @@ function download(filename: string, text: string) {
   URL.revokeObjectURL(url);
 }
 
-export function ReportView({ report, cityId, period }: { report: CityReport; cityId: string; period: string }) {
+export function ReportView({
+  report, cityId, period, heading, basePath, csvName,
+}: {
+  report: ReportBody;
+  cityId: string;
+  period: string;
+  heading: { title: string; subtitle: string; backHref?: string };
+  basePath: string; // period links → `${basePath}?period=`
+  csvName: string;
+}) {
   const { overall, byStatus, byNode, trend, weekly, weekSummary } = report;
 
   // The headline Trail reads best as weekly progress; fall back to the per-session
@@ -121,23 +130,26 @@ export function ReportView({ report, cityId, period }: { report: CityReport; cit
     const csv = [nodeHeader, ...nodeRows, [], weekHeader, ...weekRows]
       .map((r) => r.map(esc).join(","))
       .join("\n");
-    download(`${report.city.name}-attendance-report.csv`, csv);
+    download(`${csvName}-attendance-report.csv`, csv);
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#2f55ea]">Administration</div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Reports</h1>
-          <p className="mt-0.5 text-sm text-slate-500">{report.city.name} · attendance analytics</p>
+          {heading.backHref && (
+            <Link href={heading.backHref} className="text-sm text-slate-400 transition hover:text-slate-600">‹ Reports</Link>
+          )}
+          <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#2f55ea]">Administration</div>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{heading.title}</h1>
+          <p className="mt-0.5 text-sm text-slate-500">{heading.subtitle}</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="inline-flex rounded-xl border border-slate-200/70 bg-white p-0.5 text-sm shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
             {PERIODS.map((p) => (
               <Link
                 key={p.key}
-                href={`/reports/${cityId}?period=${p.key}`}
+                href={`${basePath}?period=${p.key}`}
                 className={`rounded-lg px-3 py-1.5 font-medium transition ${
                   period === p.key ? "bg-[#2f55ea] text-white" : "text-slate-500 hover:text-slate-900"
                 }`}
@@ -233,7 +245,11 @@ export function ReportView({ report, cityId, period }: { report: CityReport; cit
             <p className="px-5 py-10 text-center text-sm text-slate-400">No completed sessions yet.</p>
           ) : (
             byNode.map((n) => (
-              <div key={n.nodeId} className="flex items-center gap-4 px-5 py-3">
+              <Link
+                key={n.nodeId}
+                href={`/reports/${cityId}/node/${n.nodeId}`}
+                className="flex items-center gap-4 px-5 py-3 transition hover:bg-slate-50"
+              >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="truncate text-sm font-medium text-slate-900">{n.nodeName}</span>
@@ -254,7 +270,8 @@ export function ReportView({ report, cityId, period }: { report: CityReport; cit
                     <div className={`h-full rounded-full ${rateColor(n.rate)}`} style={{ inlineSize: `${n.rate}%` }} />
                   </div>
                 </div>
-              </div>
+                <span className="text-slate-300" aria-hidden>›</span>
+              </Link>
             ))
           )}
         </div>

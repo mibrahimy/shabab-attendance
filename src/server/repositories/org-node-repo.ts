@@ -134,6 +134,20 @@ export type SubtreeNode = OrgNodeRow & {
 };
 
 // Every node at or below `path` (one indexed prefix scan). Bounded per city.
+// Direct children of a node (one level down), enriched with their level — for
+// report rollups (distinct from listChildren, which returns bare rows).
+export async function listChildrenLeveled(parentId: string): Promise<SubtreeNode[]> {
+  const rows = await prisma.orgNode.findMany({
+    where: { parentId },
+    orderBy: { name: "asc" },
+    select: { ...baseSelect, type: { select: { label: true, rank: true, key: true } } },
+  });
+  return rows.map(({ type, ...n }) => ({
+    ...n,
+    level: { key: type.key ?? "", label: type.label, rank: type.rank },
+  }));
+}
+
 export async function listSubtree(path: string): Promise<SubtreeNode[]> {
   const rows = await prisma.orgNode.findMany({
     where: { path: { startsWith: path } },

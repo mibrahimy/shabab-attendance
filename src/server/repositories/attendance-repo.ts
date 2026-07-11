@@ -19,6 +19,35 @@ function eventWhere(cityId: string, range?: DateRange) {
   return range ? { cityId, scheduledAt: { gte: range.start, lt: range.end } } : { cityId };
 }
 
+// Events anchored anywhere within a node's subtree (by materialized-path prefix).
+function eventWhereUnder(path: string, range?: DateRange) {
+  return {
+    orgNode: { path: { startsWith: path } },
+    ...(range ? { scheduledAt: { gte: range.start, lt: range.end } } : {}),
+  };
+}
+
+// Subtree-scoped siblings of rateInCity / statusBreakdownInCity (node reports).
+export async function rateUnderNode(path: string, range?: DateRange): Promise<{ present: number; total: number }> {
+  const ev = eventWhereUnder(path, range);
+  const [present, total] = await Promise.all([
+    prisma.attendance.count({ where: { event: ev, status: "present" } }),
+    prisma.attendance.count({ where: { event: ev } }),
+  ]);
+  return { present, total };
+}
+
+export async function statusBreakdownUnderNode(path: string, range?: DateRange): Promise<Record<AttendanceStatus, number>> {
+  const rows = await prisma.attendance.groupBy({
+    by: ["status"],
+    where: { event: eventWhereUnder(path, range) },
+    _count: { _all: true },
+  });
+  const out: Record<AttendanceStatus, number> = { present: 0, late: 0, absent: 0, excused: 0 };
+  for (const r of rows) out[r.status] = r._count._all;
+  return out;
+}
+
 // City-wide attendance rate: present marks over total marks across a city's events
 // (optionally within a date range). Two cheap counts for the dashboard/report.
 export async function rateInCity(cityId: string, range?: DateRange): Promise<{ present: number; total: number }> {

@@ -180,7 +180,7 @@ export async function recentCompletedAtNode(orgNodeId: string, limit: number): P
 }
 
 export type ReportEvent = {
-  id: string; orgNodeId: string; nodeName: string; nodeLevel: string; scheduledAt: Date;
+  id: string; orgNodeId: string; nodeName: string; nodeLevel: string; nodePath: string; scheduledAt: Date;
 };
 
 // All completed sessions in a city (oldest→newest, optionally within a date range)
@@ -198,11 +198,35 @@ export async function listCompletedInCity(
     orderBy: { scheduledAt: "asc" },
     select: {
       id: true, orgNodeId: true, scheduledAt: true,
-      orgNode: { select: { name: true, type: { select: { key: true } } } },
+      orgNode: { select: { name: true, path: true, type: { select: { key: true } } } },
     },
   });
   return rows.map((r) => ({
-    id: r.id, orgNodeId: r.orgNodeId, nodeName: r.orgNode.name,
+    id: r.id, orgNodeId: r.orgNodeId, nodeName: r.orgNode.name, nodePath: r.orgNode.path,
+    nodeLevel: r.orgNode.type.key ?? "", scheduledAt: r.scheduledAt,
+  }));
+}
+
+// All completed sessions anywhere within a node's subtree (path prefix), oldest→
+// newest — the node report's raw material. Same shape as listCompletedInCity.
+export async function listCompletedUnderNode(
+  path: string,
+  range?: { start: Date; end: Date },
+): Promise<ReportEvent[]> {
+  const rows = await prisma.event.findMany({
+    where: {
+      status: "completed",
+      orgNode: { path: { startsWith: path } },
+      ...(range ? { scheduledAt: { gte: range.start, lt: range.end } } : {}),
+    },
+    orderBy: { scheduledAt: "asc" },
+    select: {
+      id: true, orgNodeId: true, scheduledAt: true,
+      orgNode: { select: { name: true, path: true, type: { select: { key: true } } } },
+    },
+  });
+  return rows.map((r) => ({
+    id: r.id, orgNodeId: r.orgNodeId, nodeName: r.orgNode.name, nodePath: r.orgNode.path,
     nodeLevel: r.orgNode.type.key ?? "", scheduledAt: r.scheduledAt,
   }));
 }
