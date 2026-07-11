@@ -14,6 +14,7 @@ export type EventRow = {
   orgNodeId: string;
   orgNodePath: string;
   orgNodeDepth: number;
+  orgNodeName: string;
   rosterDepth: number | null;
   segment: Segment | null;
   audiencePositionId: string | null;
@@ -34,19 +35,19 @@ const selectWithNode = {
   cityId: true,
   status: true,
   scheduledAt: true,
-  orgNode: { select: { path: true, depth: true } },
+  orgNode: { select: { path: true, depth: true, name: true } },
 } as const;
 
 type Raw = {
   id: string; title: string; orgNodeId: string; rosterDepth: number | null;
   segment: Segment | null; audiencePositionId: string | null; functionId: string | null;
   cityId: string | null; status: EventStatus; scheduledAt: Date;
-  orgNode: { path: string; depth: number };
+  orgNode: { path: string; depth: number; name: string };
 };
 
 function toRow(r: Raw): EventRow {
   const { orgNode, ...rest } = r;
-  return { ...rest, orgNodePath: orgNode.path, orgNodeDepth: orgNode.depth };
+  return { ...rest, orgNodePath: orgNode.path, orgNodeDepth: orgNode.depth, orgNodeName: orgNode.name };
 }
 
 export async function create(
@@ -84,25 +85,47 @@ export async function findById(id: string): Promise<EventRow | null> {
   return r ? toRow(r as Raw) : null;
 }
 
-// Today's events whose anchor node is within one of `anchorPaths` (or all events,
-// for a superadmin). `anchorPaths` are the caller's trailing-delimited grant paths.
-export async function listToday(
+// Events whose anchor node is within one of `anchorPaths` (or all events, for a
+// superadmin), filtered by an optional scheduledAt window + status set. This is the
+// one scoped list query; Today/Upcoming/Past are just different windows over it.
+// `anchorPaths` are the caller's trailing-delimited grant paths.
+export async function listInScope(
   anchorPaths: string[] | "all",
-  range: { start: Date; end: Date },
+  opts: {
+    range?: { start?: Date; end?: Date };
+    statuses?: EventStatus[];
+    order?: "asc" | "desc";
+    take?: number;
+  } = {},
 ): Promise<EventRow[]> {
+  // An empty non-"all" anchor set means "no scope" → no events.
+  if (anchorPaths !== "all" && anchorPaths.length === 0) return [];
+  const { range, statuses, order = "asc", take } = opts;
+  const scheduledAt =
+    range && (range.start || range.end)
+      ? { ...(range.start ? { gte: range.start } : {}), ...(range.end ? { lt: range.end } : {}) }
+      : undefined;
   const rows = await prisma.event.findMany({
     where: {
-      scheduledAt: { gte: range.start, lt: range.end },
+      ...(scheduledAt ? { scheduledAt } : {}),
+      ...(statuses ? { status: { in: statuses } } : {}),
       ...(anchorPaths === "all"
         ? {}
         : { OR: anchorPaths.map((p) => ({ orgNode: { path: { startsWith: p } } })) }),
     },
-    orderBy: { scheduledAt: "asc" },
+    orderBy: { scheduledAt: order },
+    ...(take ? { take } : {}),
     select: selectWithNode,
   });
-  // An empty non-"all" anchor set means "no scope" → no events.
-  if (anchorPaths !== "all" && anchorPaths.length === 0) return [];
   return rows.map((r) => toRow(r as Raw));
+}
+
+// Today's events, all statuses (a thin caller over listInScope).
+export async function listToday(
+  anchorPaths: string[] | "all",
+  range: { start: Date; end: Date },
+): Promise<EventRow[]> {
+  return listInScope(anchorPaths, { range });
 }
 
 // Dashboard signal: how many events are scheduled in a city today, and how many

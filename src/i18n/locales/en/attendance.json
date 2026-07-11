@@ -11,6 +11,25 @@
     "notMarked": "Not marked",
     "marked": "Marked"
   },
+  "hub": {
+    "title": "Attendance",
+    "subtitle": "Your sessions to mark",
+    "scope": {
+      "today": "Today",
+      "upcoming": "Upcoming",
+      "past": "Past"
+    },
+    "empty": {
+      "today": "No events today.",
+      "upcoming": "No upcoming events.",
+      "past": "No past events."
+    }
+  },
+  "eventStatus": {
+    "scheduled": "Scheduled",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
   "create": {
     "title": "New event",
     "name": "Event title",

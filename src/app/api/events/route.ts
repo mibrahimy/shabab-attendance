@@ -7,15 +7,20 @@ import { ValidationError, toErrorResponse } from "@/server/errors";
 import { getAuthzContext } from "@/server/auth/authz-context";
 import * as eventService from "@/server/services/event-service";
 
+const SCOPES = ["today", "upcoming", "past"] as const;
+
 export async function GET(req: Request): Promise<NextResponse> {
   try {
     const ctx = await getAuthzContext(req);
+    const params = new URL(req.url).searchParams;
     // ?nodes=1 → the nodes this caller may create an event at (for the create form).
-    if (new URL(req.url).searchParams.get("nodes") === "1") {
+    if (params.get("nodes") === "1") {
       const nodes = await eventService.listCreatableNodes(ctx);
       return NextResponse.json({ data: { nodes } });
     }
-    const events = await eventService.listToday(ctx);
+    const scopeParam = params.get("scope");
+    const scope = SCOPES.find((s) => s === scopeParam) ?? "today";
+    const events = await eventService.listEvents(ctx, scope);
     return NextResponse.json({ data: { events } });
   } catch (err) {
     const { status, body } = toErrorResponse(err);

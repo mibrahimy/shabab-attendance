@@ -112,20 +112,24 @@ export async function listCreatableNodes(ctx: AuthzContext): Promise<CreatableNo
     }));
 }
 
-export type TodayEvent = {
+export type EventScope = "today" | "upcoming" | "past";
+
+export type ListedEvent = {
   id: string;
   title: string;
   scheduledAt: Date;
   orgNodeId: string;
+  nodeName: string;
+  status: "scheduled" | "completed" | "cancelled";
   markedCount: number;
   rosterCount: number;
 };
 
-// Today's events the caller may see: those anchored under a node where they hold
-// view_attendance or mark_attendance (superadmin sees all).
-export async function listToday(ctx: AuthzContext): Promise<TodayEvent[]> {
-  const anchorPaths = isSuperadmin(ctx)
-    ? ("all" as const)
+// Nodes the caller may see attendance for: those where they hold view_attendance
+// or mark_attendance (superadmin sees all). Shared by every scoped event list.
+function viewAnchorPaths(ctx: AuthzContext): string[] | "all" {
+  return isSuperadmin(ctx)
+    ? "all"
     : [
         ...new Set(
           ctx.grants
@@ -133,23 +137,52 @@ export async function listToday(ctx: AuthzContext): Promise<TodayEvent[]> {
             .map((g) => g.anchorPath),
         ),
       ];
+}
 
-  const events = await eventRepo.listToday(anchorPaths, pktDayRange());
+// Attach per-event roster size + marked count. Roster SIZES are light distinct-
+// personId counts (not full rosters); marked counts are one grouped query.
+async function withCounts(events: eventRepo.EventRow[]): Promise<ListedEvent[]> {
   if (events.length === 0) return [];
-
-  // Roster SIZES per event (light distinct-personId counts, not full rosters) +
-  // ONE grouped marked-count query for all events.
   const [rosterCounts, markedByEvent] = await Promise.all([
     Promise.all(events.map((e) => eventRepo.countRoster(e))),
     attendanceRepo.countByEvents(events.map((e) => e.id)),
   ]);
-
   return events.map((e, i) => ({
     id: e.id,
     title: e.title,
     scheduledAt: e.scheduledAt,
     orgNodeId: e.orgNodeId,
+    nodeName: e.orgNodeName,
+    status: e.status,
     rosterCount: rosterCounts[i],
     markedCount: markedByEvent.get(e.id) ?? 0,
   }));
+}
+
+const PAST_LIMIT = 30;
+
+// Scoped event list for the attendance hub. Today = the PKT day (any status);
+// Upcoming = still-scheduled sessions after today (soonest first); Past = anything
+// before today (most recent first, capped at PAST_LIMIT so late marking stays
+// reachable). All three are scoped to the caller's view/mark anchors.
+export async function listEvents(ctx: AuthzContext, scope: EventScope): Promise<ListedEvent[]> {
+  const anchorPaths = viewAnchorPaths(ctx);
+  const today = pktDayRange();
+  let events: eventRepo.EventRow[];
+  if (scope === "upcoming") {
+    events = await eventRepo.listInScope(anchorPaths, {
+      range: { start: today.end },
+      statuses: ["scheduled"],
+      order: "asc",
+    });
+  } else if (scope === "past") {
+    events = await eventRepo.listInScope(anchorPaths, {
+      range: { end: today.start },
+      order: "desc",
+      take: PAST_LIMIT,
+    });
+  } else {
+    events = await eventRepo.listInScope(anchorPaths, { range: today, order: "asc" });
+  }
+  return withCounts(events);
 }
