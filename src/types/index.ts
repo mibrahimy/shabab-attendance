@@ -1,38 +1,5 @@
-import type { User, Member, Event, Attendance, Park, City } from "@prisma/client";
-
-export type SafeUser = Omit<User, "passwordHash">;
-
-export type MemberWithChildren = Member & {
-  children: MemberWithChildren[];
-  user?: { id: string; email: string } | null;
-  park?: Park | null;
-};
-
-export type EventWithPark = Event & {
-  park: Park;
-  _count?: {
-    attendances: number;
-  };
-};
-
-export type AttendanceWithDetails = Attendance & {
-  event: Event;
-  member: Member;
-  markedBy?: SafeUser | null;
-};
-
-export type ParkWithCity = Park & {
-  city: City;
-};
-
-export type DashboardStats = {
-  totalMembers: number;
-  activeEvents: number;
-  attendanceRate: number;
-  totalParks: number;
-};
-
-/** Shared lightweight types used across multiple client components */
+// Shared lightweight types used across client components. (The v1 Prisma-derived
+// types were removed with the v1 surface; v2 uses its own domain types.)
 
 export type ParkOption = {
   id: string;
