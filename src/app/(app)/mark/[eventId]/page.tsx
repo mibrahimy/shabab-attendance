@@ -9,6 +9,7 @@ import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/components/ui/Toast";
+import SearchInput from "@/components/ui/SearchInput";
 import { ATTENDANCE_STATUSES, type AttendanceStatus } from "@/lib/attendance-status";
 import { initials } from "@/lib/initials";
 import { queueMark, queueMany, pending } from "@/lib/offline/outbox";
@@ -48,6 +49,8 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [unmarkedFirst, setUnmarkedFirst] = useState(false);
   const rosterRef = useRef<Entry[]>([]);
 
   function applyRoster(next: Entry[]) {
@@ -105,6 +108,22 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
     setTouched(new Set(next.map((e) => e.personId)));
     // One transaction + one store notification instead of N (big rosters).
     await queueMany(next.map((e) => ({ eventId, personId: e.personId, status: "present" as AttendanceStatus })));
+  }
+
+  // Mark everyone not yet touched as absent — finishes a roster where you've marked
+  // the exceptions and the rest are absent. Only touches untouched rows.
+  async function markRemainingAbsent() {
+    if (readOnly) return;
+    const rest = rosterRef.current.filter((e) => !touched.has(e.personId));
+    if (rest.length === 0) return;
+    const restIds = new Set(rest.map((e) => e.personId));
+    applyRoster(rosterRef.current.map((e) => (restIds.has(e.personId) ? { ...e, status: "absent" as AttendanceStatus } : e)));
+    setTouched((prev) => {
+      const next = new Set(prev);
+      for (const id of restIds) next.add(id);
+      return next;
+    });
+    await queueMany(rest.map((e) => ({ eventId, personId: e.personId, status: "absent" as AttendanceStatus })));
   }
 
   async function save() {
@@ -177,6 +196,18 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
   }
 
   const progress = roster.length ? Math.round((touched.size / roster.length) * 100) : 0;
+  const unmarked = roster.length - touched.size;
+  const q = search.trim().toLowerCase();
+  // Filter by name; optionally float untouched rows to the top (stable otherwise).
+  const visible = roster
+    .map((e, i) => ({ e, i }))
+    .filter(({ e }) => !q || e.name.toLowerCase().includes(q))
+    .sort((a, b) =>
+      unmarkedFirst
+        ? Number(touched.has(a.e.personId)) - Number(touched.has(b.e.personId)) || a.i - b.i
+        : a.i - b.i,
+    )
+    .map(({ e }) => e);
 
   return (
     <div className="pb-28">
@@ -230,16 +261,43 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
         </div>
       )}
 
-      {/* Toolbar */}
+      {/* Search — jump to a person in a large roster */}
+      {roster.length > 6 && (
+        <div className="mb-2">
+          <SearchInput value={search} onChange={setSearch} placeholder={t("mark.search", "Search people…")} />
+        </div>
+      )}
+
+      {/* Toolbar: sort toggle + bulk actions */}
       {!readOnly && roster.length > 0 && (
-        <div className="mb-1 flex items-center justify-between">
-          <span className="text-xs font-medium text-gray-500">{t("mark.everyoneAbsent")}</span>
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
           <button
-            onClick={markAllPresent}
-            className="rounded-full border border-[#b9e6c7] bg-[#e7f6ed] px-3 py-1.5 text-xs font-semibold text-[#15a34a]"
+            onClick={() => setUnmarkedFirst((v) => !v)}
+            aria-pressed={unmarkedFirst}
+            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+              unmarkedFirst
+                ? "border-[#2f55ea]/30 bg-[#2f55ea]/[0.07] text-[#2f55ea]"
+                : "border-slate-200 text-slate-500 hover:bg-slate-50"
+            }`}
           >
-            {t("mark.allPresent")}
+            {t("mark.unmarkedFirst", "Unmarked first")}
           </button>
+          <div className="flex items-center gap-2">
+            {unmarked > 0 && (
+              <button
+                onClick={markRemainingAbsent}
+                className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50"
+              >
+                {t("mark.restAbsent", "Mark rest absent")}
+              </button>
+            )}
+            <button
+              onClick={markAllPresent}
+              className="rounded-full border border-[#b9e6c7] bg-[#e7f6ed] px-3 py-1.5 text-xs font-semibold text-[#15a34a]"
+            >
+              {t("mark.allPresent")}
+            </button>
+          </div>
         </div>
       )}
       {/* Legend — what P/L/A/E mean */}
@@ -257,9 +315,11 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
       {/* Roster */}
       {roster.length === 0 ? (
         <p className="text-sm text-gray-400">{t("mark.empty")}</p>
+      ) : visible.length === 0 ? (
+        <p className="py-6 text-center text-sm text-gray-400">{t("mark.noMatches", "No one matches “{{q}}”.", { q: search.trim() })}</p>
       ) : (
         <ul className="divide-y divide-gray-100">
-          {roster.map((e) => (
+          {visible.map((e) => (
             <li key={e.personId} className="flex items-center gap-3 py-2">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-[#f5f6fd] font-num text-xs text-gray-600">
                 {initials(e.name)}
@@ -307,6 +367,11 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
         <div className="fixed inset-x-0 bottom-0 border-t border-gray-200 bg-white/90 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur lg:bottom-0">
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
             <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-400">
+              {unmarked > 0 && (
+                <span className="me-1 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 font-semibold text-amber-700">
+                  <span className="font-num">{unmarked}</span> {t("mark.unmarked", "unmarked")}
+                </span>
+              )}
               {ATTENDANCE_STATUSES.map((s) => (
                 <span key={s} className="inline-flex items-center gap-1">
                   <span className={`font-num font-semibold ${STATUS_TEXT[s]}`}>{counts[s]}</span>
