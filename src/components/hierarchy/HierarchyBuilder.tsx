@@ -20,6 +20,7 @@ import { AddMemberModal } from "@/components/members/AddMemberModal";
 import { MoveMemberModal } from "@/components/members/MoveMemberModal";
 import { TreeOverview } from "./TreeOverview";
 import { NodeNameModal } from "./NodeNameModal";
+import { MoveNodeModal, type MoveTarget } from "./MoveNodeModal";
 
 type NodeMember = {
   assignmentId: string;
@@ -74,7 +75,7 @@ export function HierarchyBuilder({
   const [currentId, setCurrentId] = useState(city.id);
   const current = byId.get(currentId) ?? byId.get(city.id)!;
 
-  const [modal, setModal] = useState<"add" | "rename" | null>(null);
+  const [modal, setModal] = useState<"add" | "rename" | "move" | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -148,6 +149,35 @@ export function HierarchyBuilder({
   const isCityRoot = current.id === city.id;
   const rolesHere = roles.filter((r) => r.attachLevelKey === current.level.key);
 
+  // Valid move destinations: any node one level above `current` (so the level
+  // template still fits), excluding the current node, its existing parent, and
+  // its own descendants (a node can't move under itself).
+  const descendantIds = new Set<string>();
+  {
+    const stack = [current.id];
+    while (stack.length) {
+      for (const c of childrenOf.get(stack.pop()!) ?? []) {
+        descendantIds.add(c.id);
+        stack.push(c.id);
+      }
+    }
+  }
+  const moveTargets: MoveTarget[] = isCityRoot
+    ? []
+    : nodes
+        .filter((n) => {
+          if (n.id === current.id || n.id === current.parentId || descendantIds.has(n.id)) return false;
+          return nextLevel(levels, n.level.rank)?.key === current.level.key;
+        })
+        .map((n) => {
+          const parts: string[] = [];
+          for (let p: BuilderNode | undefined = n; p; p = p.parentId ? byId.get(p.parentId) : undefined) {
+            parts.unshift(p.name);
+          }
+          return { id: n.id, name: n.name, pathLabel: parts.join(" / ") };
+        })
+        .sort((a, b) => a.pathLabel.localeCompare(b.pathLabel));
+
   async function call(url: string, method: string, body?: unknown): Promise<boolean> {
     setSaving(true);
     try {
@@ -181,6 +211,14 @@ export function HierarchyBuilder({
   async function rename(name: string) {
     if (await call(`/api/org-nodes/${current.id}`, "PATCH", { name })) {
       toast(t("toast.renamed"));
+      setModal(null);
+      router.refresh();
+    }
+  }
+
+  async function move(newParentId: string) {
+    if (await call(`/api/org-nodes/${current.id}`, "PATCH", { newParentId })) {
+      toast(t("toast.moved", "Moved"));
       setModal(null);
       router.refresh();
     }
@@ -264,6 +302,11 @@ export function HierarchyBuilder({
             <Button size="sm" variant="secondary" onClick={() => setModal("rename")}>
               {t("node.rename")}
             </Button>
+            {!isCityRoot && moveTargets.length > 0 && (
+              <Button size="sm" variant="secondary" onClick={() => setModal("move")}>
+                {t("node.move", "Move")}
+              </Button>
+            )}
             {!isCityRoot && (
               <Button size="sm" variant="danger" onClick={() => setConfirmDelete(true)}>
                 {t("node.delete")}
@@ -438,6 +481,15 @@ export function HierarchyBuilder({
           submitLabel={t("modal.rename.submit")}
           saving={saving}
           onSubmit={rename}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal === "move" && (
+        <MoveNodeModal
+          nodeName={current.name}
+          targets={moveTargets}
+          saving={saving}
+          onSubmit={move}
           onClose={() => setModal(null)}
         />
       )}
