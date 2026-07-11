@@ -103,13 +103,13 @@ export async function listCityPositions(cityId: string): Promise<CityPosition[]>
     select: {
       id: true,
       label: true,
-      canonical: { select: { key: true } },
+      key: true,
       permissions: { select: { permission: { select: { key: true } } } },
     },
   });
   return rows.map((r) => ({
     id: r.id,
-    canonicalKey: r.canonical.key,
+    canonicalKey: r.key ?? "",
     label: r.label,
     permissionKeys: r.permissions.map((p) => p.permission.key),
   }));

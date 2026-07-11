@@ -82,7 +82,7 @@ export async function findActiveById(id: string): Promise<{
       personId: true,
       orgNodeId: true,
       cityId: true,
-      position: { select: { canonical: { select: { key: true } } } },
+      position: { select: { key: true } },
     },
   });
   if (!row) return null;
@@ -91,7 +91,7 @@ export async function findActiveById(id: string): Promise<{
     personId: row.personId,
     orgNodeId: row.orgNodeId,
     cityId: row.cityId,
-    roleKey: row.position.canonical.key,
+    roleKey: row.position.key ?? "",
   };
 }
 
@@ -119,7 +119,7 @@ export async function listActiveByNode(orgNodeId: string): Promise<NodeMember[]>
       person: {
         select: { id: true, name: true, segment: true, user: { select: { id: true } } },
       },
-      position: { select: { label: true, canonical: { select: { key: true } } } },
+      position: { select: { label: true, key: true } },
     },
   });
   return rows.map((r) => ({
@@ -127,7 +127,7 @@ export async function listActiveByNode(orgNodeId: string): Promise<NodeMember[]>
     personId: r.person.id,
     name: r.person.name,
     segment: r.person.segment,
-    roleKey: r.position.canonical.key,
+    roleKey: r.position.key ?? "",
     roleLabel: r.position.label,
     hasLogin: r.person.user !== null,
   }));

@@ -23,9 +23,9 @@ const TEMPLATE_CANONICAL_KEYS = ["zone", "sector", "park", "class"];
 export async function ensureCityTemplate(cityId: string, db: Db = prisma): Promise<void> {
   const existing = await db.nodeType.findMany({
     where: { cityId },
-    select: { canonical: { select: { key: true } } },
+    select: { key: true },
   });
-  const have = new Set(existing.map((e) => e.canonical.key));
+  const have = new Set(existing.map((e) => e.key).filter((k): k is string => k != null));
   const missing = TEMPLATE_CANONICAL_KEYS.filter((k) => !have.has(k));
   if (missing.length === 0) return;
 
@@ -46,9 +46,9 @@ export async function ensureCityTemplate(cityId: string, db: Db = prisma): Promi
 // national "city" type so the city node's own level is known), with canonical key/rank.
 export async function listCityLevels(cityId: string): Promise<CityLevel[]> {
   const rows = await prisma.nodeType.findMany({
-    where: { OR: [{ cityId }, { cityId: null, canonical: { key: "city" } }] },
-    select: { id: true, label: true, rank: true, canonical: { select: { key: true } } },
+    where: { OR: [{ cityId }, { cityId: null, key: "city" }] },
+    select: { id: true, label: true, rank: true, key: true },
     orderBy: { rank: "asc" },
   });
-  return rows.map((r) => ({ id: r.id, key: r.canonical.key, label: r.label, rank: r.rank }));
+  return rows.map((r) => ({ id: r.id, key: r.key ?? "", label: r.label, rank: r.rank }));
 }

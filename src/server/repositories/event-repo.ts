@@ -198,12 +198,12 @@ export async function listCompletedInCity(
     orderBy: { scheduledAt: "asc" },
     select: {
       id: true, orgNodeId: true, scheduledAt: true,
-      orgNode: { select: { name: true, type: { select: { canonical: { select: { key: true } } } } } },
+      orgNode: { select: { name: true, type: { select: { key: true } } } },
     },
   });
   return rows.map((r) => ({
     id: r.id, orgNodeId: r.orgNodeId, nodeName: r.orgNode.name,
-    nodeLevel: r.orgNode.type.canonical.key, scheduledAt: r.scheduledAt,
+    nodeLevel: r.orgNode.type.key ?? "", scheduledAt: r.scheduledAt,
   }));
 }
 

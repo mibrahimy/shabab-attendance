@@ -37,17 +37,25 @@ model CanonicalNodeType {
 }
 
 model NodeType {
-  id          String            @id @default(cuid())
+  id          String             @id @default(cuid())
   cityId      String? // null = national level (above any city, e.g. country/city types)
-  canonicalId String
-  canonical   CanonicalNodeType @relation(fields: [canonicalId], references: [id])
-  label       String
-  rank        Int
-  orgNodes    OrgNode[]
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  // Self-describing per-city level config. `key` is the level's per-city identity
+  // (a slug); `canonicalId` links to the optional cross-city spine (null = a custom
+  // city-defined level). `headPositionKey` is the role that heads this level; `color`
+  // is the level's badge color. These replace the in-code level maps.
+  key             String?
+  color           String?
+  headPositionKey String?
+  canonicalId     String?
+  canonical       CanonicalNodeType? @relation(fields: [canonicalId], references: [id])
+  label           String
+  rank            Int
+  orgNodes        OrgNode[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 
   @@unique([cityId, canonicalId])
+  @@unique([cityId, key])
   @@index([cityId])
   @@index([canonicalId])
 }
@@ -61,24 +69,30 @@ model CanonicalPosition {
 }
 
 model Position {
-  id          String               @id @default(cuid())
+  id          String              @id @default(cuid())
   cityId      String? // null = national title (above any city)
-  canonicalId String
-  canonical   CanonicalPosition    @relation(fields: [canonicalId], references: [id])
-  functionId  String? // null = cross-functional
-  function    Function?            @relation(fields: [functionId], references: [id])
-  label       String
-  rank        Int
-  permissions PositionPermission[]
-  assignments Assignment[]
-  events      Event[]              @relation("EventAudience")
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  // Self-describing per-city role config. `key` is the role's per-city identity (a
+  // slug); `canonicalId` links to the optional cross-city spine (null = a custom
+  // city-defined role); `attachLevelKey` is the NodeType.key this role attaches at.
+  key            String?
+  attachLevelKey String?
+  canonicalId    String?
+  canonical      CanonicalPosition?  @relation(fields: [canonicalId], references: [id])
+  functionId     String? // null = cross-functional
+  function       Function?           @relation(fields: [functionId], references: [id])
+  label          String
+  rank           Int
+  permissions    PositionPermission[]
+  assignments    Assignment[]
+  events         Event[]             @relation("EventAudience")
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   // One Position per (city, canonical) role — makes findOrCreateRolePosition
   // race-safe (a concurrent duplicate insert is rejected, not silently created).
   // National positions (cityId = null) are exempt: NULLs compare as distinct.
   @@unique([cityId, canonicalId])
+  @@unique([cityId, key])
   @@index([canonicalId])
   @@index([functionId])
 }

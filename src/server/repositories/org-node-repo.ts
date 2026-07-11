@@ -140,12 +140,12 @@ export async function listSubtree(path: string): Promise<SubtreeNode[]> {
     orderBy: [{ depth: "asc" }, { name: "asc" }],
     select: {
       ...baseSelect,
-      type: { select: { label: true, rank: true, canonical: { select: { key: true } } } },
+      type: { select: { label: true, rank: true, key: true } },
     },
   });
   return rows.map(({ type, ...n }) => ({
     ...n,
-    level: { key: type.canonical.key, label: type.label, rank: type.rank },
+    level: { key: type.key ?? "", label: type.label, rank: type.rank },
   }));
 }
 
