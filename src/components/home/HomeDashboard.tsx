@@ -9,12 +9,15 @@ import Link from "next/link";
 import { Trail } from "./Trail";
 import type { LevelCount } from "@/lib/city-summary";
 
+type WeekRate = { present: number; total: number; rate: number };
+
 type Dashboard = {
   city: { id: string; name: string };
   levels: LevelCount[];
   peopleCount: number;
   sessions: { total: number; today: number; markedToday: number };
   rate: { present: number; total: number };
+  week: { thisWeek: WeekRate; lastWeek: WeekRate; deltaPts: number };
   recent: {
     id: string; title: string; when: string; nodeName: string;
     status: "scheduled" | "completed" | "cancelled"; present: number; total: number;
@@ -43,6 +46,52 @@ function Stat({ label, value, sub, accent }: { label: string; value: string; sub
         {value}
       </div>
       {sub && <div className="mt-0.5 text-xs text-slate-400">{sub}</div>}
+    </div>
+  );
+}
+
+// This-week attendance vs last week. Calm empty state when the current PKT week has
+// no marked sessions yet (common for a city whose data is historical).
+function WeekSignal({ week }: { week: Dashboard["week"] }) {
+  const { thisWeek, lastWeek, deltaPts } = week;
+  const hasThis = thisWeek.total > 0;
+  const hasLast = lastWeek.total > 0;
+  const up = deltaPts > 0;
+  const down = deltaPts < 0;
+  const deltaTone = up ? "text-emerald-600" : down ? "text-rose-500" : "text-slate-400";
+
+  return (
+    <div className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.07em] text-slate-400">This week</div>
+          {hasThis ? (
+            <>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="font-num text-3xl font-semibold tracking-tight text-slate-900">{thisWeek.rate}%</span>
+                {hasLast && (
+                  <span className={`font-num text-sm font-semibold ${deltaTone}`}>
+                    {up ? "▲" : down ? "▼" : "±"} {Math.abs(deltaPts)} pts
+                  </span>
+                )}
+              </div>
+              <div className="mt-0.5 text-xs text-slate-400">
+                <span className="font-num text-slate-600">{thisWeek.present}</span> present of{" "}
+                <span className="font-num">{thisWeek.total}</span>
+                {hasLast ? <> · vs {lastWeek.rate}% last week</> : <> · first week with sessions</>}
+              </div>
+            </>
+          ) : (
+            <div className="mt-1 text-sm text-slate-400">
+              No sessions marked yet this week.
+              {hasLast && <> Last week was <span className="font-num text-slate-600">{lastWeek.rate}%</span>.</>}
+            </div>
+          )}
+        </div>
+        <Link href="/mark" className="text-xs font-medium text-[#2f55ea] hover:underline">
+          Take attendance →
+        </Link>
+      </div>
     </div>
   );
 }
@@ -155,6 +204,9 @@ export function HomeDashboard({
           </div>
         </div>
       </div>
+
+      {/* Weekly progress: this week vs last week */}
+      <WeekSignal week={dashboard.week} />
 
       {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-3">

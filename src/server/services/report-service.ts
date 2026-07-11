@@ -6,10 +6,16 @@ import type { AuthzContext } from "@/types/auth";
 import { NotFoundError } from "@/server/errors";
 import { requirePermission } from "@/server/auth/can-act-on";
 import type { AttendanceStatus } from "@/lib/attendance-status";
+import { pktWeekStart, pktWeekRange, pktPrevWeekRange } from "@/lib/pkt-week";
 import * as orgNodeRepo from "@/server/repositories/org-node-repo";
 import * as eventRepo from "@/server/repositories/event-repo";
 import * as attendanceRepo from "@/server/repositories/attendance-repo";
 import * as personRepo from "@/server/repositories/person-repo";
+
+export type WeekBucket = {
+  weekStart: string; // ISO instant of the PKT week's Sunday 00:00
+  present: number; total: number; rate: number; sessions: number;
+};
 
 export type CityReport = {
   city: { id: string; name: string };
@@ -20,10 +26,35 @@ export type CityReport = {
     sessions: number; present: number; total: number; rate: number;
   }[];
   trend: { when: string; rate: number }[];
+  weekly: WeekBucket[];
+  weekSummary: { thisWeek: WeekBucket; lastWeek: WeekBucket; deltaPts: number };
 };
 
 function pct(present: number, total: number): number {
   return total > 0 ? Math.round((present / total) * 100) : 0;
+}
+
+// Bucket completed events into PKT calendar weeks (Sun–Sat), summing present/total
+// over each week's sessions. Pure — reused by getCityReport and unit-tested. Weeks
+// with no sessions are absent (not zero-filled), so a trend line reflects only
+// weeks the org actually met.
+export function buildWeekly(
+  events: { id: string; scheduledAt: Date }[],
+  ratesByEvent: Map<string, { present: number; total: number }>,
+): WeekBucket[] {
+  const m = new Map<number, { present: number; total: number; sessions: number }>();
+  for (const e of events) {
+    const key = pktWeekStart(e.scheduledAt).getTime();
+    const s = ratesByEvent.get(e.id) ?? { present: 0, total: 0 };
+    const cur = m.get(key) ?? { present: 0, total: 0, sessions: 0 };
+    cur.present += s.present;
+    cur.total += s.total;
+    cur.sessions += 1;
+    m.set(key, cur);
+  }
+  return [...m.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([ms, v]) => ({ weekStart: new Date(ms).toISOString(), present: v.present, total: v.total, sessions: v.sessions, rate: pct(v.present, v.total) }));
 }
 
 async function requireCityView(ctx: AuthzContext, cityId: string): Promise<orgNodeRepo.OrgNodeRow> {
@@ -123,11 +154,22 @@ export async function getCityReport(
     return { when: e.scheduledAt.toISOString(), rate: pct(s.present, s.total) };
   });
 
+  // Weekly progress: PKT calendar-week buckets, plus this-week-vs-last-week.
+  const weekly = buildWeekly(events, ratesByEvent);
+  const byWeekStart = new Map(weekly.map((w) => [w.weekStart, w]));
+  const emptyWeek = (weekStart: string): WeekBucket => ({ weekStart, present: 0, total: 0, rate: 0, sessions: 0 });
+  const thisKey = pktWeekRange().start.toISOString();
+  const lastKey = pktPrevWeekRange().start.toISOString();
+  const thisWeek = byWeekStart.get(thisKey) ?? emptyWeek(thisKey);
+  const lastWeek = byWeekStart.get(lastKey) ?? emptyWeek(lastKey);
+
   return {
     city: { id: city.id, name: city.name },
     overall: { present: overall.present, total: overall.total, rate: pct(overall.present, overall.total), sessions: events.length },
     byStatus,
     byNode,
     trend,
+    weekly,
+    weekSummary: { thisWeek, lastWeek, deltaPts: thisWeek.rate - lastWeek.rate },
   };
 }

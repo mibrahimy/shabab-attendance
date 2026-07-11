@@ -86,6 +86,13 @@ function rateColor(rate: number): string {
   return "bg-emerald-500";
 }
 
+// A PKT week's Sunday, labeled as "Jul 5" in the org's timezone.
+function fmtWeek(weekStartIso: string): string {
+  return new Date(weekStartIso).toLocaleDateString(undefined, {
+    month: "short", day: "numeric", timeZone: "Asia/Karachi",
+  });
+}
+
 function download(filename: string, text: string) {
   const blob = new Blob([text], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -97,13 +104,23 @@ function download(filename: string, text: string) {
 }
 
 export function ReportView({ report, cityId, period }: { report: CityReport; cityId: string; period: string }) {
-  const { overall, byStatus, byNode, trend } = report;
+  const { overall, byStatus, byNode, trend, weekly, weekSummary } = report;
+
+  // The headline Trail reads best as weekly progress; fall back to the per-session
+  // trend only when there aren't enough weeks to draw a line.
+  const trailPoints = weekly.length > 1 ? weekly.map((w) => w.rate) : trend.map((t) => t.rate);
+  const weeks = weekly.slice(-12); // recent weeks for the trend strip
+  const { thisWeek, lastWeek, deltaPts } = weekSummary;
 
   function exportCsv() {
-    const header = ["Node", "Level", "Sessions", "Present", "Total", "Rate %"];
-    const rows = byNode.map((n) => [n.nodeName, n.level, n.sessions, n.present, n.total, n.rate]);
     const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-    const csv = [header, ...rows].map((r) => r.map(esc).join(",")).join("\n");
+    const nodeHeader = ["Node", "Level", "Sessions", "Present", "Total", "Rate %"];
+    const nodeRows = byNode.map((n) => [n.nodeName, n.level, n.sessions, n.present, n.total, n.rate]);
+    const weekHeader = ["Week of", "Sessions", "Present", "Total", "Rate %"];
+    const weekRows = weekly.map((w) => [fmtWeek(w.weekStart), w.sessions, w.present, w.total, w.rate]);
+    const csv = [nodeHeader, ...nodeRows, [], weekHeader, ...weekRows]
+      .map((r) => r.map(esc).join(","))
+      .join("\n");
     download(`${report.city.name}-attendance-report.csv`, csv);
   }
 
@@ -153,12 +170,44 @@ export function ReportView({ report, cityId, period }: { report: CityReport; cit
               <span className="font-num text-slate-600">{overall.present.toLocaleString()}</span> present of{" "}
               <span className="font-num">{overall.total.toLocaleString()}</span> · {overall.sessions} sessions
             </div>
+            {thisWeek.total > 0 && (
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/70 px-3 py-1 text-xs">
+                <span className="font-semibold uppercase tracking-wide text-slate-400">This week</span>
+                <span className="font-num font-semibold text-slate-700">{thisWeek.rate}%</span>
+                {lastWeek.total > 0 && (
+                  <span className={`font-num font-semibold ${deltaPts > 0 ? "text-emerald-600" : deltaPts < 0 ? "text-rose-500" : "text-slate-400"}`}>
+                    {deltaPts > 0 ? "▲" : deltaPts < 0 ? "▼" : "±"} {Math.abs(deltaPts)} pts
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <div className="min-w-[220px] flex-1 sm:max-w-[420px]">
-            {trend.length > 1 && <Trail points={trend.map((t) => t.rate)} />}
+            {trailPoints.length > 1 && <Trail points={trailPoints} />}
           </div>
         </div>
       </div>
+
+      {/* Weekly trend — attendance by PKT calendar week (Sun–Sat) */}
+      {weeks.length > 0 && (
+        <div className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-900">Weekly progress</h2>
+            <span className="text-xs text-slate-400">last {weeks.length} week{weeks.length === 1 ? "" : "s"}</span>
+          </div>
+          <div className="mt-4 flex items-end gap-2 sm:gap-3">
+            {weeks.map((w) => (
+              <div key={w.weekStart} className="flex min-w-0 flex-1 flex-col items-center gap-1.5" title={`${fmtWeek(w.weekStart)} · ${w.present}/${w.total} · ${w.sessions} session${w.sessions === 1 ? "" : "s"}`}>
+                <span className="font-num text-[11px] font-semibold text-slate-600">{w.rate}</span>
+                <div className="flex h-24 w-full items-end rounded-md bg-slate-50">
+                  <div className={`w-full rounded-md ${rateColor(w.rate)}`} style={{ blockSize: `${Math.max(w.rate, 3)}%` }} />
+                </div>
+                <span className="truncate text-[10px] text-slate-400">{fmtWeek(w.weekStart)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Status breakdown */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

@@ -11,6 +11,7 @@ import { nextLevel, type Level } from "@/lib/org-levels";
 import { DEFAULT_ROLES, HEAD_CANONICAL_BY_LEVEL, type RoleDef } from "@/lib/default-roles";
 import { summarizeLevels, type LevelCount } from "@/lib/city-summary";
 import { pktDayRange } from "@/lib/pkt-day";
+import { pktWeekRange, pktPrevWeekRange } from "@/lib/pkt-week";
 import * as orgNodeRepo from "@/server/repositories/org-node-repo";
 import * as nodeTypeRepo from "@/server/repositories/node-type-repo";
 import * as assignmentRepo from "@/server/repositories/assignment-repo";
@@ -109,17 +110,24 @@ export async function listSwitchableCities(ctx: AuthzContext): Promise<{ id: str
   return city ? [{ id: city.id, name: city.name }] : [];
 }
 
+type WeekRate = { present: number; total: number; rate: number };
+
 export type CityDashboard = {
   city: { id: string; name: string };
   levels: LevelCount[];
   peopleCount: number;
   sessions: { total: number; today: number; markedToday: number };
   rate: { present: number; total: number };
+  week: { thisWeek: WeekRate; lastWeek: WeekRate; deltaPts: number };
   recent: {
     id: string; title: string; when: string; nodeName: string;
     status: "scheduled" | "completed" | "cancelled"; present: number; total: number;
   }[];
 };
+
+function toRate(c: { present: number; total: number }): WeekRate {
+  return { present: c.present, total: c.total, rate: c.total > 0 ? Math.round((c.present / c.total) * 100) : 0 };
+}
 
 // Rich command-center dashboard for a city: org shape + attendance headline +
 // recent sessions. Same scope guard as the tree.
@@ -128,16 +136,21 @@ export async function getCityDashboard(ctx: AuthzContext, cityId: string): Promi
   if (!city) throw new NotFoundError("City not found");
   canManage(ctx, city);
 
-  const [levels, nodes, peopleCount, today, totalSessions, rate, recent] = await Promise.all([
+  const [levels, nodes, peopleCount, today, totalSessions, rate, thisWeekRate, lastWeekRate, recent] = await Promise.all([
     nodeTypeRepo.listCityLevels(cityId),
     orgNodeRepo.listSubtree(city.path),
     assignmentRepo.countActiveInSubtree(city.path),
     eventRepo.todayStatsInCity(cityId, pktDayRange()),
     eventRepo.countInCity(cityId),
     attendanceRepo.rateInCity(cityId),
+    attendanceRepo.rateInCity(cityId, pktWeekRange()),
+    attendanceRepo.rateInCity(cityId, pktPrevWeekRange()),
     eventRepo.recentInCity(cityId, 6),
   ]);
   const byEvent = await attendanceRepo.statusByEvents(recent.map((r) => r.id));
+
+  const thisWeek = toRate(thisWeekRate);
+  const lastWeek = toRate(lastWeekRate);
 
   return {
     city: { id: city.id, name: city.name },
@@ -145,6 +158,7 @@ export async function getCityDashboard(ctx: AuthzContext, cityId: string): Promi
     peopleCount,
     sessions: { total: totalSessions, today: today.events, markedToday: today.started },
     rate,
+    week: { thisWeek, lastWeek, deltaPts: thisWeek.rate - lastWeek.rate },
     recent: recent.map((r) => ({
       id: r.id, title: r.title, when: r.scheduledAt.toISOString(), nodeName: r.nodeName,
       status: r.status, ...(byEvent.get(r.id) ?? { present: 0, total: 0 }),
