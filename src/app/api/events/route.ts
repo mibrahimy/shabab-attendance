@@ -26,7 +26,8 @@ export async function GET(req: Request): Promise<NextResponse> {
       const rosterDepth = rosterDepthParam === "null" ? null : rosterDepthParam ? Number(rosterDepthParam) : 1;
       const segParam = params.get("segment");
       const segment = segParam === "junior" || segParam === "senior" ? segParam : null;
-      const count = await eventService.previewRosterSize(ctx, { nodeId, rosterDepth, segment });
+      const rosterMode = params.get("rosterMode") === "team" ? "team" : "members";
+      const count = await eventService.previewRosterSize(ctx, { nodeId, rosterDepth, segment, rosterMode });
       return NextResponse.json({ data: { count } });
     }
     const scopeParam = params.get("scope");
@@ -47,6 +48,8 @@ const postSchema = z.object({
   // null = whole subtree; a number = that many levels below the anchor (1 = direct).
   rosterDepth: z.number().int().min(1).nullable().optional(),
   audiencePositionId: z.string().min(1).nullable().optional(),
+  // members (default) = directly-assigned people; team = the node's derived team.
+  rosterMode: z.enum(["members", "team"]).optional(),
 });
 
 export async function POST(req: Request): Promise<NextResponse> {
@@ -63,6 +66,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       segment: parsed.data.segment,
       rosterDepth: parsed.data.rosterDepth,
       audiencePositionId: parsed.data.audiencePositionId,
+      rosterMode: parsed.data.rosterMode,
     });
     return NextResponse.json({ data: result });
   } catch (err) {

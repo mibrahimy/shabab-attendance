@@ -16,12 +16,20 @@ export type RosterEntry = {
   personId: string;
   name: string;
   segment: "junior" | "senior" | null;
+  roleLabel: string | null; // set for team rosters (e.g. "Park lead", "Murabbi")
   status: AttendanceStatus;
   marked: boolean; // whether an explicit attendance record already exists
 };
 
 export type MarkerRoster = {
-  event: { id: string; title: string; scheduledAt: Date; status: string };
+  event: {
+    id: string;
+    title: string;
+    scheduledAt: Date;
+    status: string;
+    rosterMode: "members" | "team";
+    nodeName: string;
+  };
   roster: RosterEntry[];
   recentRates: number[]; // rate % of recent completed sessions at this node (oldest→newest)
 };
@@ -49,6 +57,7 @@ export async function getMarkerRoster(ctx: AuthzContext, eventId: string): Promi
       personId: p.personId,
       name: p.name,
       segment: p.segment,
+      roleLabel: p.roleLabel,
       status: byPerson.get(p.personId) ?? DEFAULT_STATUS,
       marked: byPerson.has(p.personId),
     }));
@@ -65,7 +74,14 @@ export async function getMarkerRoster(ctx: AuthzContext, eventId: string): Promi
     });
 
   return {
-    event: { id: event.id, title: event.title, scheduledAt: event.scheduledAt, status: event.status },
+    event: {
+      id: event.id,
+      title: event.title,
+      scheduledAt: event.scheduledAt,
+      status: event.status,
+      rosterMode: event.rosterMode,
+      nodeName: event.orgNodeName,
+    },
     roster: slice,
     recentRates,
   };

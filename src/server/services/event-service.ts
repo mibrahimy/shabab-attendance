@@ -6,7 +6,9 @@ import { NotFoundError, ValidationError } from "@/server/errors";
 import { requirePermission, isSuperadmin } from "@/server/auth/can-act-on";
 import { pktDayRange } from "@/lib/pkt-day";
 import { PATH_DELIMITER } from "@/lib/org-path";
+import { teamHeadKeys } from "@/lib/org-levels";
 import * as orgNodeRepo from "@/server/repositories/org-node-repo";
+import * as nodeTypeRepo from "@/server/repositories/node-type-repo";
 import * as eventRepo from "@/server/repositories/event-repo";
 import * as attendanceRepo from "@/server/repositories/attendance-repo";
 import * as auditRepo from "@/server/repositories/audit-repo";
@@ -29,6 +31,9 @@ export async function createEvent(
     // wide or zone-wide session). Defaults to direct members.
     rosterDepth?: number | null;
     audiencePositionId?: string | null;
+    // members (default) = directly-assigned people; team = the node's derived team
+    // (its head + its children's heads), for taking a level's leads' attendance.
+    rosterMode?: "members" | "team";
   },
 ): Promise<{ id: string }> {
   const node = await orgNodeRepo.findById(input.nodeId);
@@ -39,14 +44,25 @@ export async function createEvent(
   if (!title) throw new ValidationError("Title is required");
   if (Number.isNaN(input.scheduledAt.getTime())) throw new ValidationError("Invalid date/time");
 
+  const teamMode = input.rosterMode === "team";
+  if (teamMode) {
+    // A team event needs a level with a head role, or its roster would be empty.
+    if (!node.cityId) throw new ValidationError("Team attendance needs a city-scoped node");
+    const levels = await nodeTypeRepo.listCityLevels(node.cityId);
+    const { headForNode } = teamHeadKeys(levels, node.typeId);
+    if (!headForNode) throw new ValidationError("Team attendance isn’t available at this level");
+  }
+
   const event = await eventRepo.create({
     title,
     orgNodeId: node.id,
     cityId: node.cityId,
     scheduledAt: input.scheduledAt,
-    rosterDepth: input.rosterDepth === undefined ? 1 : input.rosterDepth,
+    // Reach + audience-position don't apply to a team roster.
+    rosterDepth: teamMode ? null : input.rosterDepth === undefined ? 1 : input.rosterDepth,
+    rosterMode: teamMode ? "team" : "members",
     segment: input.segment ?? null,
-    audiencePositionId: input.audiencePositionId ?? null,
+    audiencePositionId: teamMode ? null : input.audiencePositionId ?? null,
     createdById: ctx.personId,
   });
 
@@ -66,7 +82,7 @@ export async function createEvent(
 // resolution (countRoster) so the preview can't disagree with the real creation.
 export async function previewRosterSize(
   ctx: AuthzContext,
-  input: { nodeId: string; rosterDepth?: number | null; segment?: Segment | null },
+  input: { nodeId: string; rosterDepth?: number | null; segment?: Segment | null; rosterMode?: "members" | "team" },
 ): Promise<number> {
   const node = await orgNodeRepo.findById(input.nodeId);
   if (!node) throw new NotFoundError("Node not found");
@@ -79,7 +95,9 @@ export async function previewRosterSize(
     orgNodePath: node.path,
     orgNodeDepth: node.depth,
     orgNodeName: node.name,
+    orgNodeTypeId: node.typeId,
     rosterDepth: input.rosterDepth === undefined ? 1 : input.rosterDepth,
+    rosterMode: input.rosterMode === "team" ? "team" : "members",
     segment: input.segment ?? null,
     audiencePositionId: null,
     functionId: null,
@@ -209,6 +227,7 @@ export type ListedEvent = {
   orgNodeId: string;
   nodeName: string;
   status: "scheduled" | "completed" | "cancelled";
+  rosterMode: "members" | "team";
   markedCount: number;
   rosterCount: number;
 };
@@ -242,6 +261,7 @@ async function withCounts(events: eventRepo.EventRow[]): Promise<ListedEvent[]> 
     orgNodeId: e.orgNodeId,
     nodeName: e.orgNodeName,
     status: e.status,
+    rosterMode: e.rosterMode,
     rosterCount: rosterCounts[i],
     markedCount: markedByEvent.get(e.id) ?? 0,
   }));

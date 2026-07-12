@@ -15,6 +15,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useOnline } from "@/lib/offline/use-online";
 import { pending as pendingMarks } from "@/lib/offline/outbox";
 import { CreateEventForm } from "@/components/attendance/CreateEventForm";
+import { RosterModeChip } from "@/components/attendance/RosterModeChip";
 
 type Scope = "today" | "upcoming" | "past";
 
@@ -25,6 +26,7 @@ type HubEvent = {
   orgNodeId: string;
   nodeName: string;
   status: "scheduled" | "completed" | "cancelled";
+  rosterMode: "members" | "team";
   rosterCount: number;
   markedCount: number;
 };
@@ -83,6 +85,7 @@ function EventCard({ e, scope }: { e: HubEvent; scope: Scope }) {
           <span className={`truncate text-sm font-medium ${cancelled ? "text-slate-400 line-through" : "text-slate-900"}`}>
             {e.title}
           </span>
+          <RosterModeChip mode={e.rosterMode} />
           <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ring-inset ${pill.cls}`}>
             {pill.text}
           </span>

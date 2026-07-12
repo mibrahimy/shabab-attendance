@@ -64,6 +64,7 @@ export function CreateEventForm({
   const [when, setWhen] = useState(defaultLocalDateTime);
   const [segment, setSegment] = useState<"" | "junior" | "senior">("");
   const [reach, setReach] = useState<"direct" | "subtree">("direct");
+  const [mode, setMode] = useState<"members" | "team">("members");
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<number | null>(null);
   const [previewing, setPreviewing] = useState(false);
@@ -91,9 +92,12 @@ export function CreateEventForm({
       }
       setPreviewing(true);
       const rd = reach === "subtree" ? "null" : "1";
-      fetch(`/api/events?preview=1&nodeId=${encodeURIComponent(nodeId)}&rosterDepth=${rd}&segment=${segment}`, {
-        signal: ctrl.signal,
-      })
+      // Team mode ignores reach + segment (see submit); keep the preview consistent.
+      const seg = mode === "members" ? segment : "";
+      fetch(
+        `/api/events?preview=1&nodeId=${encodeURIComponent(nodeId)}&rosterDepth=${rd}&segment=${seg}&rosterMode=${mode}`,
+        { signal: ctrl.signal },
+      )
         .then((r) => (r.ok ? r.json() : null))
         .then((j) => {
           setPreview(typeof j?.data?.count === "number" ? j.data.count : null);
@@ -105,7 +109,7 @@ export function CreateEventForm({
       clearTimeout(timer);
       ctrl.abort();
     };
-  }, [nodeId, reach, segment]);
+  }, [nodeId, reach, segment, mode]);
 
   const q = query.trim().toLowerCase();
   const filtered = q ? nodes.filter((n) => n.label.toLowerCase().includes(q)) : nodes;
@@ -121,8 +125,12 @@ export function CreateEventForm({
           nodeId,
           title: title.trim(),
           scheduledAt: new Date(when).toISOString(),
-          segment: segment || undefined,
-          rosterDepth: reach === "subtree" ? null : 1,
+          rosterMode: mode,
+          // Reach + segment only apply to a members roster; a team roster is the
+          // node's leads regardless of these, so don't send them in team mode.
+          ...(mode === "members"
+            ? { segment: segment || undefined, rosterDepth: reach === "subtree" ? null : 1 }
+            : {}),
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -207,31 +215,50 @@ export function CreateEventForm({
           <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className={inputClass} />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("create.reach", "Who")}</label>
-            <Segmented
-              value={reach}
-              onChange={setReach}
-              options={[
-                { value: "direct", label: t("create.reachDirect", "This group") },
-                { value: "subtree", label: t("create.reachSubtree", "Everyone under") },
-              ]}
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("create.segment", "Segment")}</label>
-            <Segmented
-              value={segment}
-              onChange={setSegment}
-              options={[
-                { value: "", label: t("create.segmentAll", "All") },
-                { value: "junior", label: t("create.segmentJunior", "Junior") },
-                { value: "senior", label: t("create.segmentSenior", "Senior") },
-              ]}
-            />
-          </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("create.mode", "Whose attendance")}</label>
+          <Segmented
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: "members", label: t("create.modeMembers", "Members") },
+              { value: "team", label: t("create.modeTeam", "Team (leads)") },
+            ]}
+          />
+          {mode === "team" && (
+            <p className="mt-1.5 text-xs text-slate-400">
+              {t("create.teamHint", "The team here: this node's lead plus each sub-location's lead.")}
+            </p>
+          )}
         </div>
+
+        {mode === "members" && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("create.reach", "Who")}</label>
+              <Segmented
+                value={reach}
+                onChange={setReach}
+                options={[
+                  { value: "direct", label: t("create.reachDirect", "This group") },
+                  { value: "subtree", label: t("create.reachSubtree", "Everyone under") },
+                ]}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("create.segment", "Segment")}</label>
+              <Segmented
+                value={segment}
+                onChange={setSegment}
+                options={[
+                  { value: "", label: t("create.segmentAll", "All") },
+                  { value: "junior", label: t("create.segmentJunior", "Junior") },
+                  { value: "senior", label: t("create.segmentSenior", "Senior") },
+                ]}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </Modal>
   );

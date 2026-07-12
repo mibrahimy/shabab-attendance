@@ -270,6 +270,7 @@ model Event {
   orgNodeId          String // anchor — any level
   orgNode            OrgNode     @relation(fields: [orgNodeId], references: [id])
   rosterDepth        Int?        @default(1) // 1 = directly under anchor; null = whole subtree
+  rosterMode         RosterMode  @default(members) // members = directly-assigned people (rosterDepth/audience apply); team = the node's derived team (head + child heads)
   segment            Segment? // jr/sr filter; null = both
   audiencePositionId String? // e.g. Student/Murabbi; null = everyone assigned
   audiencePosition   Position?   @relation("EventAudience", fields: [audiencePositionId], references: [id])
@@ -360,6 +361,11 @@ enum EventStatus {
   scheduled
   completed
   cancelled
+}
+
+enum RosterMode {
+  members
+  team
 }
 
 enum AttendanceStatus {

@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { useToast } from "@/components/ui/Toast";
 import SearchInput from "@/components/ui/SearchInput";
 import { EventActionsMenu } from "@/components/attendance/EventActionsMenu";
+import { RosterModeChip } from "@/components/attendance/RosterModeChip";
 import { ATTENDANCE_STATUSES, type AttendanceStatus } from "@/lib/attendance-status";
 import { initials } from "@/lib/initials";
 import { queueMark, queueMany, pending } from "@/lib/offline/outbox";
@@ -28,6 +29,7 @@ type Entry = {
   personId: string;
   name: string;
   segment: string | null;
+  roleLabel?: string | null; // set for team rosters (the member's role)
   status: AttendanceStatus;
   marked?: boolean;
 };
@@ -41,6 +43,8 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
 
   const [title, setTitle] = useState("");
   const [scheduledAt, setScheduledAt] = useState<string | null>(null);
+  const [rosterMode, setRosterMode] = useState<"members" | "team">("members");
+  const [nodeName, setNodeName] = useState("");
   const [readOnly, setReadOnly] = useState(false);
   const [roster, setRoster] = useState<Entry[]>([]);
   // Which people the marker has explicitly marked (already-marked from the server,
@@ -70,6 +74,8 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
       if (res.ok) {
         setTitle(json.data.event.title);
         setScheduledAt(json.data.event.scheduledAt);
+        setRosterMode(json.data.event.rosterMode ?? "members");
+        setNodeName(json.data.event.nodeName ?? "");
         setReadOnly(json.data.event.status !== "scheduled");
         const serverRoster = json.data.roster as Entry[];
         // Overlay queued (unsynced) marks so the screen shows what was marked.
@@ -218,12 +224,16 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
           <button onClick={() => router.push("/mark")} className="text-sm text-gray-400 hover:text-gray-600">
             ‹ {t("today.title")}
           </button>
-          <h1 className="mt-1 text-xl font-semibold tracking-tight text-gray-900">
-            {title || t("mark.title")}
-          </h1>
+          <div className="mt-1 flex items-center gap-2">
+            <h1 className="min-w-0 truncate text-xl font-semibold tracking-tight text-gray-900">
+              {title || t("mark.title")}
+            </h1>
+            <RosterModeChip mode={rosterMode} />
+          </div>
           <p className="text-sm text-gray-500">
             {time && <span className="font-num">{time}</span>}
             {time && " · "}
+            {nodeName && <>{nodeName} · </>}
             {t("today.people", { count: roster.length })}
           </p>
         </div>
@@ -323,7 +333,9 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
 
       {/* Roster */}
       {roster.length === 0 ? (
-        <p className="text-sm text-gray-400">{t("mark.empty")}</p>
+        <p className="text-sm text-gray-400">
+          {rosterMode === "team" ? t("mark.teamEmpty", "No leads are assigned here yet.") : t("mark.empty")}
+        </p>
       ) : visible.length === 0 ? (
         <p className="py-6 text-center text-sm text-gray-400">{t("mark.noMatches", "No one matches “{{q}}”.", { q: search.trim() })}</p>
       ) : (
@@ -333,7 +345,10 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-[#f5f6fd] font-num text-xs text-gray-600">
                 {initials(e.name)}
               </span>
-              <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-900">{e.name}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium text-gray-900">{e.name}</span>
+                {e.roleLabel && <span className="block truncate text-xs text-gray-400">{e.roleLabel}</span>}
+              </span>
               {readOnly ? (
                 // Closed event → a static result badge, not a disabled control that
                 // reads as "broken".
@@ -354,7 +369,7 @@ export default function MarkPage({ params }: { params: Promise<{ eventId: string
                       disabled={readOnly}
                       aria-pressed={on}
                       aria-label={t(`status.${s}`)}
-                      className={`flex h-10 min-w-[42px] items-center justify-center rounded-xl font-num text-sm font-semibold transition ${
+                      className={`flex h-11 min-w-[44px] items-center justify-center rounded-xl font-num text-sm font-semibold transition ${
                         on
                           ? `${STATUS_SOLID[s]} ${STATUS_GLOW[s]}`
                           : "text-gray-500 hover:bg-white/70"

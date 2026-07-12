@@ -3,10 +3,13 @@
 
 import { prisma } from "@/server/db";
 import type { Db } from "./org-node-repo";
+import * as nodeTypeRepo from "./node-type-repo";
+import { teamHeadKeys } from "@/lib/org-levels";
 import type { AttendanceStatus } from "@/lib/attendance-status";
 
 type Segment = "junior" | "senior";
 type EventStatus = "scheduled" | "completed" | "cancelled";
+type RosterMode = "members" | "team";
 
 export type EventRow = {
   id: string;
@@ -15,7 +18,9 @@ export type EventRow = {
   orgNodePath: string;
   orgNodeDepth: number;
   orgNodeName: string;
+  orgNodeTypeId: string;
   rosterDepth: number | null;
+  rosterMode: RosterMode;
   segment: Segment | null;
   audiencePositionId: string | null;
   functionId: string | null;
@@ -29,25 +34,32 @@ const selectWithNode = {
   title: true,
   orgNodeId: true,
   rosterDepth: true,
+  rosterMode: true,
   segment: true,
   audiencePositionId: true,
   functionId: true,
   cityId: true,
   status: true,
   scheduledAt: true,
-  orgNode: { select: { path: true, depth: true, name: true } },
+  orgNode: { select: { path: true, depth: true, name: true, typeId: true } },
 } as const;
 
 type Raw = {
   id: string; title: string; orgNodeId: string; rosterDepth: number | null;
-  segment: Segment | null; audiencePositionId: string | null; functionId: string | null;
-  cityId: string | null; status: EventStatus; scheduledAt: Date;
-  orgNode: { path: string; depth: number; name: string };
+  rosterMode: RosterMode; segment: Segment | null; audiencePositionId: string | null;
+  functionId: string | null; cityId: string | null; status: EventStatus; scheduledAt: Date;
+  orgNode: { path: string; depth: number; name: string; typeId: string };
 };
 
 function toRow(r: Raw): EventRow {
   const { orgNode, ...rest } = r;
-  return { ...rest, orgNodePath: orgNode.path, orgNodeDepth: orgNode.depth, orgNodeName: orgNode.name };
+  return {
+    ...rest,
+    orgNodePath: orgNode.path,
+    orgNodeDepth: orgNode.depth,
+    orgNodeName: orgNode.name,
+    orgNodeTypeId: orgNode.typeId,
+  };
 }
 
 export async function create(
@@ -57,6 +69,7 @@ export async function create(
     cityId: string | null;
     scheduledAt: Date;
     rosterDepth?: number | null;
+    rosterMode?: RosterMode;
     segment?: Segment | null;
     audiencePositionId?: string | null;
     functionId?: string | null;
@@ -71,6 +84,7 @@ export async function create(
       cityId: input.cityId,
       scheduledAt: input.scheduledAt,
       rosterDepth: input.rosterDepth ?? 1,
+      rosterMode: input.rosterMode ?? "members",
       segment: input.segment ?? null,
       audiencePositionId: input.audiencePositionId ?? null,
       functionId: input.functionId ?? null,
@@ -253,6 +267,7 @@ export type RosterPerson = {
   name: string;
   segment: Segment | null;
   nodePath: string; // the assignment's node path — used for the marker-scope ∩
+  roleLabel: string | null; // the member's role at their node — set for team rosters
 };
 
 // The org-node predicate for an event's roster: the anchor subtree (path prefix),
@@ -264,9 +279,59 @@ function rosterNodeWhere(event: EventRow) {
     : { path: { startsWith: event.orgNodePath }, depth: { lte: event.orgNodeDepth + event.rosterDepth } };
 }
 
+// Team-mode roster: the anchor node's derived team — its own head (the level's
+// head role) plus the heads of its DIRECT children — resolved live from active
+// assignments. This is how a park/zone/city takes the attendance of its leads
+// (e.g. a park event's roster = park lead + each child class's murabbi). Each
+// RosterPerson.nodePath is the member's OWN assignment path (a child path for
+// rolled-up heads) so the marker-scope ∩ keeps gating correctly. rosterDepth and
+// audiencePositionId don't apply in team mode; segment still filters if set.
+async function resolveTeamRoster(event: EventRow): Promise<RosterPerson[]> {
+  if (!event.cityId) return [];
+  const levels = await nodeTypeRepo.listCityLevels(event.cityId);
+  const { headForNode, headForChild } = teamHeadKeys(levels, event.orgNodeTypeId);
+  if (!headForNode) return []; // level has no head role → no team
+
+  const rows = await prisma.assignment.findMany({
+    where: {
+      endDate: null,
+      ...(event.segment ? { person: { segment: event.segment } } : {}),
+      OR: [
+        { orgNodeId: event.orgNodeId, position: { key: headForNode } },
+        ...(headForChild
+          ? [{ orgNode: { parentId: event.orgNodeId }, position: { key: headForChild } }]
+          : []),
+      ],
+    },
+    select: {
+      person: { select: { id: true, name: true, segment: true } },
+      orgNode: { select: { path: true } },
+      position: { select: { label: true } },
+    },
+    orderBy: { person: { name: "asc" } },
+  });
+
+  const seen = new Set<string>();
+  const out: RosterPerson[] = [];
+  for (const r of rows) {
+    if (seen.has(r.person.id)) continue;
+    seen.add(r.person.id);
+    out.push({
+      personId: r.person.id,
+      name: r.person.name,
+      segment: r.person.segment,
+      nodePath: r.orgNode.path,
+      roleLabel: r.position.label,
+    });
+  }
+  return out;
+}
+
 // Live roster: active assignments under the event's anchor within the depth band,
-// filtered by the event's segment / audience position when set.
+// filtered by the event's segment / audience position when set. Team-mode events
+// resolve the node's derived team instead (see resolveTeamRoster).
 export async function resolveRoster(event: EventRow): Promise<RosterPerson[]> {
+  if (event.rosterMode === "team") return resolveTeamRoster(event);
   const rows = await prisma.assignment.findMany({
     where: {
       endDate: null,
@@ -292,6 +357,7 @@ export async function resolveRoster(event: EventRow): Promise<RosterPerson[]> {
       name: r.person.name,
       segment: r.person.segment,
       nodePath: r.orgNode.path,
+      roleLabel: null,
     });
   }
   return out;
@@ -301,6 +367,7 @@ export async function resolveRoster(event: EventRow): Promise<RosterPerson[]> {
 // personIds (not names/paths), so it's far lighter than resolveRoster when all we
 // need is a number.
 export async function countRoster(event: EventRow): Promise<number> {
+  if (event.rosterMode === "team") return (await resolveTeamRoster(event)).length;
   const rows = await prisma.assignment.findMany({
     where: {
       endDate: null,

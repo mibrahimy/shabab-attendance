@@ -30,6 +30,10 @@
     "completed": "Completed",
     "cancelled": "Cancelled"
   },
+  "rosterMode": {
+    "team": "Team",
+    "members": "Members"
+  },
   "actions": {
     "menu": "Event actions",
     "edit": "Edit details",
@@ -54,6 +58,10 @@
     "nodePlaceholder": "Select where",
     "search": "Search…",
     "noMatch": "No matching places",
+    "mode": "Whose attendance",
+    "modeMembers": "Members",
+    "modeTeam": "Team (leads)",
+    "teamHint": "The team here: this node’s lead plus each sub-location’s lead.",
     "reach": "Who",
     "reachDirect": "This group",
     "reachSubtree": "Everyone under",
@@ -82,7 +90,8 @@
     "savedOnDevice": "Saved on this device — will sync when you’re back online",
     "saveError": "Some marks couldn’t be saved — please try again",
     "summary": "{{present}} present · {{late}} late · {{excused}} excused · {{absent}} absent",
-    "empty": "No one in your roster for this event."
+    "empty": "No one in your roster for this event.",
+    "teamEmpty": "No leads are assigned here yet — assign a lead to this location and its sub-locations."
   },
   "status": {
     "present": "Present",

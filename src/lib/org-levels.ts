@@ -19,3 +19,22 @@ export function nextLevel(template: Level[], parentRank: number): Level | null {
     .sort((a, b) => a.rank - b.rank);
   return deeper[0] ?? null;
 }
+
+// The head role keys that define a node's derived TEAM, given the city's level
+// template and the node's NodeType id: the node's own head, plus the head of its
+// direct-child level. Mirrors getNodeTeam's resolution but kept pure (DB-free) so
+// both the team view and the team-roster resolver share one source of truth.
+// headForNode null ⇒ this level has no head role, so it has no team (and team
+// attendance isn't available there).
+export function teamHeadKeys(
+  template: Level[],
+  typeId: string,
+): { headForNode: string | null; headForChild: string | null } {
+  const nodeLevel = template.find((l) => l.id === typeId);
+  if (!nodeLevel) return { headForNode: null, headForChild: null };
+  const child = nextLevel(template, nodeLevel.rank);
+  return {
+    headForNode: nodeLevel.headPositionKey ?? null,
+    headForChild: child?.headPositionKey ?? null,
+  };
+}
