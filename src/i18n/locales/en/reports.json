@@ -1,0 +1,10 @@
+{
+  "breadcrumb": "Breadcrumb",
+  "jumpToLocation": "Jump to a location",
+  "searchLocationPlaceholder": "Search a zone, park, or class…",
+  "searchPersonPlaceholder": "Find a person’s attendance…",
+  "peopleHere": "People here",
+  "peopleHint": "lowest attendance first",
+  "peopleTruncated": "Showing the {{count}} lowest — search above for anyone else.",
+  "noPeople": "No tracked attendance yet."
+}

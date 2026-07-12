@@ -37,6 +37,38 @@ export async function findById(id: string): Promise<OrgNodeRow | null> {
   return prisma.orgNode.findUnique({ where: { id }, select: baseSelect });
 }
 
+// Resolve nodes by id (unordered) — the report breadcrumb's ancestor names.
+export async function findByIds(ids: string[]): Promise<{ id: string; name: string }[]> {
+  if (ids.length === 0) return [];
+  return prisma.orgNode.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, name: true },
+  });
+}
+
+export type NodeSearchResult = { id: string; name: string; level: string };
+
+// Nodes in a city whose name matches `query` (case-insensitive), excluding the city
+// node itself — the reports "jump to a location" picker. Bounded per city.
+export async function searchInCity(
+  cityId: string,
+  query: string,
+  limit: number,
+  underPath?: string,
+): Promise<NodeSearchResult[]> {
+  const rows = await prisma.orgNode.findMany({
+    // Scoped to a subtree when `underPath` is given (excluding the node itself),
+    // else the whole city (excluding the city node).
+    where: underPath
+      ? { cityId, path: { startsWith: underPath, not: underPath }, name: { contains: query, mode: "insensitive" } }
+      : { cityId, id: { not: cityId }, name: { contains: query, mode: "insensitive" } },
+    orderBy: { name: "asc" },
+    take: limit,
+    select: { id: true, name: true, type: { select: { label: true } } },
+  });
+  return rows.map((r) => ({ id: r.id, name: r.name, level: r.type.label }));
+}
+
 // Resolve nodes by their materialized paths (e.g. a caller's grant anchor paths).
 export async function findByPaths(
   paths: string[],

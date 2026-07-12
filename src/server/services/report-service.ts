@@ -7,6 +7,7 @@ import { NotFoundError } from "@/server/errors";
 import { requirePermission } from "@/server/auth/can-act-on";
 import type { AttendanceStatus } from "@/lib/attendance-status";
 import { pktWeekStart, pktWeekRange, pktPrevWeekRange } from "@/lib/pkt-week";
+import { PATH_DELIMITER } from "@/lib/org-path";
 import * as orgNodeRepo from "@/server/repositories/org-node-repo";
 import * as nodeTypeRepo from "@/server/repositories/node-type-repo";
 import * as eventRepo from "@/server/repositories/event-repo";
@@ -32,7 +33,26 @@ export type ReportBody = {
 };
 
 export type CityReport = { city: { id: string; name: string } } & ReportBody;
-export type NodeReport = { node: { id: string; name: string; level: string } } & ReportBody;
+
+// A person tracked under the node, with their rate over the report's period —
+// the node report's "people here" triage list.
+export type NodePerson = {
+  id: string; name: string; role: string | null;
+  present: number; total: number; rate: number;
+};
+// One breadcrumb crumb: an ancestor of the node (isCity marks the city crumb, which
+// links to the city report rather than a node report).
+export type Crumb = { id: string; name: string; isCity: boolean };
+export type NodeReport = {
+  node: { id: string; name: string; level: string };
+  people: NodePerson[];
+  peopleTruncated: boolean;
+  trail: Crumb[];
+} & ReportBody;
+
+// Cap on the node report's people list — bounded triage (lowest-rate-first); the
+// node-scoped people-search covers finding anyone past the cap.
+const NODE_PEOPLE_CAP = 50;
 
 function pct(present: number, total: number): number {
   return total > 0 ? Math.round((present / total) * 100) : 0;
@@ -68,16 +88,61 @@ async function requireCityView(ctx: AuthzContext, cityId: string): Promise<orgNo
   return city;
 }
 
-// People-search for the reports drill-down (scoped by view_attendance on the city).
+// People-search for the reports drill-down. City-wide by default (scoped by
+// view_attendance on the city). When `nodeId` is given the search is scoped to that
+// node's subtree and guarded by view_attendance on the node's path, so it can never
+// surface people outside the caller's view scope for that node.
 export async function searchPeople(
   ctx: AuthzContext,
   cityId: string,
   query: string,
+  nodeId?: string,
 ): Promise<personRepo.PersonSearchResult[]> {
-  await requireCityView(ctx, cityId);
   const q = query.trim();
+  if (nodeId) {
+    const node = await orgNodeRepo.findById(nodeId);
+    if (!node) throw new NotFoundError("Node not found");
+    requirePermission(ctx, "view_attendance", { path: node.path, functionId: null });
+    if (q.length < 2) return [];
+    return personRepo.searchInCity(cityId, q, 20, node.path);
+  }
+  await requireCityView(ctx, cityId);
   if (q.length < 2) return [];
   return personRepo.searchInCity(cityId, q, 20);
+}
+
+// Node-search for the reports "jump to a location" picker. City-wide by default
+// (view_attendance on the city). On a node report `nodeId` scopes the search to
+// that node's subtree and guards on the node's path — so a lead who can only view
+// a sub-node still gets a working, correctly-scoped location search.
+export async function searchNodes(
+  ctx: AuthzContext,
+  cityId: string,
+  query: string,
+  nodeId?: string,
+): Promise<orgNodeRepo.NodeSearchResult[]> {
+  const q = query.trim();
+  if (nodeId) {
+    const node = await orgNodeRepo.findById(nodeId);
+    if (!node) throw new NotFoundError("Node not found");
+    requirePermission(ctx, "view_attendance", { path: node.path, functionId: null });
+    if (q.length < 2) return [];
+    return orgNodeRepo.searchInCity(cityId, q, 20, node.path);
+  }
+  await requireCityView(ctx, cityId);
+  if (q.length < 2) return [];
+  return orgNodeRepo.searchInCity(cityId, q, 20);
+}
+
+// Ancestor ids of a node's report breadcrumb, ordered city → … → node's parent
+// (the node itself and the root/country above the city are excluded). Pure — the
+// path is trailing-delimited "/root/country/city/…/node/", so splitting on the
+// delimiter yields the id chain. Unit-tested.
+export function ancestorIdsForTrail(path: string, cityId: string): string[] {
+  const ids = path.split(PATH_DELIMITER).filter((s) => s.length > 0);
+  const cityIdx = ids.indexOf(cityId);
+  if (cityIdx < 0) return [];
+  return ids.slice(cityIdx, ids.length - 1);
 }
 
 export type PersonReport = {
@@ -85,7 +150,7 @@ export type PersonReport = {
   overall: { present: number; total: number; rate: number };
   byStatus: Record<AttendanceStatus, number>;
   trend: number[]; // per-session "lit" value (present/late 100, excused 40, absent 0), oldest→newest
-  sessions: { eventId: string; title: string; when: string; nodeName: string; status: AttendanceStatus }[];
+  sessions: { eventId: string; title: string; when: string; nodeId: string; nodeName: string; status: AttendanceStatus }[];
 };
 
 const LIT: Record<AttendanceStatus, number> = { present: 100, late: 100, excused: 40, absent: 0 };
@@ -115,7 +180,7 @@ export async function getPersonReport(ctx: AuthzContext, personId: string): Prom
     byStatus,
     trend,
     sessions: rows.map((r) => ({
-      eventId: r.eventId, title: r.title, when: r.when.toISOString(), nodeName: r.nodeName, status: r.status,
+      eventId: r.eventId, title: r.title, when: r.when.toISOString(), nodeId: r.nodeId, nodeName: r.nodeName, status: r.status,
     })),
   };
 }
@@ -216,5 +281,37 @@ export async function getNodeReport(ctx: AuthzContext, nodeId: string, range?: D
     children: children.map((c) => ({ id: c.id, name: c.name, path: c.path, levelLabel: c.level.label })),
     self: { id: node.id, name: node.name, levelLabel: level },
   };
-  return { node: { id: node.id, name: node.name, level }, ...assembleBody(overall, byStatus, events, ratesByEvent, rollup) };
+
+  // People here — rank everyone tracked under the node lowest-rate-first (triage),
+  // cap the list, then resolve names/roles for just the capped slice.
+  const perPerson = await attendanceRepo.ratesByPersonUnderNode(node.path, range);
+  const ranked = [...perPerson.entries()]
+    .map(([id, v]) => ({ id, present: v.present, total: v.total, rate: pct(v.present, v.total) }))
+    .sort((a, b) => a.rate - b.rate || b.total - a.total)
+    .slice(0, NODE_PEOPLE_CAP);
+  const peopleTruncated = perPerson.size > ranked.length;
+  const info = await personRepo.listByIdsWithNodeRole(ranked.map((r) => r.id), node.path);
+  const infoById = new Map(info.map((i) => [i.id, i]));
+  const people: NodePerson[] = ranked.map((r) => ({
+    id: r.id,
+    name: infoById.get(r.id)?.name ?? "—",
+    role: infoById.get(r.id)?.role ?? null,
+    present: r.present, total: r.total, rate: r.rate,
+  }));
+
+  // Breadcrumb trail — the node's ancestors from the city down to its parent.
+  const ancestorIds = ancestorIdsForTrail(node.path, node.cityId ?? "");
+  const ancestors = await orgNodeRepo.findByIds(ancestorIds);
+  const nameById = new Map(ancestors.map((a) => [a.id, a.name]));
+  const trail: Crumb[] = ancestorIds
+    .filter((id) => nameById.has(id))
+    .map((id) => ({ id, name: nameById.get(id)!, isCity: id === node.cityId }));
+
+  return {
+    node: { id: node.id, name: node.name, level },
+    people,
+    peopleTruncated,
+    trail,
+    ...assembleBody(overall, byStatus, events, ratesByEvent, rollup),
+  };
 }

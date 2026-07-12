@@ -46,12 +46,15 @@ export default async function NodeReportPage({
       report={report}
       cityId={cityId}
       period={period}
+      nodeId={nodeId}
+      trail={report.trail}
+      people={report.people}
+      peopleTruncated={report.peopleTruncated}
       basePath={`/reports/${cityId}/node/${nodeId}`}
       csvName={report.node.name}
       heading={{
         title: report.node.name,
         subtitle: `${report.node.level} · attendance`,
-        backHref: `/reports/${cityId}`,
       }}
     />
   );

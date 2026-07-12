@@ -20,14 +20,23 @@ export async function findById(id: string): Promise<{ id: string; name: string; 
 export type PersonSearchResult = { id: string; name: string; nodeName: string | null };
 
 // People in a city whose name matches `query` (case-insensitive), with a current
-// assignment node's name for context — the reports people-search.
+// assignment node's name for context — the reports people-search. When `nodePath`
+// is given, the result is scoped to people with an active assignment anywhere under
+// that node's subtree (the node-report's people-search can't leak past the node).
 export async function searchInCity(
   cityId: string,
   query: string,
   limit: number,
+  nodePath?: string,
 ): Promise<PersonSearchResult[]> {
   const rows = await prisma.person.findMany({
-    where: { cityId, name: { contains: query, mode: "insensitive" } },
+    where: {
+      cityId,
+      name: { contains: query, mode: "insensitive" },
+      ...(nodePath
+        ? { assignments: { some: { endDate: null, orgNode: { path: { startsWith: nodePath } } } } }
+        : {}),
+    },
     orderBy: { name: "asc" },
     take: limit,
     select: {
@@ -37,6 +46,31 @@ export async function searchInCity(
     },
   });
   return rows.map((r) => ({ id: r.id, name: r.name, nodeName: r.assignments[0]?.orgNode.name ?? null }));
+}
+
+export type NodePersonInfo = { id: string; name: string; role: string | null };
+
+// Names + a role label (from an active assignment under `nodePath`) for a set of
+// person ids — the node-report's people list, resolved after the ids are already
+// narrowed to the bounded triage slice.
+export async function listByIdsWithNodeRole(
+  ids: string[],
+  nodePath: string,
+): Promise<NodePersonInfo[]> {
+  if (ids.length === 0) return [];
+  const rows = await prisma.person.findMany({
+    where: { id: { in: ids } },
+    select: {
+      id: true,
+      name: true,
+      assignments: {
+        where: { endDate: null, orgNode: { path: { startsWith: nodePath } } },
+        take: 1,
+        select: { position: { select: { label: true } } },
+      },
+    },
+  });
+  return rows.map((r) => ({ id: r.id, name: r.name, role: r.assignments[0]?.position.label ?? null }));
 }
 
 export async function create(

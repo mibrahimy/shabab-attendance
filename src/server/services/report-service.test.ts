@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildWeekly } from "./report-service";
+import { buildWeekly, ancestorIdsForTrail } from "./report-service";
 
 // PKT week of Sun 2026-07-05 = [2026-07-04T19:00Z, 2026-07-11T19:00Z);
 // the following week of Sun 2026-07-12 starts at 2026-07-11T19:00Z.
@@ -56,5 +56,26 @@ describe("buildWeekly", () => {
 
   it("returns [] for no events", () => {
     expect(buildWeekly([], new Map())).toEqual([]);
+  });
+});
+
+describe("ancestorIdsForTrail", () => {
+  // Trailing-delimited path: /root/country/city/zone/park/node/
+  const path = "/root/country/city1/zone1/park1/node1/";
+
+  it("returns the chain from the city down to the node's parent (excludes node, root, country)", () => {
+    expect(ancestorIdsForTrail(path, "city1")).toEqual(["city1", "zone1", "park1"]);
+  });
+
+  it("returns just the city for a node directly under the city", () => {
+    expect(ancestorIdsForTrail("/root/country/city1/zone1/", "city1")).toEqual(["city1"]);
+  });
+
+  it("returns [] when the node IS the city (no ancestors below it to show)", () => {
+    expect(ancestorIdsForTrail("/root/country/city1/", "city1")).toEqual([]);
+  });
+
+  it("returns [] when the cityId is absent from the path", () => {
+    expect(ancestorIdsForTrail(path, "nope")).toEqual([]);
   });
 });

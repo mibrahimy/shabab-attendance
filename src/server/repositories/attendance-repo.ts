@@ -37,6 +37,29 @@ export async function rateUnderNode(path: string, range?: DateRange): Promise<{ 
   return { present, total };
 }
 
+// present/total per person across a node's subtree (within an optional range) —
+// one grouped query for the node report's "people here" triage list (no N+1).
+// "present" is the numerator to match getPersonReport's rate (late/excused don't
+// count as present).
+export async function ratesByPersonUnderNode(
+  path: string,
+  range?: DateRange,
+): Promise<Map<string, { present: number; total: number }>> {
+  const rows = await prisma.attendance.groupBy({
+    by: ["personId", "status"],
+    where: { event: eventWhereUnder(path, range) },
+    _count: { _all: true },
+  });
+  const m = new Map<string, { present: number; total: number }>();
+  for (const r of rows) {
+    const cur = m.get(r.personId) ?? { present: 0, total: 0 };
+    cur.total += r._count._all;
+    if (r.status === "present") cur.present += r._count._all;
+    m.set(r.personId, cur);
+  }
+  return m;
+}
+
 export async function statusBreakdownUnderNode(path: string, range?: DateRange): Promise<Record<AttendanceStatus, number>> {
   const rows = await prisma.attendance.groupBy({
     by: ["status"],
@@ -81,7 +104,7 @@ export async function statusByEvents(
 }
 
 export type PersonAttendanceRow = {
-  eventId: string; title: string; when: Date; nodeName: string; status: AttendanceStatus;
+  eventId: string; title: string; when: Date; nodeId: string; nodeName: string; status: AttendanceStatus;
 };
 
 // A person's attendance history (newest-first) with each session's title/date/node
@@ -92,12 +115,12 @@ export async function listByPerson(personId: string): Promise<PersonAttendanceRo
     orderBy: { event: { scheduledAt: "desc" } },
     select: {
       status: true,
-      event: { select: { id: true, title: true, scheduledAt: true, orgNode: { select: { name: true } } } },
+      event: { select: { id: true, title: true, scheduledAt: true, orgNode: { select: { id: true, name: true } } } },
     },
   });
   return rows.map((r) => ({
     eventId: r.event.id, title: r.event.title, when: r.event.scheduledAt,
-    nodeName: r.event.orgNode.name, status: r.status,
+    nodeId: r.event.orgNode.id, nodeName: r.event.orgNode.name, status: r.status,
   }));
 }
 

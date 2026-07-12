@@ -6,12 +6,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import { Trail } from "@/components/home/Trail";
-import type { ReportBody } from "@/server/services/report-service";
+import type { ReportBody, NodePerson, Crumb } from "@/server/services/report-service";
 
 type PersonHit = { id: string; name: string; nodeName: string | null };
 
-function PeopleSearch({ cityId }: { cityId: string }) {
+// Debounced people typeahead → per-person report. On a node report `nodeId` scopes
+// the search to that node's subtree.
+function PeopleSearch({ cityId, nodeId }: { cityId: string; nodeId?: string }) {
+  const { t } = useTranslation("reports");
   const [q, setQ] = useState("");
   const [results, setResults] = useState<PersonHit[]>([]);
   useEffect(() => {
@@ -22,7 +26,8 @@ function PeopleSearch({ cityId }: { cityId: string }) {
         setResults([]);
         return;
       }
-      fetch(`/api/cities/${cityId}/people?q=${encodeURIComponent(query)}`, { signal: ctrl.signal })
+      const node = nodeId ? `&node=${encodeURIComponent(nodeId)}` : "";
+      fetch(`/api/cities/${cityId}/people?q=${encodeURIComponent(query)}${node}`, { signal: ctrl.signal })
         .then((r) => r.json())
         .then((j) => setResults(j?.data?.people ?? []))
         .catch(() => {});
@@ -31,14 +36,14 @@ function PeopleSearch({ cityId }: { cityId: string }) {
       clearTimeout(timer);
       ctrl.abort();
     };
-  }, [q, cityId]);
+  }, [q, cityId, nodeId]);
 
   return (
     <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Find a person’s attendance…"
+        placeholder={t("searchPersonPlaceholder", "Find a person’s attendance…")}
         className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#2f55ea] focus:ring-2 focus:ring-[#2f55ea]/15"
       />
       {results.length > 0 && (
@@ -56,6 +61,62 @@ function PeopleSearch({ cityId }: { cityId: string }) {
                   <span className="text-sm font-medium text-slate-900">{p.name}</span>
                 </span>
                 {p.nodeName && <span className="text-xs text-slate-400">{p.nodeName}</span>}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+type NodeHit = { id: string; name: string; level: string };
+
+// Debounced node typeahead → any zone/park/class report in the current city.
+function NodeSearch({ cityId, nodeId }: { cityId: string; nodeId?: string }) {
+  const { t } = useTranslation("reports");
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState<NodeHit[]>([]);
+  useEffect(() => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => {
+      const query = q.trim();
+      if (query.length < 2) {
+        setResults([]);
+        return;
+      }
+      const node = nodeId ? `&node=${encodeURIComponent(nodeId)}` : "";
+      fetch(`/api/cities/${cityId}/nodes?q=${encodeURIComponent(query)}${node}`, { signal: ctrl.signal })
+        .then((r) => r.json())
+        .then((j) => setResults(j?.data?.nodes ?? []))
+        .catch(() => {});
+    }, 250);
+    return () => {
+      clearTimeout(timer);
+      ctrl.abort();
+    };
+  }, [q, cityId, nodeId]);
+
+  return (
+    <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder={t("searchLocationPlaceholder", "Search a zone, park, or class…")}
+        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#2f55ea] focus:ring-2 focus:ring-[#2f55ea]/15"
+      />
+      {results.length > 0 && (
+        <ul className="mt-2 divide-y divide-slate-100">
+          {results.map((n) => (
+            <li key={n.id}>
+              <Link
+                href={`/reports/${cityId}/node/${n.id}`}
+                className="flex items-center justify-between gap-3 rounded-lg px-2 py-2 transition hover:bg-slate-50"
+              >
+                <span className="truncate text-sm font-medium text-slate-900">{n.name}</span>
+                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                  {n.level}
+                </span>
               </Link>
             </li>
           ))}
@@ -105,6 +166,7 @@ function download(filename: string, text: string) {
 
 export function ReportView({
   report, cityId, period, heading, basePath, csvName,
+  nodeId, trail, people, peopleTruncated,
 }: {
   report: ReportBody;
   cityId: string;
@@ -112,7 +174,12 @@ export function ReportView({
   heading: { title: string; subtitle: string; backHref?: string };
   basePath: string; // period links → `${basePath}?period=`
   csvName: string;
+  nodeId?: string; // set on a node report → scopes the people-search to the subtree
+  trail?: Crumb[]; // node report ancestor breadcrumb (city → … → parent)
+  people?: NodePerson[]; // node report "people here" (undefined on the city report)
+  peopleTruncated?: boolean;
 }) {
+  const { t } = useTranslation("reports");
   const { overall, byStatus, byNode, trend, weekly, weekSummary } = report;
 
   // The headline Trail reads best as weekly progress; fall back to the per-session
@@ -137,8 +204,26 @@ export function ReportView({
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          {heading.backHref && (
-            <Link href={heading.backHref} className="text-sm text-slate-400 transition hover:text-slate-600">‹ Reports</Link>
+          {trail && trail.length > 0 ? (
+            <nav aria-label={t("breadcrumb", "Breadcrumb")} className="flex flex-wrap items-center gap-1.5 text-sm text-slate-400">
+              {trail.map((c, i) => (
+                <span key={c.id} className="flex items-center gap-1.5">
+                  {i > 0 && <span aria-hidden className="text-slate-300">›</span>}
+                  <Link
+                    href={c.isCity ? `/reports/${cityId}` : `/reports/${cityId}/node/${c.id}`}
+                    className="transition hover:text-[#2f55ea]"
+                  >
+                    {c.name}
+                  </Link>
+                </span>
+              ))}
+              <span aria-hidden className="text-slate-300">›</span>
+              <span className="text-slate-500">{heading.title}</span>
+            </nav>
+          ) : (
+            heading.backHref && (
+              <Link href={heading.backHref} className="text-sm text-slate-400 transition hover:text-slate-600">‹ Reports</Link>
+            )
           )}
           <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#2f55ea]">Administration</div>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{heading.title}</h1>
@@ -231,8 +316,11 @@ export function ReportView({
         ))}
       </div>
 
-      {/* People search → per-person report */}
-      <PeopleSearch cityId={cityId} />
+      {/* Jump to any location + people search → per-person report */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <NodeSearch cityId={cityId} nodeId={nodeId} />
+        <PeopleSearch cityId={cityId} nodeId={nodeId} />
+      </div>
 
       {/* By node — lowest first (triage) */}
       <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
@@ -276,6 +364,54 @@ export function ReportView({
           )}
         </div>
       </div>
+
+      {/* People here — the node's tracked individuals, worst attendance first */}
+      {people && (
+        <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+          <div className="flex items-center justify-between px-5 py-4">
+            <h2 className="text-sm font-semibold text-slate-900">{t("peopleHere", "People here")}</h2>
+            <span className="text-xs text-slate-400">{t("peopleHint", "lowest attendance first")}</span>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {people.length === 0 ? (
+              <p className="px-5 py-10 text-center text-sm text-slate-400">{t("noPeople", "No tracked attendance yet.")}</p>
+            ) : (
+              people.map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/reports/${cityId}/person/${p.id}`}
+                  className="flex items-center gap-4 px-5 py-3 transition hover:bg-slate-50"
+                >
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#2f55ea]/10 text-[11px] font-bold text-[#2f55ea]">
+                    {p.name.charAt(0)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium text-slate-900">{p.name}</div>
+                    <div className="mt-0.5 text-xs text-slate-400">
+                      {p.role ? <span>{p.role} · </span> : null}
+                      <span className="font-num">{p.present}</span>/<span className="font-num">{p.total}</span>
+                    </div>
+                  </div>
+                  <div className="w-32 shrink-0">
+                    <div className="flex items-center justify-between text-[11px] text-slate-400">
+                      <span className="font-num font-medium text-slate-600">{p.rate}%</span>
+                    </div>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                      <div className={`h-full rounded-full ${rateColor(p.rate)}`} style={{ inlineSize: `${p.rate}%` }} />
+                    </div>
+                  </div>
+                  <span className="text-slate-300" aria-hidden>›</span>
+                </Link>
+              ))
+            )}
+          </div>
+          {peopleTruncated && (
+            <p className="border-t border-slate-100 px-5 py-3 text-center text-xs text-slate-400">
+              {t("peopleTruncated", "Showing the {{count}} lowest — search above for anyone else.", { count: people.length })}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

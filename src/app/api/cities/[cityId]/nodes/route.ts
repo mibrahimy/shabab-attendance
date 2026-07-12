@@ -1,5 +1,5 @@
-// GET /api/cities/[cityId]/people?q=&node= — search people in a city (reports
-// drill-down). An optional `node` id scopes the search to that node's subtree.
+// GET /api/cities/[cityId]/nodes?q= — search zones/parks/classes in a city (the
+// reports "jump to a location" picker).
 
 import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/server/errors";
@@ -16,8 +16,8 @@ export async function GET(
     const sp = new URL(req.url).searchParams;
     const q = sp.get("q") ?? "";
     const node = sp.get("node") ?? undefined;
-    const people = await reportService.searchPeople(ctx, cityId, q, node);
-    return NextResponse.json({ data: { people } });
+    const nodes = await reportService.searchNodes(ctx, cityId, q, node);
+    return NextResponse.json({ data: { nodes } });
   } catch (err) {
     const { status, body } = toErrorResponse(err);
     return NextResponse.json(body, { status });

@@ -77,7 +77,10 @@ export function PersonReportView({ report, cityId }: { report: PersonReport; cit
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium text-slate-900">{s.title}</div>
                   <div className="mt-0.5 truncate text-xs text-slate-400">
-                    {s.nodeName} · {fmt(s.when)}
+                    <Link href={`/reports/${cityId}/node/${s.nodeId}`} className="transition hover:text-[#2f55ea]">
+                      {s.nodeName}
+                    </Link>{" "}
+                    · {fmt(s.when)}
                   </div>
                 </div>
                 <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ring-1 ring-inset ${STATUS_PILL[s.status]}`}>
