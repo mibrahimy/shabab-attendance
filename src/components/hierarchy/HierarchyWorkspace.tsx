@@ -99,6 +99,7 @@ export function HierarchyWorkspace({
   const levelColor = useCallback((key: string): BadgeColor => levelColorByKey.get(key) ?? "gray", [levelColorByKey]);
 
   const [view, setView] = useState<"tree" | "chart">("tree");
+  const [showDetail, setShowDetail] = useState(true); // collapse the detail pane → full-width structure
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [focusId, setFocusId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string>(city.id);
@@ -771,7 +772,12 @@ export function HierarchyWorkspace({
           {(["tree", "chart"] as const).map((v) => (
             <button
               key={v}
-              onClick={() => setView(v)}
+              onClick={() => {
+                setView(v);
+                // Chart is the review surface → default to full width; tree keeps
+                // its detail pane. The toggle still overrides within a view.
+                setShowDetail(v === "tree");
+              }}
               aria-pressed={view === v}
               className={`rounded-lg px-3 py-1.5 font-medium transition ${
                 view === v ? "bg-[#2f55ea] text-white" : "text-slate-500 hover:text-slate-800"
@@ -789,6 +795,15 @@ export function HierarchyWorkspace({
             <button className="border-slate-200 px-2.5 py-1.5 text-slate-600 hover:text-[#2f55ea]" onClick={() => setZoom(1)}>{t("zoom.fit")}</button>
           </div>
         )}
+        <button
+          type="button"
+          onClick={() => setShowDetail((v) => !v)}
+          aria-pressed={!showDetail}
+          className="ms-auto hidden items-center gap-1.5 rounded-xl border border-slate-200/70 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:border-[#2f55ea]/40 hover:text-[#2f55ea] lg:inline-flex"
+        >
+          <span aria-hidden>{showDetail ? "⤢" : "▤"}</span>
+          {showDetail ? t("panel.hide", "Hide panel") : t("panel.show", "Details")}
+        </button>
       </div>
 
       {/* Focus breadcrumb */}
@@ -816,7 +831,7 @@ export function HierarchyWorkspace({
         </nav>
       )}
 
-      <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-5">
+      <div className={showDetail ? "lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-5" : ""}>
         {/* Structure pane */}
         <div className="min-w-0">
           {view === "tree" ? (
@@ -835,7 +850,7 @@ export function HierarchyWorkspace({
         </div>
 
         {/* Selected-node detail pane */}
-        <div className="mt-4 lg:mt-0 lg:sticky lg:top-4">
+        <div className={`mt-4 lg:mt-0 lg:sticky lg:top-4 ${showDetail ? "" : "hidden"}`}>
           <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">

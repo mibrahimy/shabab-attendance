@@ -31,6 +31,10 @@
     "out": "Zoom out",
     "fit": "Fit"
   },
+  "panel": {
+    "hide": "Hide panel",
+    "show": "Details"
+  },
   "tree": {
     "add": "Add {{label}}",
     "addChild": "Add {{label}}…"
