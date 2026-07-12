@@ -1,6 +1,6 @@
 # Development Plan — v2
 
-How we build the multi-city v2 app. Companion to `target-architecture.html` (the model), `v2-flows.html` (the flows), `ENGINEERING.md` (how we write code), and `MIGRATION.md` (the one-time ETL). **Status: Phases 0–4 built + hardened + redesigned; real Islamabad data migrated (see below).**
+How we build the multi-city v2 app. Companion to `target-architecture.html` (the model), `v2-flows.html` (the flows), `ENGINEERING.md` (how we write code), and `MIGRATION.md` (the one-time ETL). **Status: Phases 0–4 built + hardened + redesigned; real Islamabad data migrated; plus dynamic per-city hierarchy, team attendance at every level, an interactive tree/org-chart editor, and reporting drill-down (see Status below).**
 
 ---
 
@@ -83,7 +83,7 @@ These are the software practices that don't live in one milestone. They were und
 
 - ~~**i18n / Urdu / RTL**~~ — **SETTLED: bilingual English + Urdu (RTL).** "Urdu where it counts": the whole app is built *i18n-ready* (string catalog + CSS **logical** properties `ms-/me-/text-start`, never physical `ml-/left-`), with **full Urdu + RTL on the Urdu-first public surfaces** — the `/apply` form and WhatsApp messages (Phase 5). Admin + attendance UI ship English-first with Urdu strings filled in incrementally and a full language toggle by launch (Phase 7). The **i18n foundation is laid before Phase 3** (next-intl or equivalent, locale/`dir` switch, an Urdu script font e.g. Noto Nastaliq, logical-CSS lint) so the attendance UI is built i18n-aware and the most-used screen is never retrofitted. See [[v2-i18n-bilingual-decision]].
 - **Data-protection posture for minors' PII** — how strict (retention window, deletion, encryption scope, consent records). *(Awaiting input.)*
-- **Reporting requirements** — the concrete reports admins need (deferred to Phase 7; spec before building).
+- **Reporting requirements** — *partially built ahead of Phase 7:* city + node attendance reports (by-node, status, trend, weekly, CSV), per-person history, and drill-down (node picker, breadcrumb, node-scoped people list + search). Still to spec for Phase 7: cross-level filters ("all classes"), cohort/date comparisons, and any exports admins need.
 - **Permission & position catalog** — enumerate the actual permissions and the per-city default positions (the model exists; the content doesn't). *Partially settled:* the **head position per level** is fixed (see "Teams per level" above) — Ops Lead (`superadmin`), Country/City/Zone/Sector Leads, Park Admin, Murabbi — with `country_lead`/`zone_lead`/`sector_lead` still to be added to the catalog. Non-head positions per level still open.
 - **Native app approach** *(future, not blocking)* — fully native (Kotlin/Swift), React Native (shares React skills/logic with the web), or a Capacitor wrapper of the PWA (fastest to app stores + background sync, least rework). Decide when closer to Phase 8.
 
@@ -103,6 +103,34 @@ These are the software practices that don't live in one milestone. They were und
   fetch-error states, assignment-uniqueness, SW deep-link, sticky errors, …).
 - **Teams per level** (derived head + children's heads) and **event audience controls** (reach + segment).
 
+### Iteration — July 2026 (post-ETL feature work, on `feat/v2-multi-city-architecture`)
+
+- **Dynamic hierarchy (5-phase epic).** Per-city `NodeType`/`Position` are now self-describing
+  (`key`/`color`/`headPositionKey`/`attachLevelKey`; `canonicalId` optional) — levels/roles are
+  data-driven, not in-code maps. The real **Zone tier** was inserted for Islamabad (7 zones, parks
+  re-parented under them, zone leads assigned), a **city-level role** added, and an admin **level
+  editor** ships (add/rename/reorder/remove tiers + head role). Plus **node-scoped attendance
+  monitoring**.
+- **Interactive hierarchy editor.** Replaced the drill-down with `HierarchyWorkspace`: a unified
+  **Tree ⇆ Org-chart** view with focus/re-root, search, drag-to-reparent nodes + drag-to-reassign
+  people (on the real move engine), inline type-to-create, a selected-node detail pane (team +
+  people + actions), and chart pan/zoom/**minimap**. Org-chart shows each unit's **lead** (class →
+  murabbi, zone → zone lead, …) and opens the detail pane on click; a collapse toggle gives the
+  chart full width.
+- **Team attendance at every level.** Events carry a `rosterMode` (`members` | `team`); a `team`
+  event's roster is the node's derived team (head + child heads), so a park/zone/city can mark its
+  leads' attendance — no new mechanism, one additive column, no `Attendance` schema change. The
+  marking UI now shows a **Team** chip, each person's role, the node name, and 44px tap targets.
+  *(Migration `20260712000000_event_roster_mode` applied to the v2 DB.)*
+- **Reporting drill-down.** The report page gained a **jump-to-node picker**, a **breadcrumb**
+  trail on node reports, a **"People here"** list (everyone tracked under the node, ranked
+  lowest-rate-first, linking to per-person reports), **node-scoped** people + location search, and
+  person → node links. All new queries guard `view_attendance` on the relevant path and can't
+  widen scope.
+- **Fixes:** the home **Trail** no longer crashes for a brand-new city with no sessions.
+
 Deployed on Railway. **Remaining before a real launch:** set a production `JWT_SECRET` on Railway
-(the app now refuses to boot without it); full Urdu/RTL; then Phases 5–8 (public intake + WhatsApp,
-assessments, hardening/security/reporting, native) — see the R&D notes.
+(the app now refuses to boot without it); a live browser QA pass of the new editor + team-attendance
+marking; full Urdu/RTL; then Phases 5–8 (public intake + WhatsApp, assessments, hardening/security/
+advanced reporting, native) — see the R&D notes. Smaller deferred polish: report **level filter**
+("all classes/parks") + Reports on the mobile bottom bar; a shared `Segmented` UI atom.
