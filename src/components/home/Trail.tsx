@@ -14,6 +14,19 @@ export function Trail({ points, light = false }: { points: number[]; light?: boo
   const padBot = 16;
   const clamp = (r: number) => Math.max(0, Math.min(100, r));
   const n = points.length;
+  // No sessions yet (e.g. a brand-new city): render an empty frame so the layout
+  // holds its height instead of crashing on the xs/ys length mismatch below.
+  if (n === 0) {
+    return (
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        className="h-20 w-full"
+        role="img"
+        aria-label="Recent attendance trail"
+        preserveAspectRatio="none"
+      />
+    );
+  }
   const xs = n > 1 ? points.map((_, i) => padX + (i * (w - 2 * padX)) / (n - 1)) : [w / 2];
   const amp = h - padTop - padBot;
   const ys = points.map((r) => padTop + amp - (clamp(r) / 100) * amp);
