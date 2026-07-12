@@ -1,7 +1,9 @@
 {
   "view": {
     "overview": "Overview",
-    "focus": "Focus"
+    "focus": "Focus",
+    "tree": "☰ Tree",
+    "chart": "⿻ Org chart"
   },
   "overview": {
     "search": "Search locations…",
@@ -10,9 +12,33 @@
     "children_one": "{{count}} inside",
     "children_other": "{{count}} inside"
   },
+  "search": {
+    "placeholder": "🔍 Search people / locations…"
+  },
+  "a11y": {
+    "expand": "Expand",
+    "collapse": "Collapse"
+  },
+  "drag": {
+    "hint": "Drag to move"
+  },
+  "focus": {
+    "action": "Focus on this branch",
+    "clear": "Clear focus"
+  },
+  "zoom": {
+    "in": "Zoom in",
+    "out": "Zoom out",
+    "fit": "Fit"
+  },
+  "tree": {
+    "add": "Add {{label}}",
+    "addChild": "Add {{label}}…"
+  },
   "node": {
     "rename": "Rename",
     "delete": "Delete",
+    "move": "Move",
     "addChild": "+ Add {{label}}",
     "empty": {
       "childTitle": "No {{label}} yet",
@@ -23,6 +49,7 @@
   },
   "people": {
     "title": "People here",
+    "short": "people",
     "addMember": "Add member",
     "empty": "No one assigned here yet.",
     "move": "Move",
@@ -34,10 +61,19 @@
       "senior": "senior"
     }
   },
+  "team": {
+    "title": "Team",
+    "lead": "Lead"
+  },
   "delete": {
     "title": "Delete {{name}}?",
     "message": "This can’t be undone. A node with child nodes or assigned people can’t be deleted.",
     "confirm": "Delete"
+  },
+  "dragMove": {
+    "title": "Move {{name}} under {{target}}?",
+    "message": "This moves the branch and everything inside it — sub-locations and their people move too.",
+    "confirm": "Move"
   },
   "remove": {
     "title": "Remove {{name}}?",

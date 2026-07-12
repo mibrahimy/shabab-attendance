@@ -26,7 +26,7 @@ export function MoveMemberModal({
   roles: RoleDef[];
   nodes: MoveTarget[];
   onClose: () => void;
-  onMoved: () => void;
+  onMoved: (targetNodeId: string) => void;
 }) {
   const { toast } = useToast();
   const { t } = useTranslation("hierarchy");
@@ -53,7 +53,7 @@ export function MoveMemberModal({
         return;
       }
       toast(t("toast.moved", { name: member.name }));
-      onMoved();
+      onMoved(targetNodeId);
     } catch {
       toast(t("toast.networkError"), "error");
     } finally {

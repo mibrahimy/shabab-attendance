@@ -6,7 +6,7 @@ import Link from "next/link";
 import { getAuthzContext } from "@/server/auth/authz-context";
 import * as hierarchyService from "@/server/services/hierarchy-service";
 import { ForbiddenError, NotFoundError } from "@/server/errors";
-import { HierarchyBuilder } from "@/components/hierarchy/HierarchyBuilder";
+import { HierarchyWorkspace } from "@/components/hierarchy/HierarchyWorkspace";
 
 export default async function HierarchyPage({
   params,
@@ -47,7 +47,7 @@ export default async function HierarchyPage({
           Manage levels
         </Link>
       </div>
-      <HierarchyBuilder
+      <HierarchyWorkspace
         city={{ id: tree.city.id, name: tree.city.name }}
         levels={tree.levels}
         nodes={tree.nodes}
