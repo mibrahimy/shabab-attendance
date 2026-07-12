@@ -40,6 +40,43 @@ export async function listTeam(
   }));
 }
 
+export type CityHead = {
+  orgNodeId: string;
+  typeId: string; // the anchor node's level, so the caller can match it to the level's head key
+  positionKey: string;
+  positionLabel: string;
+  personName: string;
+};
+
+// Every active head-role assignment in a city, in ONE query — the input for the
+// org chart's per-node "lead" line. `headKeys` is the set of the city levels'
+// head position keys; the caller then keeps only the row whose position matches
+// its anchor level's head key (a node's own head, not a stray same-key role).
+export async function listHeadsInCity(cityId: string, headKeys: string[]): Promise<CityHead[]> {
+  if (headKeys.length === 0) return [];
+  const rows = await prisma.assignment.findMany({
+    where: {
+      endDate: null,
+      orgNode: { cityId },
+      position: { key: { in: headKeys } },
+    },
+    select: {
+      orgNodeId: true,
+      orgNode: { select: { typeId: true } },
+      position: { select: { key: true, label: true } },
+      person: { select: { name: true } },
+    },
+    orderBy: { createdAt: "asc" }, // stable pick if a node has two same-key heads
+  });
+  return rows.map((r) => ({
+    orgNodeId: r.orgNodeId,
+    typeId: r.orgNode.typeId,
+    positionKey: r.position.key ?? "",
+    positionLabel: r.position.label,
+    personName: r.person.name,
+  }));
+}
+
 export async function create(
   input: {
     personId: string;

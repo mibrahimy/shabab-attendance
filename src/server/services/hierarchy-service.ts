@@ -30,11 +30,14 @@ function canManage(ctx: AuthzContext, node: { path: string }): void {
   requirePermission(ctx, MANAGE, { path: node.path, functionId: null });
 }
 
+export type NodeHead = { name: string; roleLabel: string };
+
 export type CityTree = {
   city: orgNodeRepo.OrgNodeRow;
   levels: Level[];
   nodes: orgNodeRepo.SubtreeNode[];
   roles: RoleDef[]; // static catalog so the client knows what's addable per level
+  heads: Record<string, NodeHead>; // nodeId → its head/lead (the level's head position)
 };
 
 export async function getCityTree(ctx: AuthzContext, cityId: string): Promise<CityTree> {
@@ -44,11 +47,31 @@ export async function getCityTree(ctx: AuthzContext, cityId: string): Promise<Ci
 
   // The level template is seeded at city creation (createCity), so we don't
   // re-ensure it on every read — that was a wasted round trip on a hot path.
-  const [levels, nodes] = await Promise.all([
-    nodeTypeRepo.listCityLevels(cityId),
+  // Levels first: they name each level's head position, which the bulk heads
+  // query needs; then fetch the subtree and the heads concurrently.
+  const levels = await nodeTypeRepo.listCityLevels(cityId);
+  const headKeyByTypeId = new Map<string, string>();
+  const headKeys = new Set<string>();
+  for (const l of levels) {
+    if (l.headPositionKey) {
+      headKeyByTypeId.set(l.id, l.headPositionKey);
+      headKeys.add(l.headPositionKey);
+    }
+  }
+  const [nodes, headRows] = await Promise.all([
     orgNodeRepo.listSubtree(city.path),
+    assignmentRepo.listHeadsInCity(cityId, [...headKeys]),
   ]);
-  return { city, levels, nodes, roles: DEFAULT_ROLES };
+
+  // Keep only the head whose position matches its OWN level's head key, so a
+  // node's lead is its own head (never a same-key role anchored elsewhere).
+  const heads: Record<string, NodeHead> = {};
+  for (const r of headRows) {
+    if (headKeyByTypeId.get(r.typeId) === r.positionKey && !heads[r.orgNodeId]) {
+      heads[r.orgNodeId] = { name: r.personName, roleLabel: r.positionLabel };
+    }
+  }
+  return { city, levels, nodes, roles: DEFAULT_ROLES, heads };
 }
 
 export type CitySummary = {

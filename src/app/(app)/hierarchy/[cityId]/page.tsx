@@ -52,6 +52,7 @@ export default async function HierarchyPage({
         levels={tree.levels}
         nodes={tree.nodes}
         roles={tree.roles}
+        heads={tree.heads}
       />
     </div>
   );

@@ -69,6 +69,9 @@
     "title": "Team",
     "lead": "Lead"
   },
+  "lead": {
+    "none": "No lead yet"
+  },
   "delete": {
     "title": "Delete {{name}}?",
     "message": "This can’t be undone. A node with child nodes or assigned people can’t be deleted.",

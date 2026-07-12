@@ -51,16 +51,20 @@ type DragState =
 
 const BADGE_COLORS: BadgeColor[] = ["blue", "green", "amber", "purple", "indigo", "orange", "pink", "red", "slate"];
 
+type NodeHead = { name: string; roleLabel: string };
+
 export function HierarchyWorkspace({
   city,
   levels,
   nodes,
   roles,
+  heads,
 }: {
   city: { id: string; name: string };
   levels: Level[];
   nodes: WorkspaceNode[];
   roles: RoleDef[];
+  heads: Record<string, NodeHead>;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -97,6 +101,14 @@ export function HierarchyWorkspace({
     return m;
   }, [levels]);
   const levelColor = useCallback((key: string): BadgeColor => levelColorByKey.get(key) ?? "gray", [levelColorByKey]);
+
+  // Level keys whose level defines a head position — those nodes get a lead line
+  // (its head, or a muted "No lead yet" prompt) in the chart.
+  const levelHasHead = useMemo(() => {
+    const s = new Set<string>();
+    for (const l of levels) if (l.headPositionKey) s.add(l.key);
+    return s;
+  }, [levels]);
 
   const [view, setView] = useState<"tree" | "chart">("tree");
   const [showDetail, setShowDetail] = useState(true); // collapse the detail pane → full-width structure
@@ -517,6 +529,12 @@ export function HierarchyWorkspace({
           <Badge color={levelColor(node.level.key)}>{node.level.label}</Badge>
           <span className="hw-name">{node.name}</span>
           {kidCount > 0 && <span className="hw-count">{kidCount}</span>}
+          {heads[node.id] && (
+            <span className="hw-lead-inline" title={`${heads[node.id].name} · ${heads[node.id].roleLabel}`}>
+              <span className="hw-lead-inline-av" aria-hidden>{heads[node.id].name.charAt(0)}</span>
+              {heads[node.id].name}
+            </span>
+          )}
           <span className="hw-sp" />
           {kidCount > 0 && node.parentId && (
             <button
@@ -557,6 +575,9 @@ export function HierarchyWorkspace({
     const kids = childrenOf.get(node.id) ?? [];
     const childLevel = childLevelOf(node);
     const isOpen = !collapsed.has(node.id);
+    const head = heads[node.id];
+    const hasHead = levelHasHead.has(node.level.key);
+    const peopleCount = membersByNode[node.id]?.length ?? 0;
     return (
       <li key={node.id}>
         <div
@@ -568,7 +589,9 @@ export function HierarchyWorkspace({
             startNodeDrag(node.id);
           }}
           onDragEnd={endDrag}
-          onClick={() => setSelectedId(node.id)}
+          // Chart hides the detail pane by default — a click both selects the
+          // node AND reveals its team/people/actions pane (Hide panel re-collapses).
+          onClick={() => { setSelectedId(node.id); setShowDetail(true); }}
           {...dropProps(node.id)}
         >
           <div className="hw-box-acts">
@@ -588,10 +611,27 @@ export function HierarchyWorkspace({
           <div className="hw-box-name" onDoubleClick={(e) => { e.stopPropagation(); setNodeModal({ mode: "rename", nodeId: node.id }); }}>
             {node.name}
           </div>
-          {(kids.length > 0 || (membersByNode[node.id]?.length ?? 0) > 0) && (
+          {hasHead && (
+            head ? (
+              <div className="hw-box-lead" title={`${head.name} · ${head.roleLabel}`}>
+                <span className="hw-box-lead-av" aria-hidden>{head.name.charAt(0)}</span>
+                <span className="hw-box-lead-txt">
+                  <span className="hw-box-lead-name">{head.name}</span>
+                  <span className="hw-box-lead-role">{head.roleLabel}</span>
+                </span>
+              </div>
+            ) : (
+              <div className="hw-box-lead hw-box-lead-empty">{t("lead.none", "No lead yet")}</div>
+            )
+          )}
+          {(kids.length > 0 || peopleCount > 0) && (
             <div className="hw-box-meta">
-              {kids.length > 0 && childLevel && <span>{kids.length} {childLevel.label.toLowerCase()}</span>}
-              {(membersByNode[node.id]?.length ?? 0) > 0 && <span>{membersByNode[node.id]!.length} {t("people.short")}</span>}
+              {kids.length > 0 && childLevel && (
+                <span className="hw-pill"><b>{kids.length}</b> {childLevel.label.toLowerCase()}</span>
+              )}
+              {peopleCount > 0 && (
+                <span className="hw-pill"><b>{peopleCount}</b> {t("people.short")}</span>
+              )}
             </div>
           )}
           {kids.length > 0 && (
@@ -1143,33 +1183,48 @@ const CHART_CSS = `
 .hw-addperson { display:block; margin:2px 0 0; border:0; background:transparent; color:var(--hw-accent); font:inherit; font-size:12px; padding:4px 8px; border-radius:8px; cursor:pointer; }
 .hw-addperson:hover { background: rgba(47,85,234,.08); }
 
+/* Tree — lead subtext on the row */
+.hw-lead-inline { display:inline-flex; align-items:center; gap:5px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; color:var(--hw-muted); }
+.hw-lead-inline-av { width:17px; height:17px; border-radius:50%; display:grid; place-items:center; font-size:9px; font-weight:700; background: rgba(47,85,234,.1); color:var(--hw-accent); flex:0 0 auto; }
+
 /* Org chart */
-.hw-canvas { overflow:auto; padding:26px 8px 28px; cursor:grab; max-height: calc(100vh - 12rem); }
+.hw-canvas { overflow:auto; padding:24px 12px 26px; cursor:grab; max-height: calc(100vh - 12rem); background:
+  radial-gradient(circle at 1px 1px, rgba(15,23,42,.045) 1px, transparent 0) 0 0 / 22px 22px; }
 .hw-canvas.hw-panning { cursor:grabbing; }
 .hw-stage { transform-origin: top center; width: max-content; margin: 0 auto; transition: transform .12s ease; }
-.hw-chart ul { margin:0; padding:0; list-style:none; position:relative; padding-top:24px; display:flex; justify-content:center; }
+.hw-chart ul { margin:0; padding:0; list-style:none; position:relative; padding-top:20px; display:flex; justify-content:center; }
 .hw-chart, .hw-chart > ul { text-align:center; }
 .hw-chart > ul { padding-top:0; }
-.hw-chart li { position:relative; list-style:none; padding:24px 12px 0; display:flex; flex-direction:column; align-items:center; }
-.hw-chart li::before, .hw-chart li::after { content:""; position:absolute; top:0; right:50%; width:50%; height:24px; border-top:2px solid var(--hw-line); }
+.hw-chart li { position:relative; list-style:none; padding:20px 11px 0; display:flex; flex-direction:column; align-items:center; }
+.hw-chart li::before, .hw-chart li::after { content:""; position:absolute; top:0; right:50%; width:50%; height:20px; border-top:2px solid var(--hw-line); }
 .hw-chart li::after { right:auto; left:50%; border-left:2px solid var(--hw-line); }
 .hw-chart li:only-child { padding-top:0; }
 .hw-chart li:only-child::before, .hw-chart li:only-child::after { display:none; }
 .hw-chart li:first-child::before, .hw-chart li:last-child::after { border:0 none; }
 .hw-chart li:last-child::before { border-right:2px solid var(--hw-line); border-radius:0 8px 0 0; }
 .hw-chart li:first-child::after { border-radius:8px 0 0 0; }
-.hw-chart ul ul::before { content:""; position:absolute; top:0; left:50%; border-left:2px solid var(--hw-line); width:0; height:24px; }
+.hw-chart ul ul::before { content:""; position:absolute; top:0; left:50%; border-left:2px solid var(--hw-line); width:0; height:20px; }
 .hw-chart > ul > li { padding-top:0; }
-.hw-box { position:relative; background:#fff; border:1px solid var(--hw-line); border-radius:13px; box-shadow: 0 4px 14px -6px rgba(16,24,40,.16); min-width:150px; max-width:210px; padding:10px 12px; text-align:start; cursor:grab; transition: box-shadow .12s, background .12s, opacity .12s; }
+.hw-box { position:relative; background:#fff; border:1px solid var(--hw-line); border-radius:14px; box-shadow: 0 4px 14px -6px rgba(16,24,40,.16); min-width:178px; max-width:226px; padding:11px 13px 12px; text-align:start; cursor:grab; transition: box-shadow .12s, transform .12s, background .12s, opacity .12s; }
+.hw-box:hover { box-shadow: 0 10px 22px -10px rgba(16,24,40,.26); transform: translateY(-1px); }
 .hw-box:active { cursor:grabbing; }
-.hw-box.hw-selected { box-shadow: 0 0 0 2px rgba(47,85,234,.4), 0 4px 14px -6px rgba(16,24,40,.16); }
+.hw-box.hw-selected { box-shadow: 0 0 0 2px rgba(47,85,234,.4), 0 8px 18px -8px rgba(16,24,40,.22); }
 .hw-box.hw-valid { box-shadow: inset 0 0 0 2px var(--hw-good), 0 4px 14px -6px rgba(16,24,40,.16); background: var(--hw-good-soft); }
 .hw-box.hw-over { box-shadow: 0 0 0 3px var(--hw-good-soft), inset 0 0 0 2px var(--hw-good); background: var(--hw-good-soft); }
 .hw-box.hw-invalid { opacity:.4; }
 .hw-box.hw-match { box-shadow: 0 0 0 2px var(--hw-accent), 0 4px 14px -6px rgba(16,24,40,.16); }
 .hw-box-top { display:flex; align-items:center; gap:6px; }
-.hw-box-name { font-weight:650; font-size:14px; margin-top:3px; color:var(--hw-ink); }
-.hw-box-meta { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; font-variant-numeric:tabular-nums; font-size:10.5px; color:var(--hw-faint); }
+.hw-box-name { font-weight:680; font-size:15px; line-height:1.25; letter-spacing:-.01em; margin-top:5px; color:var(--hw-ink); }
+/* Lead line — the whole point of an org chart: who heads this unit */
+.hw-box-lead { display:flex; align-items:center; gap:7px; margin-top:7px; min-width:0; }
+.hw-box-lead-av { width:22px; height:22px; border-radius:50%; display:grid; place-items:center; font-size:10px; font-weight:700; background: rgba(47,85,234,.1); color:var(--hw-accent); flex:0 0 auto; }
+.hw-box-lead-txt { display:flex; flex-direction:column; min-width:0; line-height:1.2; }
+.hw-box-lead-name { font-size:12.5px; font-weight:600; color:var(--hw-ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hw-box-lead-role { font-size:10.5px; color:var(--hw-faint); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hw-box-lead-empty { margin-top:7px; font-size:11.5px; font-style:italic; color:var(--hw-faint); }
+.hw-box-meta { display:flex; flex-wrap:wrap; gap:5px; margin-top:9px; padding-top:8px; border-top:1px solid var(--hw-line-soft); }
+.hw-pill { display:inline-flex; align-items:baseline; gap:3px; font-size:10.5px; color:var(--hw-muted); background: rgba(15,23,42,.045); border-radius:999px; padding:2px 8px; font-variant-numeric:tabular-nums; }
+.hw-pill b { font-weight:700; color:var(--hw-ink); }
 .hw-box-acts { position:absolute; top:-11px; inset-inline-end:8px; display:flex; gap:4px; opacity:0; transition:opacity .12s; }
 .hw-box:hover .hw-box-acts { opacity:1; }
 .hw-box-acts button { width:22px; height:22px; border-radius:7px; border:1px solid var(--hw-line); background:#fff; color:var(--hw-muted); font-size:12px; cursor:pointer; display:grid; place-items:center; box-shadow: 0 1px 2px rgba(16,24,40,.06); }
