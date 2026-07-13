@@ -117,7 +117,11 @@
     "add": {
       "title": "Add member",
       "submit": "Add {{label}}",
-      "submitFallback": "member"
+      "submitFallback": "member",
+      "another": "Add another",
+      "done": "Done",
+      "addedCount_one": "Added {{count}}",
+      "addedCount_other": "Added {{count}}"
     },
     "move": {
       "title": "Move {{name}}",

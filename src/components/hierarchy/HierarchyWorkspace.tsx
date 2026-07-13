@@ -1081,12 +1081,13 @@ export function HierarchyWorkspace({
         nodeId={addMemberFor}
         roles={addMemberFor ? rolesAt(byId.get(addMemberFor) ?? selected) : []}
         onClose={() => setAddMemberFor(null)}
-        onAdded={(c) => {
+        onAdded={(c, opts) => {
           const nid = addMemberFor;
-          setAddMemberFor(null);
           if (c) setCreds(c);
           if (nid) void loadMembers(nid);
           router.refresh();
+          // Student mini-batch keeps the modal open for the next add; staff close.
+          if (!opts?.keepOpen) setAddMemberFor(null);
         }}
       />
       <CredentialsDialog creds={creds} onClose={() => setCreds(null)} />

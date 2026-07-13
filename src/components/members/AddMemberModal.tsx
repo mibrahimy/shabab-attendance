@@ -3,8 +3,13 @@
 // Add a member at a node. Role choices are the catalog roles valid for the node's
 // level (passed in). Student = profile-only (name + segment); staff = name + CNIC
 // + phone (+ optional segment) and yields a one-time temp password.
+//
+// Students support MINI-BATCH intake: after a student is added the modal stays open,
+// clears + refocuses the name, and keeps the role/segment — so onboarding a whole
+// class is name+Enter, name+Enter. Staff still close on success (they yield a
+// one-time credential the caller must surface).
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
@@ -25,7 +30,8 @@ export function AddMemberModal({
   nodeId: string | null; // non-null = open
   roles: RoleDef[]; // roles valid at this node's level
   onClose: () => void;
-  onAdded: (creds: Credentials | null) => void; // creds set only for staff
+  // creds set only for staff; keepOpen = student mini-batch (reload but don't close)
+  onAdded: (creds: Credentials | null, opts?: { keepOpen?: boolean }) => void;
 }) {
   const { toast } = useToast();
   const { t } = useTranslation("hierarchy");
@@ -35,13 +41,15 @@ export function AddMemberModal({
   const [phone, setPhone] = useState("");
   const [segment, setSegment] = useState<"" | "junior" | "senior">("");
   const [saving, setSaving] = useState(false);
+  const [addedCount, setAddedCount] = useState(0);
+  const nameRef = useRef<HTMLInputElement>(null);
 
   const role = roles.find((r) => r.canonicalKey === roleKey) ?? roles[0];
   const isStudent = role?.isStudent ?? false;
   const canSubmit = !!name.trim() && (isStudent || !!cnic.trim()) && !saving;
 
   async function submit() {
-    if (!nodeId || !role) return;
+    if (!nodeId || !role || !canSubmit) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/org-nodes/${nodeId}/members`, {
@@ -63,11 +71,16 @@ export function AddMemberModal({
         return;
       }
       toast(t("toast.added", { name }));
-      onAdded(
-        json.data.tempPassword
-          ? { name, cnic, tempPassword: json.data.tempPassword, context: role.label }
-          : null,
-      );
+      if (json.data.tempPassword) {
+        // Staff → one-time credential; the caller closes + shows it.
+        onAdded({ name, cnic, tempPassword: json.data.tempPassword, context: role.label });
+      } else {
+        // Student → mini-batch: reload but stay open, clear + refocus for the next one.
+        setAddedCount((n) => n + 1);
+        setName("");
+        onAdded(null, { keepOpen: true });
+        requestAnimationFrame(() => nameRef.current?.focus());
+      }
     } catch {
       toast(t("toast.networkError"), "error");
     } finally {
@@ -81,13 +94,20 @@ export function AddMemberModal({
       onClose={onClose}
       title={t("member.add.title")}
       footer={
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={onClose}>
-            {t("modal.cancel")}
-          </Button>
-          <Button onClick={submit} loading={saving} disabled={!canSubmit}>
-            {t("member.add.submit", { label: role?.label ?? t("member.add.submitFallback") })}
-          </Button>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-medium text-[#2f55ea]">
+            {addedCount > 0 ? t("member.add.addedCount", { count: addedCount, defaultValue: "Added {{count}}" }) : ""}
+          </span>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={onClose}>
+              {addedCount > 0 ? t("member.add.done", "Done") : t("modal.cancel")}
+            </Button>
+            <Button onClick={submit} loading={saving} disabled={!canSubmit}>
+              {addedCount > 0 && isStudent
+                ? t("member.add.another", "Add another")
+                : t("member.add.submit", { label: role?.label ?? t("member.add.submitFallback") })}
+            </Button>
+          </div>
         </div>
       }
     >
@@ -106,7 +126,19 @@ export function AddMemberModal({
 
         <div>
           <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("member.fields.fullName")}</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
+          <input
+            ref={nameRef}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void submit();
+              }
+            }}
+            autoFocus
+            className={inputClass}
+          />
         </div>
 
         {!isStudent && (
