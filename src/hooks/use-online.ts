@@ -3,11 +3,12 @@
 // Connectivity + outbox state for the offline affordances (offline band, pending
 // badge, "last synced"). Both read through useSyncExternalStore — no setState in an
 // effect — so online status and outbox counters come from their sources directly.
+// A React hook, so it lives in src/hooks (not src/lib, which stays a pure leaf).
 
 import { useEffect, useSyncExternalStore } from "react";
-import { startSyncEngine, flush } from "./sync-engine";
-import { subscribe as subscribeStore, getSnapshot, SERVER_SNAPSHOT, clearFailed } from "./store";
-import { clearFailedMarks } from "./outbox";
+import { startSyncEngine, flush } from "@/lib/offline/sync-engine";
+import { subscribe as subscribeStore, getSnapshot, SERVER_SNAPSHOT, clearFailed } from "@/lib/offline/store";
+import { clearFailedMarks } from "@/lib/offline/outbox";
 
 function subscribeOnline(cb: () => void): () => void {
   window.addEventListener("online", cb);

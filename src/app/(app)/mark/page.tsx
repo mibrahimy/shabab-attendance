@@ -12,7 +12,7 @@ import Spinner from "@/components/ui/Spinner";
 import EmptyState from "@/components/ui/EmptyState";
 import Eyebrow from "@/components/ui/Eyebrow";
 import { useToast } from "@/components/ui/Toast";
-import { useOnline } from "@/lib/offline/use-online";
+import { useOnline } from "@/hooks/use-online";
 import { pending as pendingMarks } from "@/lib/offline/outbox";
 import { CreateEventForm } from "@/components/attendance/CreateEventForm";
 import { RosterModeChip } from "@/components/attendance/RosterModeChip";

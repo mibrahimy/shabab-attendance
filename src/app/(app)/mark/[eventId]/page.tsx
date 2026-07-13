@@ -17,7 +17,7 @@ import { initials } from "@/lib/initials";
 import { queueMark, queueMany, pending } from "@/lib/offline/outbox";
 import { flush } from "@/lib/offline/sync-engine";
 import { overlayPending, tally } from "@/lib/offline/overlay";
-import { useOnline } from "@/lib/offline/use-online";
+import { useOnline } from "@/hooks/use-online";
 import {
   STATUS_LETTER,
   STATUS_SOLID,
