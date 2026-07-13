@@ -5,7 +5,7 @@
 
 import Link from "next/link";
 import { Trail } from "@/components/home/Trail";
-import type { PersonReport } from "@/server/services/report-service";
+import type { PersonReport } from "@/types/reports";
 
 const STATUS_PILL: Record<string, string> = {
   present: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",

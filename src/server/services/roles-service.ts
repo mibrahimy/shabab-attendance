@@ -6,7 +6,7 @@
 // perms on first creation); this service manages the live PositionPermission rows.
 
 import type { AuthzContext } from "@/types/auth";
-import { prisma } from "@/server/db";
+import { withTransaction } from "@/server/repositories/transaction";
 import { NotFoundError, ValidationError } from "@/server/errors";
 import { requirePermission } from "@/server/auth/can-act-on";
 import { findRole, isProtectedRole } from "@/lib/default-roles";
@@ -67,7 +67,7 @@ export async function setRolePermissions(
 
   // Create-the-role-then-set-its-permissions must be atomic: a crash between them
   // would persist a role with NO permissions (silently granting nothing).
-  const position = await prisma.$transaction(async (tx) => {
+  const position = await withTransaction(async (tx) => {
     const pos = await positionRepo.findOrCreateRolePosition(city.id, canonicalKey, [], tx);
     await positionRepo.setPermissions(pos.id, permissionKeys, tx);
     return pos;

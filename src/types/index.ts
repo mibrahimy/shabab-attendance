@@ -12,7 +12,7 @@ export type MemberOption = {
   positionLabel: string;
 };
 
-export type AttendanceStatus = "present" | "late" | "absent" | "excused";
+export type { AttendanceStatus } from "@/lib/attendance-status";
 
 export type BadgeColor = "blue" | "green" | "amber" | "purple" | "indigo" | "orange" | "pink" | "slate" | "red" | "gray";
 

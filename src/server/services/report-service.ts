@@ -14,41 +14,15 @@ import * as eventRepo from "@/server/repositories/event-repo";
 import * as attendanceRepo from "@/server/repositories/attendance-repo";
 import * as personRepo from "@/server/repositories/person-repo";
 
-export type WeekBucket = {
-  weekStart: string; // ISO instant of the PKT week's Sunday 00:00
-  present: number; total: number; rate: number; sessions: number;
-};
-
-// The attendance report body — shared by the city report and any node-scoped report.
-export type ReportBody = {
-  overall: { present: number; total: number; rate: number; sessions: number };
-  byStatus: Record<AttendanceStatus, number>;
-  byNode: {
-    nodeId: string; nodeName: string; level: string;
-    sessions: number; present: number; total: number; rate: number;
-  }[];
-  trend: { when: string; rate: number }[];
-  weekly: WeekBucket[];
-  weekSummary: { thisWeek: WeekBucket; lastWeek: WeekBucket; deltaPts: number };
-};
-
-export type CityReport = { city: { id: string; name: string } } & ReportBody;
-
-// A person tracked under the node, with their rate over the report's period —
-// the node report's "people here" triage list.
-export type NodePerson = {
-  id: string; name: string; role: string | null;
-  present: number; total: number; rate: number;
-};
-// One breadcrumb crumb: an ancestor of the node (isCity marks the city crumb, which
-// links to the city report rather than a node report).
-export type Crumb = { id: string; name: string; isCity: boolean };
-export type NodeReport = {
-  node: { id: string; name: string; level: string };
-  people: NodePerson[];
-  peopleTruncated: boolean;
-  trail: Crumb[];
-} & ReportBody;
+// Client-facing report response contracts live in types/ (a pure leaf) so the report
+// components can consume them without importing from @/server. Re-exported here for
+// server callers that reach them through this service.
+import type {
+  WeekBucket, ReportBody, CityReport, NodePerson, Crumb, NodeReport, PersonReport,
+} from "@/types/reports";
+export type {
+  WeekBucket, ReportBody, CityReport, NodePerson, Crumb, NodeReport, PersonReport,
+} from "@/types/reports";
 
 // Cap on the node report's people list — bounded triage (lowest-rate-first); the
 // node-scoped people-search covers finding anyone past the cap.
@@ -144,14 +118,6 @@ export function ancestorIdsForTrail(path: string, cityId: string): string[] {
   if (cityIdx < 0) return [];
   return ids.slice(cityIdx, ids.length - 1);
 }
-
-export type PersonReport = {
-  person: { id: string; name: string };
-  overall: { present: number; total: number; rate: number };
-  byStatus: Record<AttendanceStatus, number>;
-  trend: number[]; // per-session "lit" value (present/late 100, excused 40, absent 0), oldest→newest
-  sessions: { eventId: string; title: string; when: string; nodeId: string; nodeName: string; status: AttendanceStatus }[];
-};
 
 const LIT: Record<AttendanceStatus, number> = { present: 100, late: 100, excused: 40, absent: 0 };
 

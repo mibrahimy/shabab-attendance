@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { Trail } from "@/components/home/Trail";
-import type { ReportBody, NodePerson, Crumb } from "@/server/services/report-service";
+import type { ReportBody, NodePerson, Crumb } from "@/types/reports";
 
 type PersonHit = { id: string; name: string; nodeName: string | null };
 

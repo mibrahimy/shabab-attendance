@@ -4,7 +4,7 @@
 // prefixes a Country/City parent (i.e. the global-root superadmin grant) passes,
 // so these are effectively superadmin-only without a special-case check.
 
-import { prisma } from "@/server/db";
+import { withTransaction } from "@/server/repositories/transaction";
 import type { AuthzContext } from "@/types/auth";
 import { NotFoundError, ValidationError } from "@/server/errors";
 import { requirePermission } from "@/server/auth/can-act-on";
@@ -99,7 +99,7 @@ export async function createCity(
   const passwordHash = await hashPassword(tempPassword);
 
   // Whole cascade is atomic: a city must never exist without its admin.
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await withTransaction(async (tx) => {
     const city = await orgNodeRepo.createChild(
       { parent: country, typeId: cityType.id, name, asCity: true },
       tx,

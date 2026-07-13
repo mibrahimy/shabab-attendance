@@ -4,10 +4,10 @@
 
 import type { AttendanceStatus } from "@/lib/attendance-status";
 
-type RosterEntry = { personId: string; status: AttendanceStatus };
+type OverlayEntry = { personId: string; status: AttendanceStatus };
 type PendingLike = { personId: string; status: AttendanceStatus };
 
-export function overlayPending<T extends RosterEntry>(roster: T[], pending: PendingLike[]): T[] {
+export function overlayPending<T extends OverlayEntry>(roster: T[], pending: PendingLike[]): T[] {
   if (pending.length === 0) return roster;
   const queued = new Map(pending.map((p) => [p.personId, p.status]));
   return roster.map((r) => {

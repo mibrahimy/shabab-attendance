@@ -4,7 +4,7 @@
 // covers all. No special-case role checks.
 
 import type { AuthzContext } from "@/types/auth";
-import { prisma } from "@/server/db";
+import { withTransaction } from "@/server/repositories/transaction";
 import { NotFoundError, ValidationError } from "@/server/errors";
 import { requirePermission } from "@/server/auth/can-act-on";
 import { nextLevel, type Level } from "@/lib/org-levels";
@@ -307,7 +307,7 @@ export async function moveNode(
     throw new ValidationError(`A ${nodeLevel.label} can't sit under a ${parentLevel.label}`, "LEVEL_MISMATCH");
   }
 
-  await prisma.$transaction((tx) => orgNodeRepo.moveSubtree(node, newParent, tx));
+  await withTransaction((tx) => orgNodeRepo.moveSubtree(node, newParent, tx));
   await auditRepo.record({
     actorPersonId: ctx.personId,
     action: "move_node",
@@ -328,7 +328,7 @@ export async function deleteNode(ctx: AuthzContext, nodeId: string): Promise<voi
   // ON DELETE RESTRICT, so even if one does, the delete FAILS at the DB (P2003)
   // rather than orphaning children — caught below and surfaced as the friendly error.
   try {
-    await prisma.$transaction(async (tx) => {
+    await withTransaction(async (tx) => {
       if (await orgNodeRepo.hasChildren(node.id, tx)) {
         throw new ValidationError("Remove or move its child nodes first", "NODE_NOT_EMPTY");
       }

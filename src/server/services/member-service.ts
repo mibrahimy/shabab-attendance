@@ -2,7 +2,7 @@
 // add_member scoped to the target node's subtree; students are profile-only,
 // staff get a login with a generated temp password.
 
-import { prisma } from "@/server/db";
+import { withTransaction } from "@/server/repositories/transaction";
 import type { AuthzContext } from "@/types/auth";
 import { NotFoundError, ValidationError } from "@/server/errors";
 import { requirePermission } from "@/server/auth/can-act-on";
@@ -62,7 +62,7 @@ export async function addMember(
   // Profile-only student: no User, CNIC optional. One transaction so a mid-way
   // failure can't leave an orphan Person with no assignment.
   if (role.isStudent) {
-    const personId = await prisma.$transaction(async (tx) => {
+    const personId = await withTransaction(async (tx) => {
       const person = await personRepo.create(
         { name, segment: input.person.segment ?? null, status: "active", cityId: node.cityId },
         tx,
@@ -95,7 +95,7 @@ export async function addMember(
 
   let personId: string;
   try {
-    personId = await prisma.$transaction(
+    personId = await withTransaction(
       async (tx) => {
         const person = await personRepo.create(
           { name, cnic, phone: input.person.phone ?? null, segment: input.person.segment ?? null, status: "active", cityId: node.cityId },
@@ -188,7 +188,7 @@ export async function moveMember(
   if (!role) throw new ValidationError("Unknown role");
   await assertRoleAtLevel(target, role);
 
-  await prisma.$transaction(
+  await withTransaction(
     async (tx) => {
       await assignmentRepo.endAssignment(assignmentId, tx);
       const position = await positionRepo.findOrCreateRolePosition(

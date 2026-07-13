@@ -12,7 +12,7 @@ import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import type { BadgeColor } from "@/types";
-import type { StructurePayload, ManagedLevel } from "@/server/services/structure-service";
+import type { StructurePayload, ManagedLevel } from "@/types/structure";
 
 const asColor = (c: string | null): BadgeColor => (c ?? "gray") as BadgeColor;
 

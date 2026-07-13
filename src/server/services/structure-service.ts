@@ -4,14 +4,14 @@
 // renumbered contiguously below the national "city" level so nextLevel stays correct.
 
 import type { AuthzContext } from "@/types/auth";
-import { prisma } from "@/server/db";
 import { NotFoundError, ValidationError } from "@/server/errors";
 import { requirePermission } from "@/server/auth/can-act-on";
 import * as orgNodeRepo from "@/server/repositories/org-node-repo";
 import * as nodeTypeRepo from "@/server/repositories/node-type-repo";
 import * as positionRepo from "@/server/repositories/position-repo";
 import * as auditRepo from "@/server/repositories/audit-repo";
-import type { Db } from "@/server/repositories/org-node-repo";
+import type { StructurePayload } from "@/types/structure";
+import { withTransaction, type Db } from "@/server/repositories/transaction";
 
 const MANAGE_CITY = "manage_city";
 const COLOR_OPTIONS = ["slate", "blue", "green", "amber", "pink", "purple", "indigo", "orange", "red"];
@@ -27,17 +27,10 @@ function slugify(s: string): string {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "level";
 }
 
-export type ManagedLevel = {
-  id: string; key: string; label: string; rank: number;
-  color: string | null; headPositionKey: string | null;
-  isCustom: boolean; nodeCount: number;
-};
-
-export type StructurePayload = {
-  levels: ManagedLevel[];
-  headRoleOptions: { key: string; label: string }[];
-  colorOptions: string[];
-};
+// Client-facing structure response contracts live in types/ (a pure leaf) so the
+// levels editor can consume them without importing from @/server. Re-exported here
+// for server callers that reach them through this service.
+export type { ManagedLevel, StructurePayload } from "@/types/structure";
 
 export async function listLevels(ctx: AuthzContext, cityId: string): Promise<StructurePayload> {
   await loadAuthorizedCity(ctx, cityId);
@@ -92,7 +85,7 @@ export async function addLevel(
     idx = ai >= 0 ? ai + 1 : existing.length;
   }
 
-  await prisma.$transaction(async (tx) => {
+  await withTransaction(async (tx) => {
     const created = await nodeTypeRepo.createLevel(
       { cityId, key, label: name, rank: base + existing.length, color: input.color ?? null, headPositionKey: input.headPositionKey ?? null },
       tx,
@@ -139,7 +132,7 @@ export async function moveLevel(ctx: AuthzContext, cityId: string, levelId: stri
   const order = levels.map((l) => l.id);
   [order[i], order[j]] = [order[j], order[i]];
   const base = (await nodeTypeRepo.cityLevelRank()) + 1;
-  await prisma.$transaction((tx) => renumber(order, base, tx));
+  await withTransaction((tx) => renumber(order, base, tx));
   await auditRepo.record({ actorPersonId: ctx.personId, action: "move_level", targetType: "NodeType", targetId: levelId, cityId, metadata: { direction } });
 }
 
@@ -152,7 +145,7 @@ export async function removeLevel(ctx: AuthzContext, cityId: string, levelId: st
   }
   const remaining = (await nodeTypeRepo.listEditableLevels(cityId)).filter((l) => l.id !== levelId).map((l) => l.id);
   const base = (await nodeTypeRepo.cityLevelRank()) + 1;
-  await prisma.$transaction(async (tx) => {
+  await withTransaction(async (tx) => {
     await nodeTypeRepo.deleteLevel(levelId, tx);
     await renumber(remaining, base, tx);
   });
