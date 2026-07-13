@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { Trail } from "@/components/home/Trail";
+import { Segmented } from "@/components/ui/Segmented";
 import type { ReportBody, NodePerson, Crumb } from "@/types/reports";
 
 type PersonHit = { id: string; name: string; nodeName: string | null };
@@ -230,19 +231,10 @@ export function ReportView({
           <p className="mt-0.5 text-sm text-slate-500">{heading.subtitle}</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="inline-flex rounded-xl border border-slate-200/70 bg-white p-0.5 text-sm shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-            {PERIODS.map((p) => (
-              <Link
-                key={p.key}
-                href={`${basePath}?period=${p.key}`}
-                className={`rounded-lg px-3 py-1.5 font-medium transition ${
-                  period === p.key ? "bg-[#2f55ea] text-white" : "text-slate-500 hover:text-slate-900"
-                }`}
-              >
-                {p.label}
-              </Link>
-            ))}
-          </div>
+          <Segmented
+            value={period}
+            options={PERIODS.map((p) => ({ value: p.key, label: p.label, href: `${basePath}?period=${p.key}` }))}
+          />
           <button
             onClick={exportCsv}
             className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:border-[#2f55ea]/40 hover:text-[#2f55ea]"

@@ -15,6 +15,7 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import EmptyState from "@/components/ui/EmptyState";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { Segmented } from "@/components/ui/Segmented";
 import { CredentialsDialog, type Credentials } from "@/components/ui/CredentialsDialog";
 import { useToast } from "@/components/ui/Toast";
 import { nextLevel, type Level } from "@/lib/org-levels";
@@ -809,25 +810,19 @@ export function HierarchyWorkspace({
           placeholder={t("search.placeholder")}
           className="w-full max-w-[220px] rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#2f55ea] focus:ring-2 focus:ring-[#2f55ea]/15"
         />
-        <div className="inline-flex rounded-xl border border-slate-200/70 bg-white p-0.5 text-sm shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-          {(["tree", "chart"] as const).map((v) => (
-            <button
-              key={v}
-              onClick={() => {
-                setView(v);
-                // Chart is the review surface → default to full width; tree keeps
-                // its detail pane. The toggle still overrides within a view.
-                setShowDetail(v === "tree");
-              }}
-              aria-pressed={view === v}
-              className={`rounded-lg px-3 py-1.5 font-medium transition ${
-                view === v ? "bg-[#2f55ea] text-white" : "text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              {t(`view.${v}`)}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          value={view}
+          options={[
+            { value: "tree", label: t("view.tree") },
+            { value: "chart", label: t("view.chart") },
+          ]}
+          onChange={(v) => {
+            setView(v);
+            // Chart is the review surface → default to full width; tree keeps
+            // its detail pane. The toggle still overrides within a view.
+            setShowDetail(v === "tree");
+          }}
+        />
         {view === "chart" && (
           <div className="inline-flex items-center rounded-xl border border-slate-200/70 bg-white text-sm shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
             <button className="px-2.5 py-1.5 text-slate-600 hover:text-[#2f55ea]" onClick={() => setZoom((z) => clampZoom(z - 0.1))} aria-label={t("zoom.out")}>−</button>

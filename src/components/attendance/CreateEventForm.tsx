@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
+import { Segmented } from "@/components/ui/Segmented";
 import { useToast } from "@/components/ui/Toast";
 
 const inputClass =
@@ -22,29 +23,6 @@ function defaultLocalDateTime(): string {
 }
 
 type NodeOption = { id: string; name: string; label: string };
-
-// A compact segmented control (used for Reach + Segment).
-function Segmented<T extends string>({
-  value, options, onChange,
-}: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void }) {
-  return (
-    <div className="inline-flex w-full rounded-xl border border-slate-200/70 bg-white p-0.5 text-sm">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          onClick={() => onChange(o.value)}
-          aria-pressed={value === o.value}
-          className={`flex-1 rounded-lg px-3 py-1.5 font-medium transition ${
-            value === o.value ? "bg-[#2f55ea] text-white" : "text-slate-500 hover:text-slate-900"
-          }`}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 export function CreateEventForm({
   open,
@@ -220,6 +198,7 @@ export function CreateEventForm({
           <Segmented
             value={mode}
             onChange={setMode}
+            fullWidth
             options={[
               { value: "members", label: t("create.modeMembers", "Members") },
               { value: "team", label: t("create.modeTeam", "Team (leads)") },
@@ -239,6 +218,7 @@ export function CreateEventForm({
               <Segmented
                 value={reach}
                 onChange={setReach}
+                fullWidth
                 options={[
                   { value: "direct", label: t("create.reachDirect", "This group") },
                   { value: "subtree", label: t("create.reachSubtree", "Everyone under") },
@@ -250,6 +230,7 @@ export function CreateEventForm({
               <Segmented
                 value={segment}
                 onChange={setSegment}
+                fullWidth
                 options={[
                   { value: "", label: t("create.segmentAll", "All") },
                   { value: "junior", label: t("create.segmentJunior", "Junior") },

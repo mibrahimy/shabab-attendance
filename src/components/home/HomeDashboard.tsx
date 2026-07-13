@@ -7,6 +7,7 @@
 
 import Link from "next/link";
 import { Trail } from "./Trail";
+import { EVENT_STATUS_PILL } from "@/components/attendance/event-status-styles";
 import type { LevelCount } from "@/lib/city-summary";
 
 type WeekRate = { present: number; total: number; rate: number };
@@ -22,12 +23,6 @@ type Dashboard = {
     id: string; title: string; when: string; nodeName: string;
     status: "scheduled" | "completed" | "cancelled"; present: number; total: number;
   }[];
-};
-
-const STATUS_PILL: Record<string, string> = {
-  completed: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-  scheduled: "bg-[#2f55ea]/[0.07] text-[#2f55ea] ring-[#2f55ea]/20",
-  cancelled: "bg-slate-100 text-slate-500 ring-slate-500/20",
 };
 
 function pct(present: number, total: number): number {
@@ -236,7 +231,7 @@ export function HomeDashboard({
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className="truncate text-sm font-medium text-slate-900">{s.title}</span>
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ring-inset ${STATUS_PILL[s.status]}`}>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ring-inset ${EVENT_STATUS_PILL[s.status]}`}>
                             {s.status}
                           </span>
                         </div>

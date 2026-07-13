@@ -16,6 +16,8 @@ import { useOnline } from "@/hooks/use-online";
 import { pending as pendingMarks } from "@/lib/offline/outbox";
 import { CreateEventForm } from "@/components/attendance/CreateEventForm";
 import { RosterModeChip } from "@/components/attendance/RosterModeChip";
+import { EVENT_STATUS_PILL } from "@/components/attendance/event-status-styles";
+import { Segmented } from "@/components/ui/Segmented";
 
 type Scope = "today" | "upcoming" | "past";
 
@@ -44,12 +46,6 @@ function dayKey(iso: string): string {
   });
 }
 
-const STATUS_PILL: Record<string, string> = {
-  completed: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-  scheduled: "bg-[#2f55ea]/[0.07] text-[#2f55ea] ring-[#2f55ea]/20",
-  cancelled: "bg-slate-100 text-slate-500 ring-slate-500/20",
-};
-
 function EventCard({ e, scope }: { e: HubEvent; scope: Scope }) {
   const { t } = useTranslation("attendance");
   const rate = e.rosterCount > 0 ? Math.round((e.markedCount / e.rosterCount) * 100) : 0;
@@ -60,9 +56,9 @@ function EventCard({ e, scope }: { e: HubEvent; scope: Scope }) {
   const pill =
     scope === "today"
       ? done
-        ? { cls: STATUS_PILL.completed, text: t("today.marked") }
-        : { cls: STATUS_PILL.scheduled, text: t("today.notMarked") }
-      : { cls: STATUS_PILL[e.status], text: t(`eventStatus.${e.status}`, e.status) };
+        ? { cls: EVENT_STATUS_PILL.completed, text: t("today.marked") }
+        : { cls: EVENT_STATUS_PILL.scheduled, text: t("today.notMarked") }
+      : { cls: EVENT_STATUS_PILL[e.status], text: t(`eventStatus.${e.status}`, e.status) };
 
   return (
     <Link
@@ -207,20 +203,11 @@ export default function AttendanceHubPage() {
       </div>
 
       {/* Scope tabs */}
-      <div className="inline-flex rounded-xl border border-slate-200/70 bg-white p-0.5 text-sm shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-        {SCOPES.map((s) => (
-          <button
-            key={s}
-            onClick={() => setScope(s)}
-            aria-pressed={scope === s}
-            className={`rounded-lg px-3.5 py-1.5 font-medium transition ${
-              scope === s ? "bg-[#2f55ea] text-white" : "text-slate-500 hover:text-slate-900"
-            }`}
-          >
-            {t(`hub.scope.${s}`, s)}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        value={scope}
+        options={SCOPES.map((s) => ({ value: s, label: t(`hub.scope.${s}`, s) }))}
+        onChange={setScope}
+      />
 
       {failed > 0 && (
         <div className="flex items-center justify-between rounded-xl bg-[#fdecec] px-4 py-2 text-xs font-semibold text-[#dc2626]">
