@@ -20,20 +20,59 @@ one focused change, keep it green, commit, tick it here, move on. Each task is s
 
 ---
 
-## Now — do next (ordered)
+## Launch-critical — student intake & onboarding  *(this gates launch)*
 
-### N1 · Lock in the layering: boundary-guard test + doc  *(arch, small, low risk)*
-**Why:** phases 1–2 of the refactor closed the frontend→server and Prisma-in-services breaches
-(commit `4ee7920`); without a guard they'll silently regress.
-**Scope:**
-- Add `src/architecture-boundaries.test.ts` (vitest, in the style of `src/i18n/no-physical-css.test.ts`)
-  asserting: (a) files with `"use client"` don't import `@/server/**` or Prisma; (b) `src/server/services/**`
-  don't import `@/server/db`/`@prisma`/`prisma/generated`; (c) `src/lib/**` and `src/types/**` import no
-  React/Prisma/`@/server`.
-- Move the one misfiled hook `src/lib/offline/use-online.ts` → `src/hooks/use-online.ts`; update importers.
-- Amend `ENGINEERING.md` §2 to explicitly bless "RSC/server-component pages may call a service directly"
-  (and note `React.cache`/`next/headers` in `server/auth` are runtime, not UI).
-**Acceptance:** the new test passes on the current tree; grep shows zero violations; tsc/eslint/vitest green.
+Launch requires a **zone lead / park admin** to onboard a shabab end-to-end so student
+attendance can be taken: **add the person → (the staff user who marks them) → interview eval →
+assign under a murabbi.** Good news from the planning pass: this chain is **~90% already built** —
+a student added at a `class` node *is* placed under that class's murabbi (add = assignment, one
+action), and staff (murabbi/park-admin) already get one-time logins. Gaps are intake UX (mobile +
+fast repeat-add), guardian PII fields + gating, and a minimal interview eval.
+
+**Decisions (baked in):** students stay **profile-only, no login** (the "user" to create is the
+*staff* who mark them); interview eval is a **fixed-field `InterviewEval` model**, not the Phase-6
+FormTemplate; **no approval gate** on direct add (add-active); **individual + stay-open mini-batch**,
+CSV import post-launch; the eval is **optional/skippable** — never blocks intake.
+
+**Must-ship for launch (ordered):**
+- **SI-1 · Mini-batch quick-add** — `AddMemberModal` stays open after a student add, clears+refocuses
+  name, keeps the class/role, shows "Added N". 10 shabab = 10 name+Enter. *(S, no server change.)*
+- **SI-2 · Mobile intake surface** — new `/intake` RSC scoped to the actor's `add_member` subtree:
+  lists *their* classes, each "Add shabab to [murabbi]'s class". ≤2 taps from home; reuses the members
+  endpoint. *(M)*
+- **SI-3 · Guardian/contact fields** — nullable `guardianName`/`guardianPhone` (± `dob`) on `Person`
+  (+ migration), threaded through repo/service/zod/form (optional for students); PII-gated on read (SI-8). *(M)*
+- **SI-4 · Confirm staff-login = the "create user" step** — verify murabbi/park-admin add yields a
+  one-time credential; students never do; label "Student = no login". *(S, no mechanism change.)*
+- **SI-5 · Show the murabbi in the intake UX** — class header + add affordance name the class's head
+  murabbi (existing head query). *(S)*
+- **SI-6 · End-to-end flow review** — walk the minimized park-admin path on a phone; fix friction;
+  confirm skipping the eval never blocks. *(S)*
+- **SI-7 · Intake authz tests** — park admin can't add outside their park; students never get a `User`;
+  direct-add is `active`. *(S)*
+- **SI-8 · PII read-gating** — CNIC/phone/guardian/eval-notes omitted from list/detail unless the viewer
+  holds the permission in scope; log the encryption-at-rest + retention follow-up. *(M)*
+
+**Fast-follow (right after launch):**
+- **SI-9 · `InterviewEval` model + repo + service** — one eval/person (recommendation enum + 3×1–5
+  scores + notes + interviewer + date), `add_member`-gated, audited. *(M)*
+- **SI-10 · Interview-eval capture UI** — `InterviewEvalModal`, optional chip in the add flow +
+  member-row action; `POST/GET /api/persons/[id]/interview-eval`. *(M)*
+- **SI-11 · CSV/Excel bulk import** · **SI-12 · per-student "Provision login"** · **SI-13 · verify
+  class→class transfer on mobile**.
+
+*The chain is authorized today (park admin + zone lead hold `add_member` in their subtree). Critical
+files: `member-service.ts`, `AddMemberModal.tsx`, `default-roles.ts`, `prisma/v2/schema.prisma`,
+`HierarchyWorkspace.tsx`.*
+
+---
+
+## Now — UX + arch (interleave with launch-critical above)
+
+### ✅ N1 · Lock in the layering: boundary-guard test + doc — DONE (`c766a15`)
+Added `src/architecture-boundaries.test.ts` (3 rules, green) + moved `use-online` → `src/hooks/`.
+*(The §2 doc amendment is applied locally but held out of the commit — `ENGINEERING.md` also carries
+separate uncommitted native/multi-client notes.)*
 
 ### N2 · Icon set (enabler for the UX cleanup)  *(UX, small–med)*
 **Why:** the app uses ~12 opaque unicode glyphs as buttons (`⌖ ⇄ ✕ ⤢ ▤ ⠿`), several destructive; the
