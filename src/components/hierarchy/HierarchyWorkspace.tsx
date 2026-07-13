@@ -25,6 +25,7 @@ import { AddMemberModal } from "@/components/members/AddMemberModal";
 import { MoveMemberModal } from "@/components/members/MoveMemberModal";
 import { NodeNameModal } from "./NodeNameModal";
 import { MoveNodeModal, type MoveTarget } from "./MoveNodeModal";
+import { PlusIcon, EditIcon, MoveIcon, TrashIcon } from "@/components/ui/icons";
 
 export type WorkspaceNode = {
   id: string;
@@ -901,20 +902,20 @@ export function HierarchyWorkspace({
             <div className="mt-3 flex flex-wrap gap-2">
               {selectedChildLevel && (
                 <Button size="sm" onClick={() => setNodeModal({ mode: "add", nodeId: selected.id })}>
-                  {t("node.addChild", { label: selectedChildLevel.label })}
+                  <span className="inline-flex items-center gap-1.5"><PlusIcon className="h-4 w-4" />{t("node.addChild", { label: selectedChildLevel.label })}</span>
                 </Button>
               )}
               <Button size="sm" variant="secondary" onClick={() => setNodeModal({ mode: "rename", nodeId: selected.id })}>
-                {t("node.rename")}
+                <span className="inline-flex items-center gap-1.5"><EditIcon className="h-4 w-4" />{t("node.rename")}</span>
               </Button>
               {!isCityRoot && moveTargetsForSelected.length > 0 && (
                 <Button size="sm" variant="secondary" onClick={() => setMoveNodeFor(selected)}>
-                  {t("node.move")}
+                  <span className="inline-flex items-center gap-1.5"><MoveIcon className="h-4 w-4" />{t("node.move")}</span>
                 </Button>
               )}
               {!isCityRoot && (
                 <Button size="sm" variant="danger" onClick={() => setDeleteFor(selected)}>
-                  {t("node.delete")}
+                  <span className="inline-flex items-center gap-1.5"><TrashIcon className="h-4 w-4" />{t("node.delete")}</span>
                 </Button>
               )}
             </div>
