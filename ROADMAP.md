@@ -20,6 +20,25 @@ one focused change, keep it green, commit, tick it here, move on. Each task is s
 
 ---
 
+## Shipped — autonomous session (2026-07-14)
+
+Committed + pushed on `feat/v2-multi-city-architecture`, all green (tsc/eslint/vitest incl. the
+boundary + RTL guards), no prod migrations:
+- **N1** — layer-boundary guard test + `use-online` → `src/hooks/` (`c766a15`)
+- **SI-1** — mini-batch quick-add for shabab (modal stays open, Enter, "Added N") (`e212fa0`)
+- **N2** — inline-SVG icon set (`src/components/ui/icons`) + icons on the detail-pane node actions (`aba214f`)
+- **N3** — shared `<Segmented>` atom (4 sites) + `event-status-styles` module (`d7aad15`)
+- **N5** — Hierarchy → node-report cross-link (`5dc564a`)
+- **SI-2 + SI-5** — mobile-first `/intake` surface: a park admin's own classes, each named by its
+  murabbi, with mini-batch "Add shabab"; authz-scoped to `add_member` (`d74438e`)
+
+**Next up:** SI-3 (guardian PII fields — needs a schema migration; write it, hold the prod apply),
+SI-4 (staff-login label/verify), SI-6 (flow review), SI-7 (intake authz tests), SI-8 (PII
+read-gating). **N4** (hierarchy → one canonical action surface) is the biggest remaining UX win but is
+a user-facing restructure — best done as a *reviewed* pass, not unsupervised.
+
+---
+
 ## Launch-critical — student intake & onboarding  *(this gates launch)*
 
 Launch requires a **zone lead / park admin** to onboard a shabab end-to-end so student
