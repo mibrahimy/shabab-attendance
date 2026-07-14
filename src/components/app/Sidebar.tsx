@@ -16,6 +16,7 @@ const ICONS: Record<string, React.ReactNode> = {
   roles: <path d="M12 3l7 4v5c0 4-3 7-7 9-4-2-7-5-7-9V7z" />,
   cities: <path d="M3 21h18M6 21V8l6-4 6 4v13M10 21v-4h4v4" />,
   reports: <path d="M4 20V11M10 20V4M16 20v-6M20 20H3" />,
+  intake: <path d="M4 20a6 6 0 0 1 11-3.3M13 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0M18 13v6M15 16h6" />,
   profile: <path d="M4 20a8 8 0 0 1 16 0M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />,
 };
 

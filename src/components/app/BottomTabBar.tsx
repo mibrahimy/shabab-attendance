@@ -17,6 +17,7 @@ function Icon({ name }: { name: string }) {
     attendance: <path {...p} d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />,
     hierarchy: <path {...p} d="M12 3v4M6 21v-4M18 21v-4M4 17h4v4H4zM10 3h4v4h-4zM16 17h4v4h-4zM8 17V11h8v6" />,
     roles: <path {...p} d="M16 11a4 4 0 1 0-8 0M12 3v0M4 21a8 8 0 0 1 16 0" />,
+    intake: <path {...p} d="M4 20a6 6 0 0 1 11-3.3M13 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0M18 13v6M15 16h6" />,
     profile: <path {...p} d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21a8 8 0 0 1 16 0" />,
   };
   return (

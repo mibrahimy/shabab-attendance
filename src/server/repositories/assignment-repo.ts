@@ -77,6 +77,22 @@ export async function listHeadsInCity(cityId: string, headKeys: string[]): Promi
   }));
 }
 
+// Active student count per node, for a set of node ids — the intake list's "N
+// shabab" badge. One grouped query; positions narrowed to the student role keys so
+// a class's own head (the murabbi assigned at the same node) isn't counted.
+export async function countStudentsByNodes(
+  nodeIds: string[],
+  studentKeys: string[],
+): Promise<Map<string, number>> {
+  if (nodeIds.length === 0 || studentKeys.length === 0) return new Map();
+  const rows = await prisma.assignment.groupBy({
+    by: ["orgNodeId"],
+    where: { endDate: null, orgNodeId: { in: nodeIds }, position: { key: { in: studentKeys } } },
+    _count: { _all: true },
+  });
+  return new Map(rows.map((r) => [r.orgNodeId, r._count._all]));
+}
+
 export async function create(
   input: {
     personId: string;

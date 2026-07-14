@@ -1,0 +1,16 @@
+{
+  "heading": {
+    "title": "Add shabab",
+    "subtitle": "Pick a class and add students — no navigating the org tree."
+  },
+  "class": {
+    "ledBy": "{{name}}’s class",
+    "noMurabbi": "No murabbi yet",
+    "count": "{{count}} shabab",
+    "addShabab": "Add shabab"
+  },
+  "empty": {
+    "title": "No classes to add to yet",
+    "description": "You’ll see your classes here once you can add members to one."
+  }
+}

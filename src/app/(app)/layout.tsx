@@ -30,10 +30,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const canAttend =
     ctx.isSuperadmin ||
     ctx.grants.some((g) => g.permission === "mark_attendance" || g.permission === "view_attendance");
+  // Intake (add shabab to a class) is gated on add_member — the same authority the
+  // /intake surface and the members POST enforce.
+  const canAddMember =
+    ctx.isSuperadmin || ctx.grants.some((g) => g.permission === "add_member");
 
   // Operations: the day-to-day. Administration: managing the org.
   const operations: NavItem[] = [{ href: "/", label: t("nav.home"), icon: "home" }];
   if (canAttend) operations.push({ href: "/mark", label: t("nav.attendance"), icon: "attendance" });
+  if (canAddMember) operations.push({ href: "/intake", label: t("nav.intake"), icon: "intake" });
 
   const admin: NavItem[] = [];
   if (cityId) {
