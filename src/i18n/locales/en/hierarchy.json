@@ -43,6 +43,7 @@
     "rename": "Rename",
     "delete": "Delete",
     "move": "Move",
+    "viewReport": "View report",
     "addChild": "+ Add {{label}}",
     "empty": {
       "childTitle": "No {{label}} yet",

@@ -26,7 +26,7 @@ import { AddMemberModal } from "@/components/members/AddMemberModal";
 import { MoveMemberModal } from "@/components/members/MoveMemberModal";
 import { NodeNameModal } from "./NodeNameModal";
 import { MoveNodeModal, type MoveTarget } from "./MoveNodeModal";
-import { PlusIcon, EditIcon, MoveIcon, TrashIcon } from "@/components/ui/icons";
+import { PlusIcon, EditIcon, MoveIcon, TrashIcon, ChartIcon } from "@/components/ui/icons";
 
 export type WorkspaceNode = {
   id: string;
@@ -900,6 +900,13 @@ export function HierarchyWorkspace({
                   <span className="inline-flex items-center gap-1.5"><PlusIcon className="h-4 w-4" />{t("node.addChild", { label: selectedChildLevel.label })}</span>
                 </Button>
               )}
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => router.push(isCityRoot ? `/reports/${city.id}` : `/reports/${city.id}/node/${selected.id}`)}
+              >
+                <span className="inline-flex items-center gap-1.5"><ChartIcon className="h-4 w-4" />{t("node.viewReport", "View report")}</span>
+              </Button>
               <Button size="sm" variant="secondary" onClick={() => setNodeModal({ mode: "rename", nodeId: selected.id })}>
                 <span className="inline-flex items-center gap-1.5"><EditIcon className="h-4 w-4" />{t("node.rename")}</span>
               </Button>
